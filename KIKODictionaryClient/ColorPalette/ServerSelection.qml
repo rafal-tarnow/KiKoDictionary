@@ -9,7 +9,7 @@ import QtExampleStyle
 
 pragma ComponentBehavior: Bound
 
-Item {
+Rectangle {
     id: root
     // A popup for selecting the server URL
 
@@ -20,7 +20,7 @@ Item {
     required property RestService restPalette
 
     Connections {
-        target: root.colorResources
+        target: root.colorUsers
         // Closes the URL selection popup once we have received data successfully
         function onDataUpdated() {
             fetchTester.stop()
@@ -38,7 +38,8 @@ Item {
         }
         ListElement {
             title: qsTr("Qt-based REST API server")
-            url: "http://127.0.0.1:49425/api"
+            url: "http://192.168.0.129:49425/api"
+            //url: "http://127.0.0.1:8000/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
     }
@@ -149,6 +150,7 @@ Item {
             textColor: "#FFFFFF"
 
             onClicked: {
+                console.log("connect ...")
                 busyIndicatorPopup.title = (serverList.currentItem as ServerListDelegate).title
                 busyIndicatorPopup.icon = (serverList.currentItem as ServerListDelegate).icon
                 busyIndicatorPopup.open()
@@ -162,8 +164,9 @@ Item {
             interval: 2000
 
             function test(url) {
+                console.log("fetchTester.test()")
                 root.restPalette.url = url
-                root.colorResources.refreshCurrentPage()
+                //root.colorResources.refreshCurrentPage()
                 root.colorUsers.refreshCurrentPage()
                 start()
             }

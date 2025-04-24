@@ -55,6 +55,9 @@ Popup {
                         anchors.fill: parent
                         source: userInfo.modelData.avatar
                         visible: false
+                        Component.onCompleted: {
+                            console.log("userInfo.modelData.avatar = " + userInfo.modelData.avatar)
+                        }
                     }
 
                     Image {

@@ -27,3 +27,4 @@ QtObject {
         return `qrc:/qt/qml/ColorPalette/icons/${baseImagePath}.svg`
     }
 }
+

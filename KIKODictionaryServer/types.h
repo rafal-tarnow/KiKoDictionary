@@ -209,6 +209,76 @@ private:
     }
 };
 
+struct Sentence : public Jsonable, public Updatable
+{
+    qint64 id;
+    QString polish_sentence;
+    QString english_sentence;
+    QColor color;
+    QString pantone;
+    QDateTime createdAt;
+    QDateTime updatedAt;
+
+    explicit Sentence(const QString &polish_sentence, const QString &english_sentence, const QString &color, const QString &pantone,
+                      const QDateTime &createdAt = QDateTime::currentDateTimeUtc(),
+                      const QDateTime &updatedAt = QDateTime::currentDateTimeUtc())
+        : id(nextId()),
+        polish_sentence(polish_sentence),
+        english_sentence(english_sentence),
+        color(QColor(color)),
+        pantone(pantone),
+        createdAt(createdAt),
+        updatedAt(updatedAt)
+    {
+    }
+
+    QJsonObject toJson() const override
+    {
+        return QJsonObject{ { "id", id },
+                           { "polish_sentence", polish_sentence },
+                           { "english_sentence", english_sentence },
+                           { "color", color.name() },
+                           { "pantone_value", pantone },
+                           { "createdAt", createdAt.toString(Qt::ISODateWithMs) },
+                           { "updatedAt", updatedAt.toString(Qt::ISODateWithMs) } };
+    }
+
+    bool update(const QJsonObject &json) override
+    {
+        if (!json.contains("polish_sentence") || !json.contains("english_sentence") || !json.contains("color") || !json.contains("pantone_value"))
+            return false;
+
+        polish_sentence = json.value("polish_sentence").toString();
+        english_sentence = json.value("english_sentence").toString();
+        color = QColor(json.value("color").toString());
+        pantone = json.value("pantone_value").toString();
+        updateTimestamp();
+        return true;
+    }
+
+    void updateFields(const QJsonObject &json) override
+    {
+        if (json.contains("polish_sentence"))
+            polish_sentence = json.value("polish_sentence").toString();
+        if (json.contains("english_sentence"))
+            english_sentence = json.value("english_sentence").toString();
+        if (json.contains("color"))
+            color = QColor(json.value("color").toString());
+        if (json.contains("pantone_value"))
+            pantone = json.value("pantone_value").toString();
+        updateTimestamp();
+    }
+
+private:
+    void updateTimestamp() { updatedAt = QDateTime::currentDateTimeUtc(); }
+
+    static qint64 nextId()
+    {
+        static qint64 lastId = 1;
+        return lastId++;
+    }
+};
+
 struct ColorFactory : public FromJsonFactory<Color>
 {
     std::optional<Color> fromJson(const QJsonObject &json) const override
@@ -224,6 +294,24 @@ struct ColorFactory : public FromJsonFactory<Color>
         }
         return Color(json.value("name").toString(), json.value("color").toString(),
                      json.value("pantone_value").toString());
+    }
+};
+
+struct SentenceFactory : public FromJsonFactory<Sentence>
+{
+    std::optional<Sentence> fromJson(const QJsonObject &json) const override
+    {
+        if (!json.contains("polish_sentence") || !json.contains("english_sentence") || !json.contains("color") || !json.contains("pantone_value"))
+            return std::nullopt;
+        if (json.contains("createdAt") && json.contains("updatedAt")) {
+            return Sentence(
+                json.value("polish_sentence").toString(), json.value("english_sentence").toString(), json.value("color").toString(),
+                json.value("pantone_value").toString(),
+                QDateTime::fromString(json.value("createdAt").toString(), Qt::ISODateWithMs),
+                QDateTime::fromString(json.value("updatedAt").toString(), Qt::ISODateWithMs));
+        }
+        return Sentence(json.value("polish_sentence").toString(), json.value("english_sentence").toString(), json.value("color").toString(),
+                        json.value("pantone_value").toString());
     }
 };
 

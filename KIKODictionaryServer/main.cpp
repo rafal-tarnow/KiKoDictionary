@@ -17,21 +17,26 @@ void addCrudRoutes(QHttpServer &httpServer, const QString &apiPath, CrudApi<T> &
 {
     //! [GET paginated list example]
     httpServer.route(
-            QString("%1").arg(apiPath), QHttpServerRequest::Method::Get,
-            [&api](const QHttpServerRequest &request) { return api.getPaginatedList(request); });
+        QString("%1").arg(apiPath), QHttpServerRequest::Method::Get,
+        [&api](const QHttpServerRequest &request) {
+            return api.getPaginatedList(request);
+        });
     //! [GET paginated list example]
 
     //! [GET single item example]
     httpServer.route(QString("%1/<arg>").arg(apiPath), QHttpServerRequest::Method::Get,
-                     [&api](qint64 itemId) { return api.getItem(itemId); });
+                     [&api](qint64 itemId) {
+                         return api.getItem(itemId);
+                     });
     //! [GET single item example]
 
     //! [POST example]
     httpServer.route(QString("%1").arg(apiPath), QHttpServerRequest::Method::Post,
                      [&api, &sessionApi](const QHttpServerRequest &request) {
                          if (!sessionApi.authorize(request)) {
-                             return QHttpServerResponse(
-                                     QHttpServerResponder::StatusCode::Unauthorized);
+                             QHttpServerResponse response(QHttpServerResponder::StatusCode::Unauthorized);
+                             addCORSHeaders(response);
+                             return response;
                          }
                          return api.postItem(request);
                      });
@@ -40,8 +45,9 @@ void addCrudRoutes(QHttpServer &httpServer, const QString &apiPath, CrudApi<T> &
     httpServer.route(QString("%1/<arg>").arg(apiPath), QHttpServerRequest::Method::Put,
                      [&api, &sessionApi](qint64 itemId, const QHttpServerRequest &request) {
                          if (!sessionApi.authorize(request)) {
-                             return QHttpServerResponse(
-                                     QHttpServerResponder::StatusCode::Unauthorized);
+                             QHttpServerResponse response(QHttpServerResponder::StatusCode::Unauthorized);
+                             addCORSHeaders(response);
+                             return response;
                          }
                          return api.updateItem(itemId, request);
                      });
@@ -50,7 +56,7 @@ void addCrudRoutes(QHttpServer &httpServer, const QString &apiPath, CrudApi<T> &
                      [&api, &sessionApi](qint64 itemId, const QHttpServerRequest &request) {
                          if (!sessionApi.authorize(request)) {
                              return QHttpServerResponse(
-                                     QHttpServerResponder::StatusCode::Unauthorized);
+                                 QHttpServerResponder::StatusCode::Unauthorized);
                          }
                          return api.updateItemFields(itemId, request);
                      });
@@ -59,10 +65,17 @@ void addCrudRoutes(QHttpServer &httpServer, const QString &apiPath, CrudApi<T> &
                      [&api, &sessionApi](qint64 itemId, const QHttpServerRequest &request) {
                          if (!sessionApi.authorize(request)) {
                              return QHttpServerResponse(
-                                     QHttpServerResponder::StatusCode::Unauthorized);
+                                 QHttpServerResponder::StatusCode::Unauthorized);
                          }
                          return api.deleteItem(itemId);
                      });
+}
+
+QHttpServerResponse handleOptionsRequest()
+{
+    QHttpServerResponse response(QHttpServerResponder::StatusCode::Ok);
+    addCORSHeaders(response);
+    return response;
 }
 
 int main(int argc, char *argv[])
@@ -71,9 +84,9 @@ int main(int argc, char *argv[])
 
     QCommandLineParser parser;
     parser.addOptions({
-            { "port", QCoreApplication::translate("main", "The port the server listens on."),
-              "port" },
-    });
+                       { "port", QCoreApplication::translate("main", "The port the server listens on."),
+                        "port" },
+                       });
     parser.addHelpOption();
     parser.process(app);
 
@@ -81,9 +94,10 @@ int main(int argc, char *argv[])
     if (!parser.value("port").isEmpty())
         portArg = parser.value("port").toUShort();
 
-    auto colorFactory = std::make_unique<ColorFactory>();
-    auto colors = tryLoadFromFile<Color>(*colorFactory, ":/assets/colors.json");
-    CrudApi<Color> colorsApi(std::move(colors), std::move(colorFactory));
+
+
+
+
 
     auto userFactory = std::make_unique<UserFactory>(SCHEME, HOST, portArg);
     auto users = tryLoadFromFile<User>(*userFactory, ":/assets/users.json");
@@ -99,29 +113,64 @@ int main(int argc, char *argv[])
         return "Qt Colorpalette example server. Please see documentation for API description";
     });
 
+
+
+    auto colorFactory = std::make_unique<ColorFactory>();
+    auto colors = tryLoadFromFile<Color>(*colorFactory, ":/assets/colors.json");
+    CrudApi<Color> colorsApi(std::move(colors), std::move(colorFactory));
+
+    httpServer.route(QString("%1/<arg>").arg("/api/unknown"), QHttpServerRequest::Method::Options,
+                     [](qint64 itemId) {
+                         return handleOptionsRequest();
+                     });
+    httpServer.route("/api/unknown", QHttpServerRequest::Method::Options, handleOptionsRequest);
     addCrudRoutes(httpServer, "/api/unknown", colorsApi, sessionApi);
+
+
+    auto sentencesFactory = std::make_unique<SentenceFactory>();
+    auto sentences = tryLoadFromFile<Sentence>(*sentencesFactory, ":/assets/sentences.json");
+    CrudApi<Sentence> sentencesApi(std::move(sentences), std::move(sentencesFactory));
+
+    httpServer.route(QString("%1/<arg>").arg("/api/sentences"), QHttpServerRequest::Method::Options,
+                     [](qint64 itemId) {
+                         return handleOptionsRequest();
+                     });
+    httpServer.route("/api/sentences", QHttpServerRequest::Method::Options, handleOptionsRequest);
+    addCrudRoutes(httpServer, "/api/sentences", sentencesApi, sessionApi);
+
+
+    httpServer.route("/api/users", QHttpServerRequest::Method::Options, handleOptionsRequest);
     addCrudRoutes(httpServer, "/api/users", usersApi, sessionApi);
 
     // Login resource
+    httpServer.route("/api/login", QHttpServerRequest::Method::Options, handleOptionsRequest);
     httpServer.route(
-            "/api/login", QHttpServerRequest::Method::Post,
-            [&sessionApi](const QHttpServerRequest &request) { return sessionApi.login(request); });
+        "/api/login", QHttpServerRequest::Method::Post,
+        [&sessionApi](const QHttpServerRequest &request)
+        {
+            return sessionApi.login(request);
+        });
 
+    httpServer.route("/api/register", QHttpServerRequest::Method::Options, handleOptionsRequest);
     httpServer.route("/api/register", QHttpServerRequest::Method::Post,
                      [&sessionApi](const QHttpServerRequest &request) {
                          return sessionApi.registerSession(request);
                      });
 
+    httpServer.route("/api/logout", QHttpServerRequest::Method::Options, handleOptionsRequest);
     httpServer.route("/api/logout", QHttpServerRequest::Method::Post,
                      [&sessionApi](const QHttpServerRequest &request) {
                          return sessionApi.logout(request);
                      });
 
     // Images resource
+    //httpServer.route("/img/faces/<arg>-image.jpg", QHttpServerRequest::Method::Options, handleOptionsRequest);
     httpServer.route("/img/faces/<arg>-image.jpg", QHttpServerRequest::Method::Get,
                      [](qint64 imageId, const QHttpServerRequest &) {
-                         return QHttpServerResponse::fromFile(
-                                 QString(":/assets/img/%1-image.jpg").arg(imageId));
+                         QHttpServerResponse response = QHttpServerResponse::fromFile(
+                             QString(":/assets/img/%1-image.jpg").arg(imageId));
+                         addCORSHeaders(response);
+                         return response;
                      });
 
     auto tcpserver = std::make_unique<QTcpServer>();
@@ -134,9 +183,9 @@ int main(int argc, char *argv[])
     tcpserver.release();
 
     qDebug() << QCoreApplication::translate(
-                        "QHttpServerExample",
-                        "Running on http://127.0.0.1:%1/ (Press CTRL+C to quit)")
-                        .arg(port);
+                    "QHttpServerExample",
+                    "Running on http://127.0.0.1:%1/ (Press CTRL+C to quit)")
+                    .arg(port);
 
     return app.exec();
 }

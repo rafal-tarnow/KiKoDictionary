@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 cmake_minimum_required(VERSION 3.16)
-project(colorpaletteserver LANGUAGES CXX)
+project(KIKODictionaryServer LANGUAGES CXX)
 
 if(NOT DEFINED INSTALL_EXAMPLESDIR)
     set(INSTALL_EXAMPLESDIR "examples")
@@ -26,6 +26,7 @@ qt_add_resources(colorpaletteserver "assets"
     FILES
     assets/colors.json
     assets/users.json
+    assets/sentences.json
     assets/sessions.json
     assets/img/1-image.jpg
     assets/img/2-image.jpg

@@ -16,6 +16,16 @@ class CrudApi
 {
 };
 
+static void addCORSHeaders(QHttpServerResponse &response) {
+    QHttpHeaders headers;
+    headers.append("Access-Control-Allow-Origin", "*");
+    //headers.append("Access-Control-Allow-Origin", "http://localhost:30000");
+    headers.append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    headers.append("Access-Control-Allow-Headers", "Content-Type, Authorization, token");
+    headers.append("Access-Control-Max-Age", "86400");
+    response.setHeaders(headers);
+}
+
 template<typename T>
 class CrudApi<T,
               std::enable_if_t<std::conjunction_v<std::is_base_of<Jsonable, T>,
@@ -42,82 +52,116 @@ public:
 
         if ((maybePage && *maybePage < 1) || (maybePerPage && *maybePerPage < 1)) {
             return QtConcurrent::run([]() {
-                return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+                QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+                addCORSHeaders(response); // Dodaj nagłówki CORS
+                return response;
             });
         }
 
         PaginatorType paginator(data, maybePage ? *maybePage : PaginatorType::defaultPage,
                                 maybePerPage ? *maybePerPage : PaginatorType::defaultPageSize);
 
-        return QtConcurrent::run([paginator = std::move(paginator), maybeDelay]() {
-            if (maybeDelay)
+        return QtConcurrent::run([paginator = std::move(paginator), maybeDelay](){
+            if (maybeDelay){
                 QThread::sleep(*maybeDelay);
-            return paginator.isValid()
-                    ? QHttpServerResponse(paginator.toJson())
-                    : QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
+            }
+            QHttpServerResponse response = paginator.isValid() ? QHttpServerResponse(paginator.toJson()) : QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
+            addCORSHeaders(response); // Dodaj nagłówki CORS
+            return response;
         });
     }
 
     QHttpServerResponse getItem(qint64 itemId) const
     {
         const auto item = data.find(itemId);
-        return item != data.end() ? QHttpServerResponse(item->toJson())
-                                  : QHttpServerResponse(QHttpServerResponder::StatusCode::NotFound);
+        QHttpServerResponse response = item != data.end() ? QHttpServerResponse(item->toJson())
+                                                          : QHttpServerResponse(QHttpServerResponder::StatusCode::NotFound);
+        addCORSHeaders(response);
+        return response;
     }
 
     //! [POST return different status code example]
     QHttpServerResponse postItem(const QHttpServerRequest &request)
     {
         const std::optional<QJsonObject> json = byteArrayToJsonObject(request.body());
-        if (!json)
+        if (!json){
             return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        }
 
         const std::optional<T> item = factory->fromJson(*json);
-        if (!item)
+        if (!item){
             return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
-        if (data.contains(item->id))
+        }
+
+        if (data.contains(item->id)){
             return QHttpServerResponse(QHttpServerResponder::StatusCode::AlreadyReported);
+        }
 
         const auto entry = data.insert(item->id, *item);
-        return QHttpServerResponse(entry->toJson(), QHttpServerResponder::StatusCode::Created);
+        QHttpServerResponse response(entry->toJson(), QHttpServerResponder::StatusCode::Created);
+        addCORSHeaders(response);
+        return response;
     }
     //! [POST return different status code example]
 
     QHttpServerResponse updateItem(qint64 itemId, const QHttpServerRequest &request)
     {
         const std::optional<QJsonObject> json = byteArrayToJsonObject(request.body());
-        if (!json)
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!json){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
         auto item = data.find(itemId);
-        if (item == data.end())
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
-        if (!item->update(*json))
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (item == data.end()){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::NoContent);
+            addCORSHeaders(response);
+            return response;
+        }
+        if (!item->update(*json)){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
-        return QHttpServerResponse(item->toJson());
+        QHttpServerResponse response(item->toJson());
+        addCORSHeaders(response);
+        return response;
     }
 
     QHttpServerResponse updateItemFields(qint64 itemId, const QHttpServerRequest &request)
     {
         const std::optional<QJsonObject> json = byteArrayToJsonObject(request.body());
-        if (!json)
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!json){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
         auto item = data.find(itemId);
-        if (item == data.end())
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
+        if (item == data.end()){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::NoContent);
+            addCORSHeaders(response);
+            return response;
+        }
         item->updateFields(*json);
 
-        return QHttpServerResponse(item->toJson());
+        QHttpServerResponse response(item->toJson());
+        addCORSHeaders(response);
+        return response;
     }
 
-    QHttpServerResponse deleteItem(qint64 itemId)
-    {
-        if (!data.remove(itemId))
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
-        return QHttpServerResponse(QHttpServerResponder::StatusCode::Ok);
+    QHttpServerResponse deleteItem(qint64 itemId) {
+        QHttpServerResponse response = (!data.remove(itemId))
+        ? QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent)
+        : QHttpServerResponse(QHttpServerResponder::StatusCode::Ok);
+        addCORSHeaders(response);
+        return response;
     }
+
+private:
+
 
 private:
     IdMap<T> data;
@@ -136,47 +180,68 @@ public:
     QHttpServerResponse registerSession(const QHttpServerRequest &request)
     {
         const auto json = byteArrayToJsonObject(request.body());
-        if (!json)
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!json){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
         const auto item = factory->fromJson(*json);
-        if (!item)
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!item){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
         const auto session = sessions.insert(item->id, *item);
         session->startSession();
-        return QHttpServerResponse(session->toJson());
+        QHttpServerResponse response(session->toJson());
+        addCORSHeaders(response);
+        return response;
     }
 
     QHttpServerResponse login(const QHttpServerRequest &request)
     {
+        qDebug() << __PRETTY_FUNCTION__;
         const auto json = byteArrayToJsonObject(request.body());
 
-        if (!json || !json->contains("email") || !json->contains("password"))
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!json || !json->contains("email") || !json->contains("password")){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
         auto maybeSession = std::find_if(
-                sessions.begin(), sessions.end(),
-                [email = json->value("email").toString(),
-                 password = json->value("password").toString()](const auto &it) {
-                    return it.password == password && it.email == email;
-                });
+            sessions.begin(), sessions.end(),
+            [email = json->value("email").toString(),
+             password = json->value("password").toString()](const auto &it) {
+                return it.password == password && it.email == email;
+            });
         if (maybeSession == sessions.end()) {
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::NotFound);
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::NotFound);
+            addCORSHeaders(response);
+            return response;
         }
         maybeSession->startSession();
-        return QHttpServerResponse(maybeSession->toJson());
+        QHttpServerResponse response(maybeSession->toJson());
+        addCORSHeaders(response);
+        return response;
     }
 
     QHttpServerResponse logout(const QHttpServerRequest &request)
     {
         const auto maybeToken = getTokenFromRequest(request);
-        if (!maybeToken)
-            return QHttpServerResponse(QHttpServerResponder::StatusCode::BadRequest);
+        if (!maybeToken){
+            QHttpServerResponse response(QHttpServerResponder::StatusCode::BadRequest);
+            addCORSHeaders(response);
+            return response;
+        }
 
         auto maybeSession = std::find(sessions.begin(), sessions.end(), *maybeToken);
         if (maybeSession != sessions.end())
             maybeSession->endSession();
-        return QHttpServerResponse(QHttpServerResponder::StatusCode::Ok);
+        QHttpServerResponse response(QHttpServerResponder::StatusCode::Ok);
+        addCORSHeaders(response);
+        return response;
     }
 
     bool authorize(const QHttpServerRequest &request) const

@@ -11,11 +11,21 @@ import QtQuick.Shapes
 
 import QtExampleStyle
 
-Item {
+Rectangle {
     id: root
     required property BasicLogin loginService
     required property PaginatedResource colors
     required property PaginatedResource colorViewUsers
+
+    onVisibleChanged: {
+        if(root.visible){
+            root.colors.refreshCurrentPage()
+        }
+    }
+
+    Component.onCompleted: {
+        root.colors.refreshCurrentPage()
+    }
 
     ColorDialogEditor {
         id: colorPopup
@@ -60,7 +70,6 @@ Item {
                 Text {
                     text: qsTr("QHTTP Server")
                     font.pixelSize: 8
-                    color: "#667085"
                 }
                 Item { Layout.fillWidth: true }
 
@@ -175,7 +184,6 @@ Item {
                     text: qsTr("Color Palette")
                     font.pixelSize: 14
                     font.bold: true
-                    color: "#667085"
                 }
 
                 Item { Layout.fillWidth: true }
