@@ -51,6 +51,14 @@ qt_add_qml_module(colorpaletteclient
         icons/plus.svg
         icons/navi-drawer-svgrepo-com.svg
         qtquickcontrols2.conf
+        QML_FILES ColorPalette/SentenceDialogDelete.qml
+)
+
+qt_add_resources(colorpaletteclient "assets"
+    PREFIX
+        "/"
+    FILES
+        assets/server.crt
 )
 
 target_link_libraries(colorpaletteclient PRIVATE

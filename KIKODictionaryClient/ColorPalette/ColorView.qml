@@ -363,6 +363,7 @@ Rectangle {
                 visible: root.colors.pages > 1
                 implicitWidth: parent.width
 
+
                 RowLayout {
                     anchors.fill: parent
 

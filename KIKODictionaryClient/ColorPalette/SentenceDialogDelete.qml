@@ -8,7 +8,7 @@ import QtQuick.Layouts
 import QtExampleStyle
 
 Popup {
-    id: colorDeleter
+    id: sentenceDeleter
     padding: 10
     modal: true
     focus: true
@@ -18,12 +18,12 @@ Popup {
 
     property int colorId: -1
 
-    property string colorName: ""
+    property string sentenceTxt: ""
 
     function maybeDelete(data) {
-        console.log("maybeDelete = " + data.name)
+        console.log("maybeDelete = " + data.sentence)
         console.log("maybeDelete = " + data.id)
-        colorName = data.name
+        sentenceTxt = data.sentence
         colorId = data.id
         open()
     }
@@ -42,7 +42,7 @@ Popup {
 
         Text {
             color: "#222222"
-            text: qsTr("Are you sure, you want to delete color") + " \"" + colorDeleter.colorName + "\"?"
+            text: qsTr("Are you sure, you want to delete sentence") + " \"" + sentenceDeleter.sentenceTxt + "\"?"
             font.pixelSize: 12
         }
 
@@ -53,7 +53,7 @@ Popup {
             Button {
                 Layout.fillWidth: true
                 text: qsTr("Cancel")
-                onClicked: colorDeleter.close()
+                onClicked: sentenceDeleter.close()
             }
 
             Button {
@@ -64,8 +64,8 @@ Popup {
                 textColor: "#FFFFFF"
 
                 onClicked: {
-                    colorDeleter.deleteClicked(colorDeleter.colorId)
-                    colorDeleter.close()
+                    sentenceDeleter.deleteClicked(sentenceDeleter.colorId)
+                    sentenceDeleter.close()
                 }
             }
        }

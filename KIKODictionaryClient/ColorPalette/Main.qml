@@ -38,6 +38,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import QtExampleStyle
+
 Window {
     id: window
     width: 450
@@ -102,6 +104,9 @@ Window {
                     action: navigateBackAction
                     visible: true
                 }
+            }
+            background: Rectangle{
+                color: UIStyle.colorPrimary
             }
         }
 

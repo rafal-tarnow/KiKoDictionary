@@ -34,12 +34,14 @@ Rectangle {
         ListElement {
             title: qsTr("Public REST API Test Server")
             url: "https://reqres.in/api"
+            //url: "http://192.168.0.129:49425/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/testserver.png"
         }
         ListElement {
-            title: qsTr("Qt-based REST API server")
-            url: "http://192.168.0.129:49425/api"
-            //url: "http://127.0.0.1:8000/api"
+            title: qsTr("DastAPI REST API server")
+            //////url: "http://192.168.0.129:49425/api"
+            url: "http://192.168.0.129:8000/api"
+            //url: "https://192.168.0.129:8000/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
     }
