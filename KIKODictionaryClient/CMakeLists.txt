@@ -7,18 +7,18 @@ project(KIKODictionaryClient LANGUAGES CXX)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 qt_standard_project_setup(REQUIRES 6.8)
 
-qt_add_executable(colorpaletteclient
+qt_add_executable(dudu
     main.cpp
 )
 
-set_target_properties(colorpaletteclient PROPERTIES
+set_target_properties(dudu PROPERTIES
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
 )
 
 add_subdirectory(QtExampleStyle)
 
-qt_add_qml_module(colorpaletteclient
+qt_add_qml_module(dudu
     URI ColorPalette
     QML_FILES
         ColorPalette/Main.qml
@@ -54,14 +54,14 @@ qt_add_qml_module(colorpaletteclient
         QML_FILES ColorPalette/SentenceDialogDelete.qml
 )
 
-qt_add_resources(colorpaletteclient "assets"
+qt_add_resources(dudu "assets"
     PREFIX
         "/"
     FILES
         assets/server.crt
 )
 
-target_link_libraries(colorpaletteclient PRIVATE
+target_link_libraries(dudu PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -69,14 +69,14 @@ target_link_libraries(colorpaletteclient PRIVATE
 )
 
 
-install(TARGETS colorpaletteclient
+install(TARGETS dudu
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 qt_generate_deploy_qml_app_script(
-    TARGET colorpaletteclient
+    TARGET dudu
     OUTPUT_SCRIPT deploy_script
     MACOS_BUNDLE_POST_BUILD
     NO_UNSUPPORTED_PLATFORM_ERROR
