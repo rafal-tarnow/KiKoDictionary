@@ -7,6 +7,19 @@ project(KIKODictionaryClient LANGUAGES CXX)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 qt_standard_project_setup(REQUIRES 6.8)
 
+# Add SSL android support
+if (ANDROID)
+    include(FetchContent)
+    FetchContent_Declare(
+        android_openssl
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        URL https://github.com/KDAB/android_openssl/archive/refs/heads/master.zip
+    )
+    FetchContent_MakeAvailable(android_openssl)
+    include(${android_openssl_SOURCE_DIR}/android_openssl.cmake)
+endif()
+
+
 qt_add_executable(dudu
     main.cpp
 )
@@ -53,6 +66,11 @@ qt_add_qml_module(dudu
         qtquickcontrols2.conf
         QML_FILES ColorPalette/SentenceDialogDelete.qml
 )
+
+# add SSL support for android
+if (ANDROID)
+    add_android_openssl_libraries(dudu)
+endif()
 
 qt_add_resources(dudu "assets"
     PREFIX

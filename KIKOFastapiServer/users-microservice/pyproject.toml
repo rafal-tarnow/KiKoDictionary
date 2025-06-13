@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "users-microservice"
+version = "0.1.0"
+description = ""
+authors = ["Rafal Kruszyna <rafal.kruszyna@gmail.com>"]
+package-mode = false
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.12"
+uvicorn = {extras = ["standard"], version = "^0.34.3"}
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.41"}
+pydantic = {extras = ["email"], version = "^2.11.5"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
+python-dotenv = "^1.1.0"
+httpx = "^0.28.1"
+alembic = "^1.16.1"
+asyncpg = "^0.30.0"
+aiosqlite = "^0.21.0"
+pydantic-settings = "^2.9.1"
+python-multipart = "^0.0.20"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.0"
+pytest-asyncio = "^1.0.0"
+pytest-mock = "^3.14.1"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

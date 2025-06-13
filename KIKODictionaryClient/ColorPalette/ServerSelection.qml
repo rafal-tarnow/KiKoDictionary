@@ -39,9 +39,12 @@ Rectangle {
         }
         ListElement {
             title: qsTr("DastAPI REST API server")
-            //////url: "http://192.168.0.129:49425/api"
+            url: "https://sentences.rafal-kruszyna.org/api"
+            icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
+        }
+        ListElement {
+            title: qsTr("DastAPI REST API server")
             url: "http://192.168.0.129:8000/api"
-            //url: "https://192.168.0.129:8000/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
     }
@@ -49,7 +52,7 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
+        anchors.margins: 10
         spacing: 10
 
         Image {
@@ -57,11 +60,14 @@ Rectangle {
             source: "qrc:/qt/qml/ColorPalette/icons/qt.png"
             fillMode: Image.PreserveAspectFit
             Layout.preferredWidth: 20
+            Layout.preferredHeight: 50
         }
 
         Label {
             text: qsTr("Choose a server")
             Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: 50
+
             font.pixelSize: 24
         }
 
@@ -78,7 +84,7 @@ Rectangle {
             border.color: ListView.view.currentIndex === index ? "#2CDE85" : "#E0E2E7"
             border.width: 2
 
-            implicitWidth: 180
+            implicitWidth: 250
             implicitHeight: 100
 
             Rectangle {
@@ -134,18 +140,25 @@ Rectangle {
         ListView {
             id: serverList
             Layout.alignment: Qt.AlignHCenter
-            Layout.minimumWidth: 180 * server.count + 20
-            Layout.minimumHeight: 100
-            orientation: ListView.Horizontal
+            Layout.minimumHeight: 200
+            Layout.preferredWidth: 250
+            //Layout.preferredHeight: parent.height*0.6
+            Layout.fillHeight: true
+            orientation: ListView.Vertical
+            clip: true
 
             model: server
             spacing: 20
 
-            delegate: ServerListDelegate {}
+            delegate: ServerListDelegate {
+            }
         }
+
+
 
         Button {
             Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: 40
             text: restPalette.sslSupported ? qsTr("Connect (SSL)") : qsTr("Connect")
 
             buttonColor: "#2CDE85"
@@ -174,6 +187,7 @@ Rectangle {
             }
             onTriggered: busyIndicatorPopup.close()
         }
+
     }
 
     onVisibleChanged: {if (!visible) busyIndicatorPopup.close();}
@@ -241,5 +255,13 @@ Rectangle {
 
         }
 
+    }
+
+    Text{
+        font.pointSize: 5
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        color: "red"
+        text: "build: 2"
     }
 }

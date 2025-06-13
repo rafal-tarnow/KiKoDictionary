@@ -204,7 +204,7 @@ Window {
 
         PaginatedResource {
             id: sentences
-            path: "sentences"
+            path: "sentences/"
         }
 
         PaginatedResource {
