@@ -8,7 +8,7 @@ from src.db.session import get_db
 from src.db.models.user import Base
 
 # Create an in-memory SQLite database for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+TEST_DATABASE_URL = "sqlite+aiosqlite:///test.db"
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
 TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession
