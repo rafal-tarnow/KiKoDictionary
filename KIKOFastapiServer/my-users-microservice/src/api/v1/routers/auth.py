@@ -17,6 +17,10 @@ async def register_user(user_in: user_schema.UserCreate,
     if db_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     
+    db_user = await repo.get_by_username(username=user_in.username)
+    if db_user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+    
     # Create user
     user = await repo.create(user_data=user_in)
     return user

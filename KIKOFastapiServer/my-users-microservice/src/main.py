@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from src.api.v1.routers import auth
 from src.db.models.user import Base
 from src.db.session import engine
+import yaml
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +26,20 @@ app = FastAPI(
 
 
 app.include_router(auth.router)
+
+
+@app.get("/docs.yaml")
+async def yaml_docs():
+    try:
+        openapi_schema = app.openapi()
+        yaml_content = yaml.dump(openapi_schema, sort_keys=False)
+        return Response(
+            content=yaml_content,
+            media_type="application/yaml",
+            headers={"Content-Disposition": "attachment; filename=docs.yaml"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating YAML: {str(e)}")
 
 
 @app.get("/", tags=['Health Check'])

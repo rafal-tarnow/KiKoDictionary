@@ -110,3 +110,17 @@ async def test_post_register_user_saves_to_database(client, valid_register_data)
         assert db_user.account_subscription == "FREE"
         assert db_user.created_at is not None
         assert pwd_context.verify(valid_register_data["password"], db_user.hashed_password)
+
+
+@pytest.mark.asyncio
+async def test_post_regitster_user_duplicate_username(client, valid_register_data):
+    response = client.post("/api/v1/auth/register", json=valid_register_data)
+    assert response.status_code == 201
+    assert response.json()["username"] == valid_register_data["username"]
+
+    duplicate_data = valid_register_data.copy()
+    duplicate_data["email"] = "different@example.com"
+    response = client.post("/api/v1/auth/register", json=duplicate_data)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail":"Username already taken"}
