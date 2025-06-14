@@ -38,13 +38,13 @@ Rectangle {
             icon: "qrc:/qt/qml/ColorPalette/icons/testserver.png"
         }
         ListElement {
-            title: qsTr("DastAPI REST API server")
+            title: qsTr("Production REST API server")
             url: "https://sentences.rafal-kruszyna.org/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
         ListElement {
-            title: qsTr("DastAPI REST API server")
-            url: "http://192.168.0.129:8000/api"
+            title: qsTr("Development REST API server")
+            url: "https://192.168.0.129:8000/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
     }

@@ -15,7 +15,7 @@ using namespace Qt::StringLiterals;
 
 static constexpr auto totalPagesField = "total_pages"_L1;
 static constexpr auto currentPageField = "page"_L1;
-static constexpr auto resourceId = "/%1"_L1;
+static constexpr auto resourceId = "%1"_L1;
 
 PaginatedResource::PaginatedResource(QObject *parent)
     : AbstractResource(parent)

@@ -110,4 +110,3 @@ async def test_post_register_user_saves_to_database(client, valid_register_data)
         assert db_user.account_subscription == "FREE"
         assert db_user.created_at is not None
         assert pwd_context.verify(valid_register_data["password"], db_user.hashed_password)
-
