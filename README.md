@@ -1,3 +1,13 @@
+# How to setup development enviroment and build
+
+## Client
+
+Open Qt Creator (6.9.1), open KIKODictionary Client CMake project, configure Qt Creator project as webassembly, android and desktop app, and run as normal Qt project 
+
+## Server
+
+Open server forlder in Visual Studio Code and selecto foloder with microservice , then read README.md for microservice
+
 # KiKoDictionary
 
 

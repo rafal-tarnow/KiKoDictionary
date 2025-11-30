@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "captchaclient.h"
+#include "./auth_service/AuthManager.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +12,9 @@ int main(int argc, char *argv[])
 
     CaptchaClient captchaClient;
     engine.rootContext()->setContextProperty("captchaClient", &captchaClient);
+
+    AuthManager authManager;
+    engine.rootContext()->setContextProperty("authManager", &authManager);
 
     // Rejestracja typu dla QML, jeśli chcesz go tworzyć dynamicznie w QML
     // qmlRegisterType<CaptchaClient>("dev.yourdomain.captcha", 1, 0, "CaptchaClient");

@@ -21,7 +21,13 @@ qt_add_qml_module(CaptchaQtTester
     URI "Tester"
     VERSION 1.0
     QML_FILES
-        qml/main.qml
+    qml/main.qml
+    SOURCES auth_service/AuthManager.hpp
+    SOURCES auth_service/AuthManager.cpp
+    QML_FILES qml/auth_service/AuthPage.qml
+    QML_FILES qml/auth_service/AuthLoginPage.qml
+    QML_FILES qml/common/ScrollablePage.qml
+    QML_FILES qml/auth_service/AuthRegisterPage.qml
 )
 
 target_link_libraries(CaptchaQtTester PRIVATE

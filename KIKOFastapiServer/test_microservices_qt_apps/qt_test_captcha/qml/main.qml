@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "./auth_service"
 // import Tester 1.0 // Potrzebne, jeśli używasz qmlRegisterType i tworzysz obiekt CaptchaClient w QML
 
 ApplicationWindow {
     visible: true
-    width: 400
+    width: 700
     height: 350
     title: "CAPTCHA Tester"
 
@@ -16,8 +17,13 @@ ApplicationWindow {
     // W tym przykładzie używamy setContextProperty, więc captchaClient jest dostępne globalnie.
 
     ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 10
+        id: captchaPage
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        width: parent.width/3
+
+        anchors.margins: 5
         spacing: 10
 
         Button {
@@ -84,5 +90,23 @@ ApplicationWindow {
                    captchaClient.verificationResult.startsWith("Result: INVALID") ? "red" :
                    captchaClient.verificationResult.startsWith("Error:") ? "darkred" : "black"
         }
+    }
+
+    AuthRegisterPage{
+        id: registerPage
+        anchors.left: captchaPage.right
+        anchors.right: loginPage.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.margins: 5
+    }
+
+    AuthLoginPage{
+    id: loginPage
+       anchors.top: parent.top
+       anchors.bottom: parent.bottom
+       anchors.right: parent.right
+       width: parent.width/3
+       anchors.margins: 5
     }
 }

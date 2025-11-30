@@ -124,3 +124,35 @@ async def test_post_regitster_user_duplicate_username(client, valid_register_dat
 
     assert response.status_code == 409
     assert response.json() == {"detail":"Username already taken"}
+
+
+@pytest.mark.asyncio
+async def test_logout_user(client, valid_register_data):
+    # 1. Zarejestruj i zaloguj użytkownika, aby uzyskać tokeny
+    client.post("/api/v1/auth/register", json=valid_register_data)
+    login_payload = {
+        "username": valid_register_data["email"],
+        "password": valid_register_data["password"]
+    }
+    login_response = client.post("/api/v1/auth/login", data=login_payload)
+    assert login_response.status_code == 200
+    tokens = login_response.json()
+    access_token = tokens["access_token"]
+    refresh_token = tokens["refresh_token"]
+
+    # 2. Sprawdź, czy chroniony endpoint działa
+    headers = {"Authorization": f"Bearer {access_token}"}
+    protected_response = client.get("/api/v1/data/test-data", headers=headers)
+    assert protected_response.status_code == 200
+
+    # 3. Wyloguj użytkownika
+    logout_response = client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert logout_response.status_code == 204
+
+     # 4. Sprawdź, czy odświeżenie tokena teraz zawiedzie
+    refresh_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert refresh_response.status_code == 401
+    assert "Invalid or expired refresh token" in refresh_response.json()["detail"]
+    
+
+

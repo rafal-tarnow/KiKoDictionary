@@ -2,7 +2,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from src.api.v1.routers import auth
+from src.api.v1.routers import test
 from src.db.models.user import Base
+from src.db.models.refresh_token import RefreshToken
 from src.db.session import engine
 import yaml
 
@@ -26,6 +28,7 @@ app = FastAPI(
 
 
 app.include_router(auth.router)
+app.include_router(test.router)
 
 
 @app.get("/docs.yaml")
