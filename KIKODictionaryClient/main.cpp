@@ -1,9 +1,12 @@
 // Copyright (C) 2023 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
+#include <QtGui/qguiapplication.h>
 #include <QtQml/qqmlapplicationengine.h>
 #include <QtQml/qqmlcontext.h>
-#include <QtGui/qguiapplication.h>
+#include "./AuthManager.hpp"
+#include "./CaptchaClient.hpp"
+
 //#include <QQuickStyle>
 
 
@@ -128,6 +131,13 @@ int main(int argc, char *argv[])
 
 
     QQmlApplicationEngine engine;
+
+    AuthManager authManager;
+    engine.rootContext()->setContextProperty("authManager", &authManager);
+
+    CaptchaClient captchaClient;
+    engine.rootContext()->setContextProperty("captchaClient", &captchaClient);
+
 #ifdef Q_OS_MACOS
     engine.addImportPath(app.applicationDirPath() + "/../PlugIns");
 #endif

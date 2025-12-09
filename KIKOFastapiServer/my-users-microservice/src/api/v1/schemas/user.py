@@ -20,6 +20,10 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserRegister(UserCreate):
+    captcha_id: UUID
+    captcha_answer: str
+    
 class UserPublic(UserBase):
     id: UUID
     account_role: AccountRole

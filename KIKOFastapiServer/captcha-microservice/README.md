@@ -23,3 +23,6 @@ open CaptchaQtTester form repo/KIKOFastapiServer/test_microservices_qt_apps/qt_t
 
 ## Docs
 http://127.0.0.1:8001/api/v1/docs
+
+# Dump project to file
+python dump_project.py

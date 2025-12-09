@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
+
 from src.api.v1.routers import auth
 from src.api.v1.routers import test
 from src.db.models.user import Base
 from src.db.models.refresh_token import RefreshToken
 from src.db.session import engine
+from src.api.v1.routers.health import health_router
+
 import yaml
 
 @asynccontextmanager
@@ -26,9 +30,26 @@ app = FastAPI(
     lifespan=lifespan
     )
 
+# <--- 2. Konfiguracja Middleware
+# W środowisku deweloperskim (Wasm lokalnie) najlepiej zezwolić na wszystko ("*")
+# W produkcji powinieneś tu wpisać konkretny adres, z którego serwowany jest plik .wasm/.html
+origins = [
+    "*", 
+    # "http://localhost:8000",
+    # "http://127.0.0.1:8000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # Zezwól na zapytania z tych źródeł
+    allow_credentials=True,
+    allow_methods=["*"],        # Zezwól na wszystkie metody (GET, POST, OPTIONS itd.)
+    allow_headers=["*"],        # Zezwól na wszystkie nagłówki (w tym Content-Type)
+)
 
 app.include_router(auth.router)
 app.include_router(test.router)
+app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
 
 
 @app.get("/docs.yaml")

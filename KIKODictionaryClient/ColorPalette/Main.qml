@@ -40,6 +40,10 @@ import QtQuick.Layouts
 
 import QtExampleStyle
 
+import "../health_page"
+import "../register_page"
+import "../captcha_page"
+
 Window {
     id: window
     width: 450
@@ -56,6 +60,9 @@ Window {
         serverview.visible = false;
         colorview.visible = false;
         sentencesGui.visible = false;
+        servicesHealthPage.visible = false
+        registerPage.visible = false
+        captchaPage.visible = false
     }
 
     Action {
@@ -77,7 +84,16 @@ Window {
             title: "Color View"
         }
         ListElement {
-            title: "Blue Circle"
+            title: "Sentences"
+        }
+        ListElement {
+            title: "Dbg health"
+        }
+        ListElement {
+            title: "Dbg register"
+        }
+        ListElement{
+            title: "Dbg captcha"
         }
     }
 
@@ -157,6 +173,36 @@ Window {
             colors: colors
             sentences: sentences
         }
+
+        ServicesHealthPage{
+            id: servicesHealthPage
+            anchors.margins: 1
+            anchors.top: menuBar.bottom
+            anchors.right: parent.right
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            visible: false
+        }
+
+        RegisterPage{
+            id: registerPage
+            anchors.margins: 1
+            anchors.top: menuBar.bottom
+            anchors.right: parent.right
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            visible: false
+        }
+
+        CaptchaPage{
+            id: captchaPage
+            anchors.margins: 1
+            anchors.top: menuBar.bottom
+            anchors.right: parent.right
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            visible: false
+        }
     }
 
     Drawer{
@@ -181,9 +227,16 @@ Window {
                         serverview.visible = true
                     } else if (title === "Color View") {
                         colorview.visible = true
-                    } else if (title === "Blue Circle") {
+                    } else if (title === "Sentences") {
                         sentencesGui.visible = true
+                    } else if (title === "Dbg health") {
+                        servicesHealthPage.visible = true
+                    } else if (title === "Dbg register") {
+                        registerPage.visible = true
+                    } else if (title === "Dbg captcha"){
+                        captchaPage.visible = true
                     }
+
                     drawer.close()
                 }
             }

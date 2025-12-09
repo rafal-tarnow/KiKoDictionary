@@ -25,7 +25,7 @@ class User(Base):
     account_role = Column(Enum(AccountRole), default=AccountRole.REGULAR, nullable=False)
 
     account_subscription = Column(Enum(AccountSubscription), default=AccountSubscription.FREE, nullable=False)
-    subscription_expires_at = Column(DateTime, nullable=True)
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

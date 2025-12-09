@@ -28,6 +28,9 @@ qt_add_qml_module(CaptchaQtTester
     QML_FILES qml/auth_service/AuthLoginPage.qml
     QML_FILES qml/common/ScrollablePage.qml
     QML_FILES qml/auth_service/AuthRegisterPage.qml
+    QML_FILES qml/health_page/ServicesHealthPage.qml
+    SOURCES ServerMonitor.h
+    SOURCES ServerMonitor.cpp
 )
 
 target_link_libraries(CaptchaQtTester PRIVATE

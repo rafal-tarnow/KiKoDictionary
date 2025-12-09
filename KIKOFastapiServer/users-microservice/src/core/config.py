@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
+    VERSION: str = "1.0.0"
     # JWT Settings
     SECRET_KEY: str = os.getenv("SECRET_KEY", "default_secret")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")

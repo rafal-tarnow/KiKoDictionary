@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.v1.endpoints import router as v1_router
+from src.api.endpoints.v1.endpoints import router as v1_router
+from src.api.endpoints.health import health_router
 from src.database.models import Base
 from src.database import engine
 from src.core.config import settings
@@ -26,6 +27,9 @@ Base.metadata.create_all(bind=engine)
 
 # Include API routes
 app.include_router(v1_router, prefix="/api/v1")
+
+# Include health router
+app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
 
 @app.on_event("startup")
 async def startup_event():

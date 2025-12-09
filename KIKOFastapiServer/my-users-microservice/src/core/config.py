@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
+    VERSION: str = "1.0.0"
+    CAPTCHA_SERVICE_URL: str = os.getenv("CAPTCHA_SERVICE_URL", "http://127.0.0.1:8001/api/v1") 
     # JWT Settings
     SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")

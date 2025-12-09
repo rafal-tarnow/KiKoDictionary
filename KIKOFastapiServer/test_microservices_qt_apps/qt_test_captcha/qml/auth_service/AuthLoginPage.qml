@@ -50,7 +50,7 @@ ScrollablePage {
             anchors.right: parent.right
             anchors.left: parent.left
             height: 10
-            color: authManager.loggedIn === "" ? "red" : "green"
+            color: authManager.loggedIn ? "green" : "red"
         }
 
         Button{

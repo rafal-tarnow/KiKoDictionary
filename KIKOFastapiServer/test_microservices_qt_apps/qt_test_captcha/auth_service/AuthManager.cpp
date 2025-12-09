@@ -79,6 +79,7 @@ void AuthManager::clearTokens()
 
 QString AuthManager::encryptToken(const QString &token) const
 {
+#warning "Ta metoda musi byc usunieta, jest niebezpieczna, nie nadaje sie na produkcje"
     if (token.isEmpty())
         return "";
     QByteArray data = token.toUtf8();
@@ -92,6 +93,7 @@ QString AuthManager::encryptToken(const QString &token) const
 
 QString AuthManager::decryptToken(const QString &encryptedToken) const
 {
+#warning "Ta metoda musi byc usunieta, jest niebezpieczna, nie nadaje sie na produkcje"
     if (encryptedToken.isEmpty())
         return "";
     QByteArray data = QByteArray::fromBase64(encryptedToken.toUtf8());
@@ -198,18 +200,19 @@ void AuthManager::getTestData()
 
 void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
 {
-    if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Response Login ERROR";
-        setResponseMessage(QString("%1 failed: %2").arg(operation, reply->errorString()));
+    // Czytaj status i body ZAWSZE, nawet jak jest błąd
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+
+    // Sprawdź czy to błąd sieciowy (brak internetu) czy błąd HTTP (zła odpowiedź serwera)
+    if (reply->error() != QNetworkReply::NoError && statusCode == 0) {
+        // statusCode == 0 oznacza zazwyczaj, że w ogóle nie połączono się z serwerem
+        setResponseMessage("Network error: " + reply->errorString());
         reply->deleteLater();
         return;
     }
-    qDebug() << "Response Login OK";
-    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    qDebug() << "Status code: " << statusCode;
-    QByteArray responseData = reply->readAll();
-    qDebug() << "responseData: " << responseData;
-    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+
     QString message;
 
     if (operation == "Register") {
@@ -263,6 +266,11 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
         } else {
             message = QString("Failed to get test data with status %1").arg(statusCode);
         }
+    }
+
+    if (message.isEmpty() && reply->error() != QNetworkReply::NoError) {
+        // Fallback dla innych błędów
+        message = "Error: " + reply->errorString();
     }
 
     setResponseMessage(message);

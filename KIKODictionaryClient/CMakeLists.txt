@@ -65,6 +65,19 @@ qt_add_qml_module(dudu
         icons/navi-drawer-svgrepo-com.svg
         qtquickcontrols2.conf
         QML_FILES ColorPalette/SentenceDialogDelete.qml
+        QML_FILES common/ScrollablePage.qml
+        QML_FILES health_page/ServicesHealthPage.qml
+        SOURCES ServerMonitor.h
+        SOURCES ServerMonitor.cpp
+        SOURCES ServerMonitor.cpp
+        SOURCES AuthManager.hpp
+        SOURCES AuthManager.cpp
+        QML_FILES register_page/RegisterPage.qml
+        QML_FILES common/ErrorDialog.qml
+        QML_FILES common/SuccessDialog.qml
+        SOURCES CaptchaClient.hpp
+        SOURCES CaptchaClient.cpp
+        QML_FILES captcha_page/CaptchaPage.qml
 )
 
 # add SSL support for android
