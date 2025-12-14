@@ -8,7 +8,7 @@ Group=rafal
 
 WorkingDirectory=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice
 
-ExecStart=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice/venv/bin/python3 main.py
+ExecStart=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice/venv_cap/bin/python3 main.py
 
 Restart=on-failure
 RestartSec=5s
