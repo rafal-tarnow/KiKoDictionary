@@ -1,5 +1,7 @@
 ## Run
 
+source venv/bin/activate
+python3 main.py
 
 Development enviroment run:
 
@@ -9,22 +11,19 @@ uvicorn main:app --host 192.168.0.129 --port 8000 \
   
 ## Deploy server
 
-Jak dostac sie na serwer?
-1. Polacz sie z siecia lokalna wifi w ktorej jest serwer
-2. Otworz PCMan-Qt
-3. Otworz lacze w pasku adresu:  sftp://rafal@mojserver.local/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/sentences-microservice
-4. Podaj haslo
-5. otowrzyc przegladarke i adres https://ssh.rafal-kruszyna.org
-6. podac haslo
 
 
-Install systemd service:
-sudo cp ./deploy_files/kiko-sentences.service /etc/systemd/system/kiko-sentences.service
 
 
-cat /etc/systemd/system/kiko-sentences.service
+## How to install app on new server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd systemd_files
+chmod +x install_systemd_service.sh
+./install_systemd_service.sh
+sudo systemctl enable --now maia-sentences.service
 
-Systemd service
-sudo systemctl status kiko-sentences.service
-sudo systemctl start kiko-sentences.servicesudo 
-sudo systemctl restart kiko-sentences.service
+sudo systemctl start maia-sentences.service
+sudo systemctl status maia-sentences.service
+sudo systemctl restart maia-sentences.service

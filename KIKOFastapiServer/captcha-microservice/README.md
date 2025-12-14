@@ -25,7 +25,15 @@ source venv_cap/bin/activate
 uvicorn src.main:app --host 0.0.0.0 --port 8001
 
 ## How to install app on new server
+python3 -m venv venv_cap
+source venv_cap/bin/activate
+pip install -r requirements.txt
+cd systemd_files
+chmod +x install_systemd_service.sh
+./install_systemd_service.sh
+sudo systemctl start maia-captcha.service
 
+sudo systemctl status maia-captcha.service
 
 ## Test captcha
 open CaptchaQtTester form repo/KIKOFastapiServer/test_microservices_qt_apps/qt_test_captcha , start microservice as describled above, and run qt app

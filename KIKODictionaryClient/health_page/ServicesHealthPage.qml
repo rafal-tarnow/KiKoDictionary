@@ -6,16 +6,18 @@ ScrollablePage {
     id: page
 
     Column{
+        spacing: 15
         Row{
             spacing: 15
             ServerMonitor{
                 id: captchaServerMonitor
                 //serverUrl: "http://127.0.0.1:8001"
+
                 serverUrl: "http://192.168.0.117:8001"
             }
 
             Label{
-                text: qsTr("captha-microservice")
+                text: qsTr("captcha-microservice\n" + captchaServerMonitor.serverUrl)
             }
             Rectangle{
                 height: 10
@@ -23,6 +25,24 @@ ScrollablePage {
                 color: captchaServerMonitor.isAlive ? "lightgreen" : "red"
             }
         }
+
+        Row{
+            spacing: 15
+            ServerMonitor{
+                id: captchaServerMonitor_2
+                serverUrl: "https://captcha.rafal-kruszyna.org:8001"
+            }
+
+            Label{
+                text: qsTr("captha-microservice\n" + captchaServerMonitor_2.serverUrl)
+            }
+            Rectangle{
+                height: 10
+                width: 10
+                color: captchaServerMonitor_2.isAlive ? "lightgreen" : "red"
+            }
+        }
+
         Row{
             spacing: 15
             ServerMonitor{

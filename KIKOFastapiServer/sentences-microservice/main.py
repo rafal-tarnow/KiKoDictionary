@@ -23,6 +23,8 @@ from routers import sentence
 from database import engine
 from models.sentence import Base
 
+from src.api.endpoints.health import health_router
+
 # Tworzenie tabel w bazie danych
 Base.metadata.create_all(bind=engine)
 
@@ -140,6 +142,7 @@ async def get_users(
 
 # Rejestracja routerów
 app.include_router(sentence.router)
+app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
 
 if __name__ == "__main__":
     import uvicorn
