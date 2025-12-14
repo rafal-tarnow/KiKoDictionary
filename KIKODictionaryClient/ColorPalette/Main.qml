@@ -43,6 +43,7 @@ import QtExampleStyle
 import "../health_page"
 import "../register_page"
 import "../captcha_page"
+import "../login_page"
 
 Window {
     id: window
@@ -62,6 +63,7 @@ Window {
         sentencesGui.visible = false;
         servicesHealthPage.visible = false
         registerPage.visible = false
+        loginDbgPage.visible = false
         captchaPage.visible = false
     }
 
@@ -73,6 +75,13 @@ Window {
         onTriggered: {
             drawer.open()
         }
+    }
+
+    LoginDialog{
+        id: loginDialog
+    }
+    LoginRegisterDialog{
+        id: loginRegisterDialog
     }
 
     ListModel {
@@ -92,6 +101,9 @@ Window {
         ListElement {
             title: "Dbg register"
         }
+        ListElement {
+            title: "Dbg login"
+        }
         ListElement{
             title: "Dbg captcha"
         }
@@ -104,6 +116,8 @@ Window {
         width: window.width > 500 ? 500 : window.width
         anchors.top: parent.top
         anchors.bottom: parent.bottom
+        border.width: 1
+        border.color: "blue"
 
         ToolBar {
             id: menuBar
@@ -120,9 +134,30 @@ Window {
                     action: navigateBackAction
                     visible: true
                 }
+                Item{
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+               }
+                RoundButton{
+                    id: userButton
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: menuBar.background.height
+                    icon.source: authManager.loggedIn ? "qrc:/qt/qml/ColorPalette/icons/user_logged.svg" : "qrc:/qt/qml/ColorPalette/icons/user.svg"
+                    icon.color: "transparent"
+                    icon.height: userButton.height * 0.7
+                    icon.width: userButton.height * 0.7
+                    padding: 0
+                    onClicked: {
+                        loginDialog.open()
+                        //loginRegisterDialog.open()
+                    }
+                    background: null
+                }
             }
             background: Rectangle{
                 color: UIStyle.colorPrimary
+                border.width: 1
+                border.color: "yellow"
             }
         }
 
@@ -194,6 +229,16 @@ Window {
             visible: false
         }
 
+        LoginTestPage{
+            id: loginDbgPage
+            anchors.margins: 1
+            anchors.top: menuBar.bottom
+            anchors.right: parent.right
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            visible: false
+        }
+
         CaptchaPage{
             id: captchaPage
             anchors.margins: 1
@@ -233,6 +278,8 @@ Window {
                         servicesHealthPage.visible = true
                     } else if (title === "Dbg register") {
                         registerPage.visible = true
+                    } else if (title === "Dbg login") {
+                        loginDbgPage.visible = true
                     } else if (title === "Dbg captcha"){
                         captchaPage.visible = true
                     }

@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(KIKODictionaryClient LANGUAGES CXX)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # Add SSL android support
@@ -61,6 +61,7 @@ qt_add_qml_module(dudu
         icons/ok.svg
         icons/update.svg
         icons/user.svg
+        icons/user_logged.svg
         icons/plus.svg
         icons/navi-drawer-svgrepo-com.svg
         qtquickcontrols2.conf
@@ -78,6 +79,12 @@ qt_add_qml_module(dudu
         SOURCES CaptchaClient.hpp
         SOURCES CaptchaClient.cpp
         QML_FILES captcha_page/CaptchaPage.qml
+        QML_FILES login_page/LoginTestPage.qml
+        QML_FILES login_page/LoginDialog.qml
+        QML_FILES login_page/LoginComponent.qml
+        QML_FILES common/CaptchaImage.qml
+        QML_FILES common/CaptchaComponent.qml
+        QML_FILES login_page/LoginRegisterDialog.qml
 )
 
 # add SSL support for android
@@ -97,6 +104,7 @@ target_link_libraries(dudu PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::QuickControls2
 )
 
 

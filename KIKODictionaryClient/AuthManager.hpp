@@ -36,7 +36,8 @@ signals:
     void refreshTokenChanged();
     void responseMessageChanged();
     void loggedInChanged();
-    void success(QString success);
+    void registerSuccess(QString success);
+    void loginSuccess(QString success);
     void error(QString error);
 
 public slots:

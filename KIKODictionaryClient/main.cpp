@@ -7,8 +7,8 @@
 #include "./AuthManager.hpp"
 #include "./CaptchaClient.hpp"
 
-//#include <QQuickStyle>
-
+#include <QQuickStyle>
+#include <QSettings>
 
 // #include <QFile>
 // #include <QSslCertificate>
@@ -102,18 +102,17 @@
 //     qDebug() << "Konfiguracja SSL zaktualizowana o własny certyfikat.";
 // }
 
-
-
+#include <QTimer>
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    //QQuickStyle::setStyle(QLatin1String("Material"));
+    app.setOrganizationName("rafal_kruszyna_org");
+    app.setApplicationName("Maia Lang");
 
-
-
-
+    QQuickStyle::setStyle("Basic");
+    QQuickStyle::setFallbackStyle("Basic");
 
     // // Przykład użycia funkcji
     // QString certPath = "/home/rafal/fastapi_ssl/server.crt"; // Podaj ścieżkę do certyfikatu
@@ -146,6 +145,26 @@ int main(int argc, char *argv[])
     engine.loadFromModule("ColorPalette", "Main");
     //engine.load("http://127.0.0.1/Main.qml");
     //engine.load("/home/rafal/Dokumenty/GITHUB_MOJE/rafal-tarnow.github.io/PROJECT_qml_site/Main.qml");
+
+    qDebug() << "START App !!!!!!!!!!!!!!!!!!!!!!!!!";
+
+    // QSettings settings;
+    // int count = settings.value("launch_count", 0).toInt();
+    // count++;
+    // settings.setValue("launch_count", count);
+
+    // qDebug() << "launch_count = " << count;
+
+    QTimer::singleShot(3000, []() {
+        qDebug() << "Wykonuje opozniony zapis do settings...";
+
+        QSettings settings;
+        int count = settings.value("launch_count", 0).toInt();
+        count++;
+        settings.setValue("launch_count", count);
+
+        qDebug() << "launch_count zaktualizowany (w timerze) = " << count;
+    });
 
     return QGuiApplication::exec();
 }

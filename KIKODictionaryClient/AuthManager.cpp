@@ -236,7 +236,7 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
         if (statusCode == 201) {
             QJsonObject json = doc.object();
             message = QString("Registered user: %1").arg(json["username"].toString());
-            emit success(message);
+            emit registerSuccess(message);
 
             // Czyścimy captchę po sukcesie
             m_captchaClient->clear();
@@ -270,6 +270,7 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
             QJsonObject json = doc.object();
             setAccessToken(json["access_token"].toString());
             setRefreshToken(json["refresh_token"].toString());
+            emit loginSuccess(message);
             message = "Login successful";
         } else if (statusCode == 401) {
             message = "Login failed: Incorrect username or password";

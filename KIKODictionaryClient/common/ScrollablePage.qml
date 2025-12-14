@@ -5,6 +5,7 @@ Page {
     id: page
 
     default property alias content: pane.contentItem
+    clip: true
 
     Flickable {
         anchors.fill: parent
