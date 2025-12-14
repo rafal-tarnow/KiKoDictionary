@@ -23,6 +23,9 @@ echo 'source "/home/rafal/Qt/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
 
 # Jak polaczayc sie z serwerem
 
+## IP serwera w sieci lokalnej
+192.168.0.117
+
 ## Polaczenie Lokalnie w tej samej sieci
 Za pomoca terminala
 ssh rafal@mojserver.local/home/rafal
