@@ -10,7 +10,8 @@ ScrollablePage {
             spacing: 15
             ServerMonitor{
                 id: captchaServerMonitor
-                serverUrl: "http://127.0.0.1:8001"
+                //serverUrl: "http://127.0.0.1:8001"
+                serverUrl: "http://192.168.0.117:8001"
             }
 
             Label{
