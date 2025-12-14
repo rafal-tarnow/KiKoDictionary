@@ -1,0 +1,17 @@
+[Unit]
+Description=Maia Captcha API Service
+After=network.target
+
+[Service]
+User=rafal
+Group=rafal
+
+WorkingDirectory=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice
+
+ExecStart=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice/venv/bin/python3 main.py
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

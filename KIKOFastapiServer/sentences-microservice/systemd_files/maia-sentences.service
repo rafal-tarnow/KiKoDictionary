@@ -1,5 +1,5 @@
 [Unit]
-Description=KIKO Sentences API Service
+Description=Maia Sentences API Service
 After=network.target
 
 [Service]
