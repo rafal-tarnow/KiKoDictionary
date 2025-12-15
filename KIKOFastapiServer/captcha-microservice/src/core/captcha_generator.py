@@ -25,7 +25,8 @@ class CaptchaGenerator:
         
         # Try to load a font, fallback to default if not available
         try:
-            font = ImageFont.truetype("arial.ttf", self.font_size)
+            #font = ImageFont.truetype("../../assets/fonts/Domestic_Manners.ttf", self.font_size)
+            font = ImageFont.truetype("../../assets/fonts/Arial.ttf", self.font_size)
         except:
             font = ImageFont.load_default()
 

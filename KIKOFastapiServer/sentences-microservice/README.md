@@ -23,5 +23,6 @@ chmod +x install_systemd_service.sh
 sudo systemctl enable --now maia-sentences.service
 
 sudo systemctl start maia-sentences.service
+sudo systemctl stop maia-sentences.service
 sudo systemctl status maia-sentences.service
 sudo systemctl restart maia-sentences.service
