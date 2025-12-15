@@ -1,45 +1,39 @@
-import pytest_asyncio
-from typing import AsyncGenerator
-from httpx import AsyncClient
+# tests/conftest.py
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
 from src.main import app
 from src.db.session import get_db
 from src.db.models.user import Base
-from src.services.captcha_service import CaptchaService
 
-# Use an in-memory SQLite database for testing
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+# Create an in-memory SQLite database for tests
+TEST_DATABASE_URL = "sqlite+aiosqlite:///test.db"
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession
+)
 
-engine = create_async_engine(TEST_DATABASE_URL, echo=True)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
-
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def setup_database():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+# Override the get_db dependency to use the test database
+async def override_get_db():
     async with TestingSessionLocal() as session:
         yield session
 
-# Mock Captcha Service
-class MockCaptchaService:
-    async def verify(self, captcha_id: str, answer: str) -> bool:
-        # For testing, we can have a simple logic
-        return answer == "VALID"
-
-def override_get_captcha_service():
-    return MockCaptchaService()
-
 app.dependency_overrides[get_db] = override_get_db
-app.dependency_overrides[CaptchaService] = override_get_captcha_service
 
-@pytest_asyncio.fixture()
-async def client() -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(app=app, base_url="http://test") as c:
-        yield c
+# Create a test client fixture
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+# Fixture to set up and tear down the database for each test
+@pytest.fixture(autouse=True, scope="function")
+async def setup_database():
+    # Create tables before each test
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)  # Ensure clean state
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Clean up after each test
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)

@@ -1,28 +1,34 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from src.db.models.user import AccountType
+from src.db.models.user import AccountRole, AccountSubscription
 
-# Base properties shared by all user schemas
 class UserBase(BaseModel):
     email: EmailStr
     username: str
 
-# Properties to receive via API on creation
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        if not value or value.isspace():
+            raise ValueError("The username cannot be empty or consist only of whitespace.")
+        if value != value.strip():
+            raise ValueError("The username cannot contain spaces at the beginning or end.")
+        return value
+
 class UserCreate(UserBase):
     password: str
-    captcha_id: str
-    captcha_answer: str
 
-# Properties to return to the client
-class UserPublic(BaseModel):
+class UserRegister(UserCreate):
+    captcha_id: UUID
+    captcha_answer: str
+    
+class UserPublic(UserBase):
     id: UUID
-    username: str
-    email: EmailStr
-    account_type: AccountType
+    account_role: AccountRole
+    account_subscription: AccountSubscription
     subscription_expires_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True # Pydantic v2
+    model_config = ConfigDict(from_attributes=True)

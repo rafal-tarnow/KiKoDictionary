@@ -123,7 +123,7 @@ async def get_users(
             "email": user["email"],
             "first_name": user["first_name"],
             "last_name": user["last_name"],
-            "avatar": f"http://127.0.0.1:8000{user['avatar']}",
+            "avatar": f"http://127.0.0.1:8003{user['avatar']}",
             "createdAt": current_time,
             "updatedAt": current_time
         })
@@ -146,4 +146,4 @@ app.include_router(health_router, prefix="/health", tags=["Health & Operations"]
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8003)
