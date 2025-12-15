@@ -6,7 +6,7 @@ CaptchaClient::CaptchaClient(QObject *parent)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_isLoading(false)
     //, m_baseUrl("http://127.0.0.1:8001/api/v1") // ZMIEŃ JEŚLI TRZEBA
-    , m_baseUrl("https://captcha.rafal-kruszyna.org:443/api/v1") // ZMIEŃ JEŚLI TRZEBA
+    , m_baseUrl("https://maia-captcha.rafal-kruszyna.org:443/api/v1") // ZMIEŃ JEŚLI TRZEBA
 {}
 
 void CaptchaClient::fetchCaptcha()

@@ -39,7 +39,7 @@ Rectangle {
         }
         ListElement {
             title: qsTr("Production REST API server")
-            url: "https://sentences.rafal-kruszyna.org/api"
+            url: "https://maia-sentences.rafal-kruszyna.org/api"
             icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
         }
         ListElement {

@@ -46,28 +46,12 @@ ScrollablePage {
                 color: usersMicroservicMonitor.isAlive ? "lightgreen" : "red"
             }
         }
-        Row{
-            spacing: 15
-            ServerMonitor{
-                id: myUsersMicroservicMonitor
-                serverUrl: "http://localhost:8003"
-            }
-
-            Label{
-                text: qsTr("my-users-microservice\n" + myUsersMicroservicMonitor.serverUrl)
-            }
-            Rectangle{
-                height: 10
-                width: 10
-                color: myUsersMicroservicMonitor.isAlive ? "lightgreen" : "red"
-            }
-        }
 
         Row{
             spacing: 15
             ServerMonitor{
                 id: sentencesServerMonitor_2
-                serverUrl: "http://127.0.0.1:8000"
+                serverUrl: "http://127.0.0.1:8003"
             }
 
             Label{
@@ -92,7 +76,7 @@ ScrollablePage {
             spacing: 15
             ServerMonitor{
                 id: captchaServerMonitor_2
-                serverUrl: "https://captcha.rafal-kruszyna.org:443"
+                serverUrl: "https://maia-captcha.rafal-kruszyna.org:443"
             }
 
             Label{
@@ -109,7 +93,7 @@ ScrollablePage {
             spacing: 15
             ServerMonitor{
                 id: sentencesServerMonitor
-                serverUrl: "https://sentences.rafal-kruszyna.org:443"
+                serverUrl: "https://maia-sentences.rafal-kruszyna.org:443"
             }
 
             Label{
