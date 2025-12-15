@@ -1,7 +1,5 @@
 ## Run
 
-source venv/bin/activate
-python3 main.py
 
 Development enviroment run:
 
@@ -12,9 +10,6 @@ uvicorn main:app --host 192.168.0.129 --port 8000 \
 ## Deploy server
 
 
-## Zrzucic biblioteki z env do pliku
-python3 -m venv venv
-pip freeze > requirements.txt
 
 
 
