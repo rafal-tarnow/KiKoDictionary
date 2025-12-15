@@ -1,9 +1,8 @@
-from PIL import Image, ImageDraw, ImageFont
 import random
 import string
-import io
 import base64
 from typing import Tuple
+from captcha.image import ImageCaptcha  # To musisz mieć zainstalowane
 
 class CaptchaGenerator:
     def __init__(self, width: int, height: int, length: int):
@@ -11,39 +10,24 @@ class CaptchaGenerator:
         self.height = height
         self.length = length
         self.characters = string.ascii_uppercase + string.digits
-        self.font_size = int(height * 0.5)
+        # Inicjalizacja generatora z biblioteki.
+        # Nie podajemy argumentu 'fonts', więc biblioteka użyje swoich WBUDOWANYCH czcionek.
+        # To gwarantuje identyczny wygląd na każdym systemie (Dev/Prod).
+        self.image_generator = ImageCaptcha(width=self.width, height=self.height)
 
     def generate_captcha(self) -> Tuple[str, str]:
-        # Generate random text
+        # Generowanie losowego tekstu
         text = ''.join(random.choice(self.characters) for _ in range(self.length))
         
         print(f"CAPTCHA TEXT = {text}")
 
-        # Create image
-        image = Image.new('RGB', (self.width, self.height), color='white')
-        draw = ImageDraw.Draw(image)
+        # Generowanie obrazka przez bibliotekę
+        # Metoda generate zwraca obiekt BytesIO (strumień bajtów)
+        data = self.image_generator.generate(text)
         
-        # Try to load a font, fallback to default if not available
-        try:
-            #font = ImageFont.truetype("../../assets/fonts/Domestic_Manners.ttf", self.font_size)
-            font = ImageFont.truetype("../../assets/fonts/Arial.ttf", self.font_size)
-        except:
-            font = ImageFont.load_default()
+        # Konwersja strumienia bajtów na base64 (tak jak w Twoim oryginale)
+        # getvalue() pobiera surowe bajty PNG
+        img_str = base64.b64encode(data.getvalue()).decode()
 
-        # Add text to image
-        text_width = draw.textlength(text, font=font)
-        text_position = ((self.width - text_width) / 2, (self.height - self.font_size) / 2)
-        draw.text(text_position, text, fill='black', font=font)
-
-        # Add noise
-        for _ in range(100):
-            x = random.randint(0, self.width)
-            y = random.randint(0, self.height)
-            draw.point((x, y), fill='gray')
-
-        # Convert to base64
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
-
+        # Zwracamy w formacie zgodnym z Twoim frontendem/API
         return text, f"data:image/png;base64,{img_str}"
