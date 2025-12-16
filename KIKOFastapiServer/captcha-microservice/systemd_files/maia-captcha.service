@@ -9,7 +9,7 @@ Group=rafal
 # Ścieżka do katalogu projektu
 WorkingDirectory=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice
 
-ExecStart=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice/venv_cap/bin/uvicorn src.main:app --host 0.0.0.0 --port 8001
+ExecStart=/home/rafal/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice/.venv_cap/bin/uvicorn src.main:app --host 0.0.0.0 --port 8001
 
 Restart=on-failure
 RestartSec=5s

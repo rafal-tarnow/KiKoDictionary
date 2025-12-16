@@ -3,6 +3,10 @@
 ## Run first time 
 sudo apt install python3-poetry
 poetry config virtualenvs.in-project true
+
+Najczęstszym powodem zawieszania się Poetry na "Pending..." podczas pracy przez SSH jest Keyring (systemowy pęk kluczy) dlatego:
+
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 poetry install
 
 
