@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 void main() {
   runApp(const MyApp());
@@ -56,6 +57,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool isLoggedIn = false; 
   int _counter = 0;
 
   void _incrementCounter() {
@@ -86,6 +88,82 @@ class _MyHomePageState extends State<MyHomePage> {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        actions:[
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0), // Odstęp od krawędzi ekranu
+            child: PopupMenuButton<String>(
+              offset: Offset(0, 50),
+
+              // Wygląd przycisku (Ikona SVG w kółku)
+              icon: CircleAvatar(
+                radius: 18, // Rozmiar kółka
+                backgroundColor: Colors.grey[200], // Kolor tła kółka
+                child: SvgPicture.asset(
+                  '/icons/user.svg', // Ścieżka do Twojego SVG
+                  width: 20, // Dopasuj rozmiar samej ikony
+                  height: 20,
+                  // Opcjonalnie: zmień kolor ikony jeśli SVG na to pozwala
+                  colorFilter: ColorFilter.mode(Colors.black, BlendMode.srcIn), 
+                ),
+              ),
+
+                            // Logika po wybraniu opcji z menu
+              onSelected: (value) {
+                if (value == 'login') {
+                  setState(() => isLoggedIn = true);
+                  // Tu dodaj nawigację do ekranu logowania
+                } else if (value == 'logout') {
+                  setState(() => isLoggedIn = false);
+                  // Tu logika wylogowania
+                } else if (value == 'profile') {
+                  // Nawigacja do profilu
+                }
+              },
+
+              itemBuilder: (BuildContext context){
+                if (isLoggedIn) {
+                  // Menu dla zalogowanego użytkownika
+                  return [
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person, color: Colors.black54),
+                          SizedBox(width: 8),
+                          Text('Mój Profil (Status: OK)'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Wyloguj'),
+                        ],
+                      ),
+                    ),
+                  ];
+                } else {
+                  // Menu dla niezalogowanego (gościa)
+                  return [
+                    PopupMenuItem(
+                      value: 'login',
+                      child: Row(
+                        children: [
+                          Icon(Icons.login, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Zaloguj się'),
+                        ],
+                      ),
+                    ),
+                  ];
+                }
+              },
+            ),
+          )
+        ],
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
@@ -122,3 +200,4 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
