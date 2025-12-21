@@ -58,7 +58,7 @@ Window {
     }
 
     function hideAll(){
-        serverview.visible = false;
+        serverSelectionPage.visible = false;
         colorview.visible = false;
         sentencesGui.visible = false;
         servicesHealthPage.visible = false
@@ -69,7 +69,7 @@ Window {
 
     Action {
         id: navigateBackAction
-        icon.source: "qrc:/qt/qml/ColorPalette/icons/navi-drawer-svgrepo-com.svg"
+        icon.source: "qrc:/qt/qml/ColorPalette/assets/images/navi-drawer-svgrepo-com.svg"
         icon.width: 20
         icon.height: 20
         onTriggered: {
@@ -109,6 +109,11 @@ Window {
         }
     }
 
+    Action {
+        id: optionsMenuAction
+        //icon.name: "menu"
+        onTriggered: optionsMenu.open()
+    }
 
     Rectangle{
         color: "#ff8888"
@@ -142,7 +147,7 @@ Window {
                     id: userButton
                     Layout.fillHeight: true
                     Layout.preferredWidth: menuBar.background.height
-                    icon.source: authManager.loggedIn ? "qrc:/qt/qml/ColorPalette/icons/user_logged.svg" : "qrc:/qt/qml/ColorPalette/icons/user.svg"
+                    icon.source: authManager.loggedIn ? "qrc:/qt/qml/ColorPalette/assets/images/user_logged.svg" : "qrc:/qt/qml/ColorPalette/assets/images/user.svg"
                     icon.color: "transparent"
                     icon.height: userButton.height * 0.7
                     icon.width: userButton.height * 0.7
@@ -153,6 +158,32 @@ Window {
                     }
                     background: null
                 }
+                ToolButton{
+                    action: optionsMenuAction
+                    Menu {
+                        id: optionsMenu
+                        x: parent.width - width
+                        transformOrigin: Menu.TopRight
+
+                        Action {
+                            text: qsTr("Settings")
+                            //onTriggered: settingsDialog.open()
+                        }
+                        Action {
+                            text: qsTr("Help")
+                            //onTriggered: window.help()
+                        }
+                        Action {
+                            text: qsTr("About")
+                            //onTriggered: aboutDialog.open()
+                        }
+                        Action{
+                            text: qsTr("Logout")
+                            onTriggered: authManager.logoutUser()
+                        }
+                    }
+
+                }
             }
             background: Rectangle{
                 color: UIStyle.colorPrimary
@@ -162,7 +193,7 @@ Window {
         }
 
         ServerSelection {
-            id: serverview
+            id: serverSelectionPage
             anchors.margins: 1
             anchors.top: menuBar.bottom
             anchors.right: parent.right
@@ -172,9 +203,9 @@ Window {
             onServerSelected: {
                  colorview.visible = true;
                  sentencesGui.visible = false;
-                 serverview.visible = false
+                 serverSelectionPage.visible = false
                 console.log("QML on ServerSelection !!!")
-                if(serverview.visible === true){
+                if(serverSelectionPage.visible === true){
                     hideAll();
                     colorview.visible = true
                 }
@@ -182,6 +213,24 @@ Window {
             colorResources: colors
             restPalette: paletteService
             colorUsers: users
+
+            // onSentencesUrlChanged: {
+            //     console.log("Captcha_url = " + serverSelectionPage.captchaUrl )
+            //     console.log("Users_url = " + serverSelectionPage.usersUrl )
+            //     console.log("Sentences_url = " + serverSelectionPage.sentencesUrl )
+
+            // }
+
+            onUsersUrlChanged: {
+                console.log("Users_url = " + serverSelectionPage.usersUrl )
+
+                authManager.baseUrl = serverSelectionPage.usersUrl
+            }
+
+            Component.onCompleted: {
+                authManager.baseUrl = serverSelectionPage.usersUrl
+            }
+
         }
 
         ColorView {
@@ -269,7 +318,7 @@ Window {
                 onClicked: {
                     hideAll();
                     if (title === "Server selection") {
-                        serverview.visible = true
+                        serverSelectionPage.visible = true
                     } else if (title === "Color View") {
                         colorview.visible = true
                     } else if (title === "Sentences") {

@@ -62,7 +62,7 @@ Popup {
 
                     Image {
                         id: userMask
-                        source: "qrc:/qt/qml/ColorPalette/icons/userMask.svg"
+                        source: "qrc:/qt/qml/ColorPalette/assets/images/userMask.svg"
                         anchors.fill: userImage
                         anchors.margins: 4
                         visible: false

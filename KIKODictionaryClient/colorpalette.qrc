@@ -1,19 +1,20 @@
-<!-- This file only exists for qmake. -->
 <RCC>
-    <qresource prefix="qt/qml/ColorPalette">
-        <file>icons/qt.png</file>
-        <file>icons/testserver.png</file>
-        <file>icons/userMask.svg</file>
-        <file>icons/close.svg</file>
-        <file>icons/delete.svg</file>
-        <file>icons/dots.svg</file>
-        <file>icons/edit.svg</file>
-        <file>icons/login.svg</file>
-        <file>icons/logout.svg</file>
-        <file>icons/ok.svg</file>
-        <file>icons/update.svg</file>
-        <file>icons/user.svg</file>
-        <file>icons/plus.svg</file>
+    <qresource prefix="/qt/qml/ColorPalette">
+        <file>assets/images/close.svg</file>
+        <file>assets/images/delete.svg</file>
+        <file>assets/images/dots.svg</file>
+        <file>assets/images/edit.svg</file>
+        <file>assets/images/login.svg</file>
+        <file>assets/images/logout.svg</file>
+        <file>assets/images/navi-drawer-svgrepo-com.svg</file>
+        <file>assets/images/ok.svg</file>
+        <file>assets/images/plus.svg</file>
+        <file>assets/images/qt.png</file>
+        <file>assets/images/testserver.png</file>
+        <file>assets/images/update.svg</file>
+        <file>assets/images/user.svg</file>
+        <file>assets/images/user_logged.svg</file>
+        <file>assets/images/userMask.svg</file>
     </qresource>
     <qresource prefix="/qt/qml">
         <file>ColorPalette/Main.qml</file>

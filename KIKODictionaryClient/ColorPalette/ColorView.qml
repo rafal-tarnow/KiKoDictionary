@@ -92,7 +92,7 @@ Rectangle {
 
                             function getCurrentUserImage() {
                                 if (!root.loginService.loggedIn)
-                                    return "qrc:/qt/qml/ColorPalette/icons/user.svg";
+                                    return "qrc:/qt/qml/ColorPalette/assets/images/user.svg";
                                 for (let i = 0; i < users.data.length; i++) {
                                     if (users.data[i].email === loginService.user)
                                         return users.data[i].avatar;
@@ -102,7 +102,7 @@ Rectangle {
 
                         Image {
                             id: userMask
-                            source: "qrc:/qt/qml/ColorPalette/icons/userMask.svg"
+                            source: "qrc:/qt/qml/ColorPalette/assets/images/userMask.svg"
                             anchors.fill: userImage
                             anchors.margins: 4
                             visible: false
@@ -167,7 +167,7 @@ Rectangle {
 
             Image {
                 anchors.centerIn: parent
-                source: "qrc:/qt/qml/ColorPalette/icons/qt.png"
+                source: "qrc:/qt/qml/ColorPalette/assets/images/qt.png"
                 fillMode: Image.PreserveAspectFit
                 height: 25
             }

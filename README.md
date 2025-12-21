@@ -8,6 +8,15 @@ Open Qt Creator (6.9.1), open KIKODictionary Client CMake project, configure Qt 
 
 Open server forlder in Visual Studio Code and selecto foloder with microservice , then read README.md for microservice
 
+# How to run microservices on production
+
+Pobierz repozytorium, wejdz do katalogu z mikroserwisami, wykonaj skrypt:
+(skrypt doda uslugi systemowe systemd, oraz skonfiguruje srodowiska
+virtualne pip oraz poetry)
+
+chmod +x install_maia_systemd_microservices.sh
+./install_maia_systemd_microservices.sh
+
 # KiKoDictionary
 
 

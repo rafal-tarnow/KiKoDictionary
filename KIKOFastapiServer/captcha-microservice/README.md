@@ -15,18 +15,18 @@ git clone <repository-url>
 cd captcha_service
 
 ## First Run
-python3 -m venv .venv_cap
-source .venv_cap/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn src.main:app --host 0.0.0.0 --port 8001
 
 ## Run
-source .venv_cap/bin/activate
+source .venv/bin/activate
 uvicorn src.main:app --host 0.0.0.0 --port 8001
 
 ## How to install app on new server
-python3 -m venv .venv_cap
-source .venv_cap/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 cd systemd_files
 chmod +x install_systemd_service.sh

@@ -32,7 +32,7 @@ QtObject {
 
 
     function iconPath(baseImagePath) {
-        return `qrc:/qt/qml/ColorPalette/icons/${baseImagePath}.svg`
+        return `qrc:/qt/qml/ColorPalette/assets/images/${baseImagePath}.svg`
     }
 }
 

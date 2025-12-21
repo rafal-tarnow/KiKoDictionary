@@ -12,13 +12,13 @@ git pull origin main
 # --- Serwis 1 (PIP) ---
 cd ~/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/captcha-microservice
 # Usunąłem "python3 -m venv...", bo venv już tam jest
-source venv_cap/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 deactivate
 
 # --- Serwis 2 (PIP) ---
 cd ~/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/sentences-microservice
-source venv/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 deactivate
 

@@ -10,12 +10,35 @@ AuthManager::AuthManager(QObject *parent)
     : QObject(parent)
     , m_networkManager(this)
     , m_settings(this)
+    , m_baseUrl("http://localhost:8002") // Domyślna wartość
 {
     m_captchaClient = new CaptchaClient(this);
     loadTokens();
 }
 
 AuthManager::~AuthManager() {}
+
+// Implementacja settera dla BaseUrl
+void AuthManager::setBaseUrl(const QString &url)
+{
+    qDebug() << __PRETTY_FUNCTION__ << " = " << url;
+    QString cleanUrl = url;
+    // Usuwamy końcowy slash, jeśli użytkownik go podał (np. "http://localhost/"),
+    // aby przy sklejaniu z "/api/..." nie powstawało "//api/...".
+    if (cleanUrl.endsWith('/')) {
+        cleanUrl.chop(1);
+    }
+
+    if (m_baseUrl != cleanUrl) {
+        m_baseUrl = cleanUrl;
+        qDebug() << "Base URL changed to:" << m_baseUrl;
+        emit baseUrlChanged();
+
+        // OPCJONALNIE: Jeśli CaptchaClient też potrzebuje znać URL,
+        // tutaj powinieneś go zaktualizować, np.:
+        // m_captchaClient->setBaseUrl(m_baseUrl);
+    }
+}
 
 void AuthManager::setAccessToken(const QString &token)
 {
@@ -111,7 +134,6 @@ void AuthManager::registerUser(const QString &email,
                                const QString &password,
                                const QString &captchaAnswer)
 {
-    // 1. Sprawdzamy czy mamy ID captchy w naszym podobiekcie
     QString capId = m_captchaClient->captchaId();
 
     if (capId.isEmpty()) {
@@ -128,8 +150,6 @@ void AuthManager::registerUser(const QString &email,
     json["email"] = email;
     json["username"] = username;
     json["password"] = password;
-
-    // 2. Dodajemy dane Captcha do payloadu
     json["captcha_id"] = capId;
     json["captcha_answer"] = captchaAnswer;
 
@@ -216,14 +236,14 @@ void AuthManager::getTestData()
 
 void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
 {
-    // Czytaj status i body ZAWSZE, nawet jak jest błąd
     int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     QByteArray responseData = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(responseData);
 
-    // Sprawdź czy to błąd sieciowy (brak internetu) czy błąd HTTP (zła odpowiedź serwera)
+    qDebug() << "REPLY Status Code: " << statusCode;
+    qDebug() << "REPLY JsonDocument: " << doc;
+
     if (reply->error() != QNetworkReply::NoError && statusCode == 0) {
-        // statusCode == 0 oznacza zazwyczaj, że w ogóle nie połączono się z serwerem
         emit error("Network error: " + reply->errorString());
         setResponseMessage("Network error: " + reply->errorString());
         reply->deleteLater();
@@ -237,17 +257,12 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
             QJsonObject json = doc.object();
             message = QString("Registered user: %1").arg(json["username"].toString());
             emit registerSuccess(message);
-
-            // Czyścimy captchę po sukcesie
             m_captchaClient->clear();
-
         } else if (statusCode == 400) {
-            // Obsługa błędu Captcha (backend zwraca 400 jak jest zła odpowiedź)
             QString detail = doc.object()["detail"].toString();
             if (detail.contains("captcha", Qt::CaseInsensitive)
                 || detail.contains("answer", Qt::CaseInsensitive)) {
                 message = "Incorrect Captcha answer.";
-                // Automatycznie odśwież captchę, bo stare ID jest już spalone
                 m_captchaClient->fetchCaptcha();
             } else {
                 message = "Registration failed: " + detail;
@@ -270,10 +285,49 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
             QJsonObject json = doc.object();
             setAccessToken(json["access_token"].toString());
             setRefreshToken(json["refresh_token"].toString());
+            qDebug() << "Emit loginSuccess(message)";
             emit loginSuccess(message);
             message = "Login successful";
         } else if (statusCode == 401) {
-            message = "Login failed: Incorrect username or password";
+            // Pobieramy obiekt JSON z odpowiedzi (doc jest już sparsowany wyżej)
+            QJsonObject json = doc.object();
+
+            // Szukamy komunikatu w typowych polach (FastAPI zwykle używa "detail")
+            QString serverError = json["detail"].toString();
+
+            // Jak nie ma w "detail", sprawdźmy "message" (inny standard)
+            if (serverError.isEmpty()) {
+                serverError = json["message"].toString();
+            }
+
+            // WARUNEK: Jak serwer coś przysłał -> pokaż to. Jak nie -> tekst na sztywno.
+            if (!serverError.isEmpty()) {
+                message = "Login failed: " + serverError;
+            } else {
+                message = "Login failed: Incorrect username or password";
+            }
+
+            emit error(message);
+        } else if (statusCode == 404) {
+            // Tutaj logika z poprawek 404
+            QJsonObject json = doc.object();
+
+            if (json.isEmpty() && !responseData.isEmpty()) {
+                // Nie JSON = zły adres URL
+                message = QString("Error 404: Endpoint not found. Check URL: %1/api/v1/auth/login")
+                              .arg(m_baseUrl);
+                qDebug() << "[CRITICAL] Wrong API URL or Endpoint!";
+                qDebug() << "Raw response:" << responseData;
+            } else {
+                // JSON = backend zgłasza błąd logiczny
+                QString serverDetail = json["detail"].toString();
+                if (serverDetail.isEmpty())
+                    serverDetail = json["message"].toString();
+
+                message = serverDetail.isEmpty() ? "Resource not found (404)"
+                                                 : serverDetail; // Np. "User not found"
+            }
+            emit error(message);
         } else {
             message = QString("Login failed with status %1").arg(statusCode);
         }
@@ -308,7 +362,6 @@ void AuthManager::handleReply(QNetworkReply *reply, const QString &operation)
     }
 
     if (message.isEmpty() && reply->error() != QNetworkReply::NoError) {
-        // Fallback dla innych błędów
         message = "Error: " + reply->errorString();
     }
 

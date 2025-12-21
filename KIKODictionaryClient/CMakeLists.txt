@@ -49,21 +49,21 @@ qt_add_qml_module(dudu
         restservice.h restservice.cpp
         paginatedresource.h paginatedresource.cpp
     RESOURCES
-        icons/qt.png
-        icons/testserver.png
-        icons/userMask.svg
-        icons/close.svg
-        icons/delete.svg
-        icons/dots.svg
-        icons/edit.svg
-        icons/login.svg
-        icons/logout.svg
-        icons/ok.svg
-        icons/update.svg
-        icons/user.svg
-        icons/user_logged.svg
-        icons/plus.svg
-        icons/navi-drawer-svgrepo-com.svg
+        assets/images/qt.png
+        assets/images/testserver.png
+        assets/images/userMask.svg
+        assets/images/close.svg
+        assets/images/delete.svg
+        assets/images/dots.svg
+        assets/images/edit.svg
+        assets/images/login.svg
+        assets/images/logout.svg
+        assets/images/ok.svg
+        assets/images/update.svg
+        assets/images/user.svg
+        assets/images/user_logged.svg
+        assets/images/plus.svg
+        assets/images/navi-drawer-svgrepo-com.svg
         qtquickcontrols2.conf
         QML_FILES ColorPalette/SentenceDialogDelete.qml
         QML_FILES common/ScrollablePage.qml

@@ -23,7 +23,7 @@ ColumnLayout {
             text: qsTr("reload")
             enabled: !authManager.captcha.isLoading
             onClicked: authManager.captcha.fetchCaptcha()
-            icon.source: "qrc:/qt/qml/ColorPalette/icons/update.svg"
+            icon.source: "qrc:/qt/qml/ColorPalette/assets/images/update.svg"
         }
     }
 }

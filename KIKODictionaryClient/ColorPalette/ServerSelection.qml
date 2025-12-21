@@ -19,6 +19,11 @@ Rectangle {
     required property PaginatedResource colorUsers
     required property RestService restPalette
 
+    property url captchaUrl: (serverListView.currentItem  as ServerListDelegate).url_captcha
+    property url usersUrl: (serverListView.currentItem  as ServerListDelegate).url_users
+    property url sentencesUrl: (serverListView.currentItem  as ServerListDelegate).url_sentences
+
+
     Connections {
         target: root.colorUsers
         // Closes the URL selection popup once we have received data successfully
@@ -30,23 +35,24 @@ Rectangle {
 
 
     ListModel {
-        id: server
-        ListElement {
-            title: qsTr("Public REST API Test Server")
-            url: "https://reqres.in/api"
-            //url: "http://192.168.0.129:49425/api"
-            icon: "qrc:/qt/qml/ColorPalette/icons/testserver.png"
-        }
-        ListElement {
-            title: qsTr("Production REST API server")
-            url: "https://maia-sentences.rafal-kruszyna.org/api"
-            icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
-        }
+        id: serverListModel
+
         ListElement {
             title: qsTr("Development REST API server")
-            url: "https://192.168.0.129:8000/api"
-            icon: "qrc:/qt/qml/ColorPalette/icons/qt.png"
+            url_captcha: "https://maia-sentences.rafal-kruszyna.org/"
+            url_users: "http://127.0.0.1:8002"
+            url_sentences: "http://127.0.0.1:8003/api"
+            icon: "qrc:/qt/qml/ColorPalette/assets/images/qt.png"
         }
+
+        ListElement {
+            title: qsTr("Production REST API server")
+            url_sentences: "https://maia-sentences.rafal-kruszyna.org/api"
+            url_captcha: "https://maia-captcha.rafal-kruszyna.org/"
+            url_users: "https://maia-users.rafal-kruszyna.org/"
+            icon: "qrc:/qt/qml/ColorPalette/assets/images/qt.png"
+        }
+
     }
 
 
@@ -57,7 +63,7 @@ Rectangle {
 
         Image {
             Layout.alignment: Qt.AlignHCenter
-            source: "qrc:/qt/qml/ColorPalette/icons/qt.png"
+            source: "qrc:/qt/qml/ColorPalette/assets/images/qt.png"
             fillMode: Image.PreserveAspectFit
             Layout.preferredWidth: 20
             Layout.preferredHeight: 50
@@ -74,7 +80,9 @@ Rectangle {
         component ServerListDelegate: Rectangle {
             id: serverListDelegate
             required property string title
-            required property string url
+            required property string url_sentences
+            required property string url_captcha
+            required property string url_users
             required property string icon
             required property int index
 
@@ -84,8 +92,8 @@ Rectangle {
             border.color: ListView.view.currentIndex === index ? "#2CDE85" : "#E0E2E7"
             border.width: 2
 
-            implicitWidth: 250
-            implicitHeight: 100
+            implicitWidth: 310
+            implicitHeight: 150
 
             Rectangle {
                 id: img
@@ -101,53 +109,84 @@ Rectangle {
                 border.width: 5
 
                 Image {
-                        anchors.centerIn: parent
-                        source: serverListDelegate.icon
-                        width: 15
-                        height: 15
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                    }
+                    anchors.centerIn: parent
+                    source: serverListDelegate.icon
+                    width: 15
+                    height: 15
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
                 }
+            }
 
-                Text {
-                    text: parent.url
 
-                    anchors.left: parent.left
-                    anchors.top: img.bottom
-                    anchors.topMargin: 10
-                    anchors.leftMargin: 20
-                    color: "#667085"
-                    font.pixelSize: 13
-                }
-                Text {
-                    text: parent.title
 
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
-                    color: "#222222"
-                    font.pixelSize: 11
-                    font.bold: true
-                }
+            Text {
+                id: captchaUrl
+                text: parent.url_captcha
 
-                MouseArea {
+                anchors.left: parent.left
+                anchors.top: img.bottom
+                anchors.topMargin: 10
+                anchors.leftMargin: 20
+                color: "#667085"
+                font.pixelSize: 13
+            }
+
+            Text {
+                id: usersUrl
+                text: parent.url_users
+
+                anchors.left: parent.left
+                anchors.top: captchaUrl.bottom
+                anchors.topMargin: 10
+                anchors.leftMargin: 20
+                color: "#667085"
+                font.pixelSize: 13
+            }
+
+
+            Text {
+                id: sentencesUrl
+                text: parent.url_sentences
+
+                anchors.left: parent.left
+                anchors.top: usersUrl.bottom
+                anchors.topMargin: 10
+                anchors.leftMargin: 20
+                color: "#667085"
+                font.pixelSize: 13
+            }
+
+            Text {
+                text: parent.title
+
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+                color: "#222222"
+                font.pixelSize: 11
+                font.bold: true
+            }
+
+            MouseArea {
                 anchors.fill: parent
-                onClicked: serverList.currentIndex = serverListDelegate.index;
+                onClicked:{
+                    serverListView.currentIndex = serverListDelegate.index;
+                }
             }
         }
 
         ListView {
-            id: serverList
+            id: serverListView
             Layout.alignment: Qt.AlignHCenter
             Layout.minimumHeight: 200
-            Layout.preferredWidth: 250
+            Layout.preferredWidth: 310
             //Layout.preferredHeight: parent.height*0.6
             Layout.fillHeight: true
             orientation: ListView.Vertical
             clip: true
 
-            model: server
+            model: serverListModel
             spacing: 20
 
             delegate: ServerListDelegate {
@@ -166,11 +205,11 @@ Rectangle {
 
             onClicked: {
                 console.log("connect ...")
-                busyIndicatorPopup.title = (serverList.currentItem as ServerListDelegate).title
-                busyIndicatorPopup.icon = (serverList.currentItem as ServerListDelegate).icon
+                busyIndicatorPopup.title = (serverListView.currentItem as ServerListDelegate).title
+                busyIndicatorPopup.icon = (serverListView.currentItem as ServerListDelegate).icon
                 busyIndicatorPopup.open()
 
-                fetchTester.test((serverList.currentItem  as ServerListDelegate).url)
+                fetchTester.test((serverListView.currentItem  as ServerListDelegate).url_sentences)
             }
         }
 

@@ -17,10 +17,10 @@ cd "$BASE_DIR/captcha-microservice/systemd_files"
 chmod +x install_systemd_service.sh
 sudo ./install_systemd_service.sh
 cd "$BASE_DIR/captcha-microservice"
-sudo rm -f -r .venv_cap
-python3 -m venv .venv_cap
-./.venv_cap/bin/pip install --upgrade pip
-./.venv_cap/bin/pip install -r requirements.txt
+sudo rm -f -r .venv
+python3 -m venv .venv
+./.venv/bin/pip install --upgrade pip
+./.venv/bin/pip install -r requirements.txt
 
 
 cd "$BASE_DIR/sentences-microservice/systemd_files"
@@ -40,11 +40,14 @@ cd "$BASE_DIR/users-microservice"
 sudo rm -f -r .venv
 poetry config virtualenvs.in-project true
 export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
-poetry -v install
+poetry -v install --no-root
 
 
 # --- START SERWISÓW ---
 echo "Restartowanie serwisów..."
+
+# POPRAWKA: Przeładowanie systemd po zmianie plików .service
+sudo systemctl daemon-reload
 
 sudo systemctl enable maia-captcha.service
 sudo systemctl enable maia-sentences.service

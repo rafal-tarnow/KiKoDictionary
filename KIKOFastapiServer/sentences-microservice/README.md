@@ -3,7 +3,7 @@
 
 Development enviroment run:
 
-uvicorn main:app --host 192.168.0.129 --port 8003 \
+uvicorn main:app --host 0.0.0.0 --port 8003 \
   --ssl-keyfile /home/rafal/fastapi_ssl/server.key \
   --ssl-certfile /home/rafal/fastapi_ssl/server.crt
   
@@ -15,7 +15,7 @@ uvicorn main:app --host 192.168.0.129 --port 8003 \
 
 ## How to install app on new server
 python3 -m venv .venv
-source ./venv/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 cd systemd_files
 chmod +x install_systemd_service.sh
