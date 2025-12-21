@@ -1,0 +1,264 @@
+===============================
+Ścieżka do pliku: ./lib/app.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/navigation_provider.dart';
+import 'core/widgets/main_drawer.dart'; // Import naszego nowego pliku
+import 'features/home/home_page.dart';
+import 'features/dictionary/dictionary_page.dart';
+import 'features/words/words_page.dart';
+import 'features/sentences/sentences_page.dart';
+
+class MainShell extends ConsumerWidget {
+  const MainShell({super.key});
+
+  // Lista stron (w profesjonalnej apce mogłyby być w osobnym serwisie/routerze)
+  static const List<Widget> _pages = [
+    HomePage(),
+    DictionaryPage(),
+    WordsPage(),
+    SentencesPage(),
+  ];
+
+    static const List<String> _titles = [
+    'Ogłoszenia parafialne',
+    'Dictionary',
+    'Words',
+    'Sentences',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = ref.watch(navigationIndexProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_titles[selectedIndex]),
+        elevation: 2,
+      ),
+      // Podstawiamy nasz wydzielony widget
+      drawer: const MainDrawer(),
+      body: _pages[selectedIndex],
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/main.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app.dart';
+
+void main() {
+  // ProviderScope przechowuje stan wszystkich providerów
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'English Learning App',
+      theme: ThemeData(
+        //colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const MainShell(),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/dictionary/dictionary_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class DictionaryPage extends StatelessWidget{
+  const DictionaryPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text("Slownik - niebawem"),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/home/home_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Strona Główna - Nauka Angielskiego'));
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class SentencesPage extends StatelessWidget{
+  const SentencesPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Sentences page')
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/words/words_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class WordsPage extends StatelessWidget{
+  const WordsPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Nauka slowek - niebawem'),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/navigation_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final navigationIndexProvider = StateProvider<int>((ref) => 0);
+
+
+===============================
+Ścieżka do pliku: ./lib/core/widgets/main_drawer.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../navigation_provider.dart';
+
+class MainDrawer extends ConsumerWidget {
+  const MainDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Odczytujemy stan, żeby wiedzieć, który element podświetlić
+    final selectedIndex = ref.watch(navigationIndexProvider);
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: Colors.deepPurple),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'English Learner',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Twój postęp: 45%',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          _DrawerTile(
+            title: 'Ogłoszenia parafialne',
+            icon: Icons.home,
+            index: 0,
+            isSelected: selectedIndex == 0,
+          ),
+          _DrawerTile(
+            title: 'Slownik',
+            icon: Icons.style,
+            index: 1,
+            isSelected: selectedIndex == 1,
+          ),
+          _DrawerTile(
+            title: 'Slowka',
+            icon: Icons.person,
+            index: 2,
+            isSelected: selectedIndex == 2,
+          ),
+          _DrawerTile(
+            title: 'Zwroty',
+            icon: Icons.settings,
+            index: 3,
+            isSelected: selectedIndex == 3,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Prywatny pomocniczy widget tylko dla tego pliku (Clean Code)
+class _DrawerTile extends ConsumerWidget {
+  final String title;
+  final IconData icon;
+  final int index;
+  final bool isSelected;
+
+  const _DrawerTile({
+    required this.title,
+    required this.icon,
+    required this.index,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? Colors.deepPurple : null),
+      title: Text(title),
+      selected: isSelected,
+      onTap: () {
+        // 1. Zmień stan indeksu
+        ref.read(navigationIndexProvider.notifier).state = index;
+        // 2. Zamknij drawer (ekran boczny)
+        Navigator.pop(context);
+      },
+    );
+  }
+}
+
+

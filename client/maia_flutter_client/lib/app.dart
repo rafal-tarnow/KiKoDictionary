@@ -1,0 +1,66 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/navigation_provider.dart';
+import 'core/widgets/main_drawer.dart';
+import 'features/home/home_page.dart';
+import 'features/dictionary/dictionary_page.dart';
+import 'features/words/words_page.dart';
+import 'features/sentences/sentences_page.dart';
+import 'core/app_sizes.dart'; // Import stałych
+
+class MainShell extends ConsumerWidget {
+  const MainShell({super.key});
+
+  static const List<Widget> _pages = [
+    HomePage(),
+    DictionaryPage(),
+    WordsPage(),
+    SentencesPage(),
+  ];
+
+  static const List<String> _titles = [
+    'Ogłoszenia parafialne',
+    'Dictionary',
+    'Words',
+    'Sentences',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = ref.watch(navigationIndexProvider);
+
+    return Container(
+      // Zamieniamy surfaceVariant na surfaceContainerHighest
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth),
+          child: Container(
+            // Ten kontener dodaje cień i ogranicza Scaffold
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: ClipRect( //ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
+              child: Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                appBar: AppBar(
+                  title: Text(_titles[selectedIndex]),
+                  elevation: 2,
+                ),
+                drawer: const MainDrawer(),
+                body: _pages[selectedIndex],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
