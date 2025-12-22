@@ -6,45 +6,73 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/navigation_provider.dart';
-import 'core/widgets/main_drawer.dart'; // Import naszego nowego pliku
+import 'core/widgets/main_drawer.dart';
 import 'features/home/home_page.dart';
 import 'features/dictionary/dictionary_page.dart';
 import 'features/words/words_page.dart';
 import 'features/sentences/sentences_page.dart';
+import 'features/test/test_page.dart';
+import 'core/app_sizes.dart'; // Import stałych
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
 
-  // Lista stron (w profesjonalnej apce mogłyby być w osobnym serwisie/routerze)
   static const List<Widget> _pages = [
     HomePage(),
     DictionaryPage(),
     WordsPage(),
     SentencesPage(),
+    TestPage(),
   ];
 
-    static const List<String> _titles = [
+  static const List<String> _titles = [
     'Ogłoszenia parafialne',
     'Dictionary',
     'Words',
     'Sentences',
+    'Test'
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(navigationIndexProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[selectedIndex]),
-        elevation: 2,
+    return Container(
+      // Zamieniamy surfaceVariant na surfaceContainerHighest
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth),
+          child: Container(
+            // Ten kontener dodaje cień i ogranicza Scaffold
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: ClipRect( //ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
+              child: Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                appBar: AppBar(
+                  title: Text(_titles[selectedIndex]),
+                  elevation: 2,
+                ),
+                drawer: const MainDrawer(),
+                body: _pages[selectedIndex],
+              ),
+            ),
+          ),
+        ),
       ),
-      // Podstawiamy nasz wydzielony widget
-      drawer: const MainDrawer(),
-      body: _pages[selectedIndex],
     );
   }
 }
+
 
 
 ===============================
@@ -116,6 +144,25 @@ class HomePage extends StatelessWidget {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/test/test_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class TestPage extends StatelessWidget{
+  const TestPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Sentences page')
+    );
+  }
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
 
 Zawartość pliku:
@@ -150,6 +197,16 @@ class WordsPage extends StatelessWidget{
       child: Text('Nauka slowek - niebawem'),
     );
   }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/app_sizes.dart
+
+Zawartość pliku:
+
+class AppSizes{
+  static const double maxMobileWidth = 550.0;
 }
 
 
@@ -209,21 +266,27 @@ class MainDrawer extends ConsumerWidget {
           ),
           _DrawerTile(
             title: 'Slownik',
-            icon: Icons.style,
+            icon: Icons.menu_book,
             index: 1,
             isSelected: selectedIndex == 1,
           ),
           _DrawerTile(
             title: 'Slowka',
-            icon: Icons.person,
+            icon: Icons.school,
             index: 2,
             isSelected: selectedIndex == 2,
           ),
           _DrawerTile(
             title: 'Zwroty',
-            icon: Icons.settings,
+            icon: Icons.chat,
             index: 3,
             isSelected: selectedIndex == 3,
+          ),
+          _DrawerTile(
+            title: 'Test',
+            icon: Icons.quiz,
+            index: 4,
+            isSelected: selectedIndex == 4,
           ),
         ],
       ),

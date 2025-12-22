@@ -6,6 +6,7 @@ import 'features/home/home_page.dart';
 import 'features/dictionary/dictionary_page.dart';
 import 'features/words/words_page.dart';
 import 'features/sentences/sentences_page.dart';
+import 'features/test/test_page.dart';
 import 'core/app_sizes.dart'; // Import stałych
 
 class MainShell extends ConsumerWidget {
@@ -16,6 +17,7 @@ class MainShell extends ConsumerWidget {
     DictionaryPage(),
     WordsPage(),
     SentencesPage(),
+    TestPage(),
   ];
 
   static const List<String> _titles = [
@@ -23,6 +25,7 @@ class MainShell extends ConsumerWidget {
     'Dictionary',
     'Words',
     'Sentences',
+    'Test'
   ];
 
   @override
