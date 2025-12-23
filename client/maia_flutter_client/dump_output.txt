@@ -170,88 +170,31 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
+import 'presentation/add_sentence_dialog.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Obserwujemy stan naszego providera
-    // To jak bindowanie property w QML: text: model.someText
     final state = ref.watch(sentencesProvider);
-    // Dostep do metod (kontrolera) bez obserwowania zmian
     final notifier = ref.read(sentencesProvider.notifier);
 
-    return Column(
-      children: [
-        // 1. Obsługa błędów
-        if (state.errorMessage != null)
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.red.shade100,
-            width: double.infinity,
-            child: Text(
-              'Błąd: ${state.errorMessage}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const AddSentenceDialog(),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
 
-        // 2. Lista danych lub Loader
-        Expanded(
-          child: state.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : state.sentences.isEmpty
-                  ? const Center(child: Text("Brak zdań do wyświetlenia."))
-                  : ListView.builder(
-                      itemCount: state.sentences.length,
-                      padding: const EdgeInsets.all(8),
-                      itemBuilder: (context, index) {
-                        final item = state.sentences[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          elevation: 2,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.deepPurple.shade100,
-                              child: Text(item.id.toString()),
-                            ),
-                            title: Text(
-                              item.sentence,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.translation,
-                                  style: const TextStyle(
-                                    fontStyle: FontStyle.italic,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.language, size: 14, color: Colors.grey[600]),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      item.language,
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            ),
-                            isThreeLine: true,
-                          ),
-                        );
-                      },
-                    ),
-        ),
-
-        // 3. Paginacja (Dolny pasek)
-        Container(
+      bottomNavigationBar: SafeArea(
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -263,7 +206,7 @@ class SentencesPage extends ConsumerWidget {
               ElevatedButton.icon(
                 onPressed: state.currentPage > 1 && !state.isLoading
                     ? () => notifier.previousPage()
-                    : null, // null wyłącza przycisk (enabled: false)
+                    : null,
                 icon: const Icon(Icons.arrow_back),
                 label: const Text("Poprzednia"),
               ),
@@ -277,18 +220,169 @@ class SentencesPage extends ConsumerWidget {
                 onPressed: !state.isLastPage && !state.isLoading
                     ? () => notifier.nextPage()
                     : null,
-                // Trick w Flutterze: zmiana kolejności dzieci w Row
-                // Directionality.rtl zmieniłoby układ ikony, ale tutaj ręcznie układamy:
                 label: const Text("Następna"),
-                icon: const Icon(Icons.arrow_forward), 
+                icon: const Icon(Icons.arrow_forward),
               ),
             ],
           ),
         ),
-      ],
+      ),
+
+      body: Column(
+        children: [
+          if (state.errorMessage != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.red.shade100,
+              width: double.infinity,
+              child: Text(
+                'Błąd: ${state.errorMessage}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+
+          Expanded(
+            // ZMIANA LOGIKI WYŚWIETLANIA:
+            
+            // 1. Jeśli ładujemy i nie mamy żadnych danych -> Wielki Loader (Inicjalizacja)
+            child: state.isLoading && state.sentences.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                
+                // 2. Jeśli nie ładujemy i lista pusta -> Info o braku danych
+                : state.sentences.isEmpty
+                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                    
+                    // 3. Mamy dane (nawet jeśli właśnie trwa odświeżanie) -> Pokaż listę
+                    : Stack(
+                        children: [
+                          // Warstwa 1: Lista
+                          ListView.builder(
+                            itemCount: state.sentences.length,
+                            padding: const EdgeInsets.only(
+                                left: 8, top: 8, right: 8, bottom: 20),
+                            itemBuilder: (context, index) {
+                              final item = state.sentences[index];
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                elevation: 2,
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Colors.deepPurple.shade100,
+                                    child: Text(item.id.toString()),
+                                  ),
+                                  title: Text(
+                                    item.sentence,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item.translation,
+                                        style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.language, size: 14, color: Colors.grey[600]),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            item.language,
+                                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                          ),
+                                        ],
+                                      )
+                                    ],
+                                  ),
+                                  isThreeLine: true,
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Warstwa 2: Dyskretny pasek ładowania na górze (tylko przy odświeżaniu)
+                          if (state.isLoading)
+                            const Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: LinearProgressIndicator(minHeight: 4),
+                            ),
+                        ],
+                      ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_create_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart'; // Potrzebne, żeby odświeżyć listę po sukcesie
+
+// Controller zarządza stanem operacji dodawania.
+// AsyncValue<void> oznacza, że operacja nie zwraca wartości, ale śledzimy jej status.
+class AddSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref; // Ref pozwala nam wchodzić w interakcję z innymi providerami
+
+  AddSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
+
+  Future<bool> addSentence({
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
+    state = const AsyncValue.loading();
+
+    try {
+      final dto = SentenceCreate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      await _repository.createSentence(dto);
+
+      // --- ZMIANA ---
+      // Zamiast zabijać providera (invalidate), prosimy go o odświeżenie danych.
+      // Dzięki temu zachowujemy numer strony.
+      await _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+      
+      // Jeśli wolałbyś skakać do ostatniej strony (bo tam dodał się element),
+      // odkomentuj metodę w providerze i użyj tutaj:
+      // await _ref.read(sentencesProvider.notifier).goToLastPage();
+
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      // 4. Błąd
+      state = AsyncValue.error(e, stack);
+      return false;
+    }
+  }
+}
+
+// Rejestracja providera
+final addSentenceControllerProvider = 
+    StateNotifierProvider<AddSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return AddSentenceController(repo, ref);
+});
 
 
 ===============================
@@ -305,17 +399,16 @@ class SentencesState {
   final bool isLoading;
   final String? errorMessage;
   final int currentPage;
-  final int totalPages; // Nowe pole: całkowita liczba stron
+  final int totalPages;
 
   const SentencesState({
     this.sentences = const [],
     this.isLoading = false,
     this.errorMessage,
     this.currentPage = 1,
-    this.totalPages = 1, // Domyślnie 1
+    this.totalPages = 1,
   });
 
-  // Getter (computed property) - czy jesteśmy na ostatniej stronie?
   bool get isLastPage => currentPage >= totalPages;
 
   SentencesState copyWith({
@@ -337,7 +430,7 @@ class SentencesState {
 
 class SentencesNotifier extends StateNotifier<SentencesState> {
   final SentencesRepository _repository;
-  static const int _perPage = 10; // Zmieniłem na 10 zgodnie z Twoim JSONem
+  static const int _perPage = 10;
 
   SentencesNotifier(this._repository) : super(const SentencesState()) {
     loadSentences(page: 1);
@@ -346,17 +439,18 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
   Future<void> loadSentences({required int page}) async {
     if (state.isLoading) return;
 
-    // Resetujemy błąd i ustawiamy loading
+    // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
+    // chyba że chcesz, żeby znikały i pojawiał się spinner. 
+    // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      // Pobieramy naszą strukturę z repozytorium
       final response = await _repository.getSentences(page: page, perPage: _perPage);
 
       state = state.copyWith(
         isLoading: false,
-        sentences: response.sentences, // Lista zdań
-        totalPages: response.totalPages, // Całkowita liczba stron z API
+        sentences: response.sentences,
+        totalPages: response.totalPages,
         currentPage: page,
       );
     } catch (e) {
@@ -367,8 +461,23 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     }
   }
 
+  // --- NOWA METODA ---
+  // Odświeża aktualną stronę bez resetowania stanu do zera
+  Future<void> refreshCurrentPage() async {
+    // Ładujemy ponownie tę samą stronę, na której jesteśmy
+    await loadSentences(page: state.currentPage);
+  }
+  
+  /* 
+  // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
+  Future<void> goToLastPage() async {
+     // Najpierw pobierzmy info (może doszła nowa strona?)
+     // To uproszczenie, w idealnym świecie API po dodaniu zwraca ID nowej strony
+     await loadSentences(page: state.totalPages);
+  }
+  */
+
   void nextPage() {
-    // Używamy gettera isLastPage, który teraz bazuje na total_pages z API
     if (!state.isLastPage) {
       loadSentences(page: state.currentPage + 1);
     }
@@ -385,6 +494,166 @@ final sentencesProvider = StateNotifierProvider<SentencesNotifier, SentencesStat
   final repository = ref.watch(sentencesRepositoryProvider);
   return SentencesNotifier(repository);
 });
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_dialog.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'add_sentence_controller.dart';
+
+class AddSentenceDialog extends ConsumerStatefulWidget {
+  const AddSentenceDialog({super.key});
+
+  @override
+  ConsumerState<AddSentenceDialog> createState() => _AddSentenceDialogState();
+}
+
+class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
+  // Klucz formularza pozwala na walidację
+  final _formKey = GlobalKey<FormState>();
+  
+  // Kontrolery pól tekstowych
+  final _sentenceController = TextEditingController();
+  final _translationController = TextEditingController();
+  final _languageController = TextEditingController(text: 'EN'); // Domyślna wartość
+
+  @override
+  void dispose() {
+    // Sprzątanie zasobów (jak destruktor w C++)
+    _sentenceController.dispose();
+    _translationController.dispose();
+    _languageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_formKey.currentState!.validate()) {
+      // Wywołujemy metodę z kontrolera Riverpod
+      final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
+            sentence: _sentenceController.text,
+            language: _languageController.text,
+            translation: _translationController.text,
+          );
+
+      if (success && mounted) {
+        Navigator.of(context).pop(); // Zamknij dialog po sukcesie
+        
+        // Pokaż powiadomienie (Snackbar)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dodano nowe zdanie!')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Obserwujemy stan asynchroniczny (loading/error)
+    final asyncState = ref.watch(addSentenceControllerProvider);
+    final isLoading = asyncState.isLoading;
+
+    return AlertDialog(
+      title: const Text('Dodaj nowe zdanie'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Wyświetlanie błędu z API, jeśli wystąpił
+              if (asyncState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Błąd: ${asyncState.error}',
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+                
+              TextFormField(
+                controller: _sentenceController,
+                decoration: const InputDecoration(labelText: 'Zdanie (np. Hello World)'),
+                enabled: !isLoading, // Blokuj inputy podczas wysyłania
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _translationController,
+                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Witaj Świecie)'),
+                enabled: !isLoading,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _languageController,
+                decoration: const InputDecoration(labelText: 'Język (np. EN)'),
+                enabled: !isLoading,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Anuluj'),
+        ),
+        ElevatedButton(
+          onPressed: isLoading ? null : _submit,
+          child: isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2)
+                ) 
+              : const Text('Zapisz'),
+        ),
+      ],
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_create_model.dart
+
+Zawartość pliku:
+
+class SentenceCreate {
+  final String sentence;
+  final String language;
+  final String translation;
+
+  const SentenceCreate({
+    required this.sentence,
+    required this.language,
+    required this.translation,
+  });
+
+  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
+  // W C++ to byłaby metoda serializująca do QJsonObject.
+  Map<String, dynamic> toJson() {
+    return {
+      'sentence': sentence,
+      'language': language,
+      'translation': translation,
+    };
+  }
+}
 
 
 ===============================
@@ -437,6 +706,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_provider.dart';
 import 'sentence_model.dart';
+import 'sentence_create_model.dart';
 
 // Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
 class SentencesResponse {
@@ -484,6 +754,19 @@ class SentencesRepository {
 
     } catch (e) {
       throw Exception('Failed to load sentences: $e');
+    }
+  }
+
+  Future<void> createSentence(SentenceCreate data) async {
+    try {
+      // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
+      await _dio.post(
+        '/api/sentences/',
+        data: data.toJson(),
+      );
+    } catch (e) {
+      // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
+      throw Exception('Failed to create sentence: $e');
     }
   }
 }

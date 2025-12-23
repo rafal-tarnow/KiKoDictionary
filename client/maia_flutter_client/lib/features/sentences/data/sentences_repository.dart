@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_provider.dart';
 import 'sentence_model.dart';
+import 'sentence_create_model.dart';
 
 // Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
 class SentencesResponse {
@@ -49,6 +50,19 @@ class SentencesRepository {
 
     } catch (e) {
       throw Exception('Failed to load sentences: $e');
+    }
+  }
+
+  Future<void> createSentence(SentenceCreate data) async {
+    try {
+      // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
+      await _dio.post(
+        '/api/sentences/',
+        data: data.toJson(),
+      );
+    } catch (e) {
+      // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
+      throw Exception('Failed to create sentence: $e');
     }
   }
 }

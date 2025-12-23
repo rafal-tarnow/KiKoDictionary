@@ -7,17 +7,16 @@ class SentencesState {
   final bool isLoading;
   final String? errorMessage;
   final int currentPage;
-  final int totalPages; // Nowe pole: całkowita liczba stron
+  final int totalPages;
 
   const SentencesState({
     this.sentences = const [],
     this.isLoading = false,
     this.errorMessage,
     this.currentPage = 1,
-    this.totalPages = 1, // Domyślnie 1
+    this.totalPages = 1,
   });
 
-  // Getter (computed property) - czy jesteśmy na ostatniej stronie?
   bool get isLastPage => currentPage >= totalPages;
 
   SentencesState copyWith({
@@ -39,7 +38,7 @@ class SentencesState {
 
 class SentencesNotifier extends StateNotifier<SentencesState> {
   final SentencesRepository _repository;
-  static const int _perPage = 10; // Zmieniłem na 10 zgodnie z Twoim JSONem
+  static const int _perPage = 10;
 
   SentencesNotifier(this._repository) : super(const SentencesState()) {
     loadSentences(page: 1);
@@ -48,17 +47,18 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
   Future<void> loadSentences({required int page}) async {
     if (state.isLoading) return;
 
-    // Resetujemy błąd i ustawiamy loading
+    // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
+    // chyba że chcesz, żeby znikały i pojawiał się spinner. 
+    // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      // Pobieramy naszą strukturę z repozytorium
       final response = await _repository.getSentences(page: page, perPage: _perPage);
 
       state = state.copyWith(
         isLoading: false,
-        sentences: response.sentences, // Lista zdań
-        totalPages: response.totalPages, // Całkowita liczba stron z API
+        sentences: response.sentences,
+        totalPages: response.totalPages,
         currentPage: page,
       );
     } catch (e) {
@@ -69,8 +69,23 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     }
   }
 
+  // --- NOWA METODA ---
+  // Odświeża aktualną stronę bez resetowania stanu do zera
+  Future<void> refreshCurrentPage() async {
+    // Ładujemy ponownie tę samą stronę, na której jesteśmy
+    await loadSentences(page: state.currentPage);
+  }
+  
+  /* 
+  // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
+  Future<void> goToLastPage() async {
+     // Najpierw pobierzmy info (może doszła nowa strona?)
+     // To uproszczenie, w idealnym świecie API po dodaniu zwraca ID nowej strony
+     await loadSentences(page: state.totalPages);
+  }
+  */
+
   void nextPage() {
-    // Używamy gettera isLastPage, który teraz bazuje na total_pages z API
     if (!state.isLastPage) {
       loadSentences(page: state.currentPage + 1);
     }
