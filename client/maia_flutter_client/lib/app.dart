@@ -32,11 +32,16 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(navigationIndexProvider);
 
-    return Container(
+    return Container( //szare tło aplikacji
       // Zamieniamy surfaceVariant na surfaceContainerHighest
-      color: Theme.of(
-        context,
-      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      color: const Color(0xFFE0E0E0), 
+      // color: Theme.of(
+      //   context,
+      // ).colorScheme.surfaceContainer,
+      //color: const Color(0xFFE0E0E0), 
+      // color: Theme.of(
+      //   context,
+      // ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth),
@@ -52,7 +57,8 @@ class MainShell extends ConsumerWidget {
             ),
             child: ClipRect( //ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
               child: Scaffold(
-                backgroundColor: Theme.of(context).colorScheme.surface,
+                //backgroundColor: Theme.of(context).colorScheme.surface,
+                backgroundColor: const Color(0xFFFFFFFF),
                 appBar: AppBar(
                   title: Text(_titles[selectedIndex]),
                   elevation: 2,

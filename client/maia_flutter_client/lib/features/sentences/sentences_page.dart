@@ -12,7 +12,9 @@ class SentencesPage extends ConsumerWidget {
     final notifier = ref.read(sentencesProvider.notifier);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      //backgroundColor: Colors.transparent,
+      //backgroundColor: Colors.red,
+      backgroundColor: const Color(0xFFFFFFFF),
       
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -98,8 +100,11 @@ class SentencesPage extends ConsumerWidget {
                                 elevation: 2,
                                 child: ListTile(
                                   leading: CircleAvatar(
-                                    backgroundColor: Colors.deepPurple.shade100,
-                                    child: Text(item.id.toString()),
+                                    backgroundColor: Colors.teal,
+                                    foregroundColor: Colors.white,
+                                    child: Text(
+                                      item.id.toString()
+                                      ),
                                   ),
                                   title: Text(
                                     item.sentence,
