@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/add_sentence_dialog.dart';
+import 'presentation/widgets/sentence_tile.dart'; 
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -65,6 +66,7 @@ class SentencesPage extends ConsumerWidget {
         ),
       ),
 
+
       body: Column(
         children: [
           if (state.errorMessage != null)
@@ -79,102 +81,39 @@ class SentencesPage extends ConsumerWidget {
             ),
 
           Expanded(
-            // ZMIANA LOGIKI WYŚWIETLANIA:
-
-            // 1. Jeśli ładujemy i nie mamy żadnych danych -> Wielki Loader (Inicjalizacja)
             child: state.isLoading && state.sentences.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                // 2. Jeśli nie ładujemy i lista pusta -> Info o braku danych
                 : state.sentences.isEmpty
-                ? const Center(child: Text("Brak zdań do wyświetlenia."))
-                // 3. Mamy dane (nawet jeśli właśnie trwa odświeżanie) -> Pokaż listę
-                : Stack(
-                    children: [
-                      // Warstwa 1: Lista
-                      ListView.separated(
-                        itemCount: state.sentences.length,
-                        padding: const EdgeInsets.only(
-                          left: 8,
-                          top: 8,
-                          right: 8,
-                          bottom: 20,
-                        ),
-                        //separator miedzy kafelkami
-                        separatorBuilder: (context, index) {
-                          return Divider(
-                            height:
-                                16, // Wysokość przestrzeni, w której rysuje się linia
-                            thickness: 0.5, // Grubość samej kreski
-                            color: Colors.grey.shade400, // Kolor linii
-                            indent:
-                                8, // Wcięcie z lewej strony (żeby nie dotykała krawędzi)
-                            endIndent: 8, // Wcięcie z prawej strony
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          final item = state.sentences[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            elevation: 2,
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                child: Text(item.id.toString()),
-                              ),
-                              title: Text(
-                                item.sentence,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.translation,
-                                    style: const TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.language,
-                                        size: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.language,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              isThreeLine: true,
+                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                    : Stack(
+                        children: [
+                          ListView.separated(
+                            itemCount: state.sentences.length,
+                            padding: const EdgeInsets.all(8),
+                            separatorBuilder: (context, index) {
+                              return Divider(
+                                height: 16,
+                                thickness: 0.5,
+                                color: Colors.grey.shade400,
+                                indent: 8,
+                                endIndent: 8,
+                              );
+                            },
+                            itemBuilder: (context, index) {
+                              final item = state.sentences[index];
+                              // --- UŻYCIE NOWEGO WIDGETU ---
+                              return SentenceTile(sentence: item);
+                            },
+                          ),
+                          if (state.isLoading)
+                            const Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: LinearProgressIndicator(minHeight: 4),
                             ),
-                          );
-                        },
+                        ],
                       ),
-
-                      // Warstwa 2: Dyskretny pasek ładowania na górze (tylko przy odświeżaniu)
-                      if (state.isLoading)
-                        const Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: LinearProgressIndicator(minHeight: 4),
-                        ),
-                    ],
-                  ),
           ),
         ],
       ),

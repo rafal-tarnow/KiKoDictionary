@@ -65,4 +65,13 @@ class SentencesRepository {
       throw Exception('Failed to create sentence: $e');
     }
   }
+
+  Future<void> deleteSentence(int id) async {
+    try {
+      // Endpoint: DELETE /api/sentences/{sentence_id}
+      await _dio.delete('/api/sentences/$id');
+    } catch (e) {
+      throw Exception('Failed to delete sentence: $e');
+    }
+  }
 }

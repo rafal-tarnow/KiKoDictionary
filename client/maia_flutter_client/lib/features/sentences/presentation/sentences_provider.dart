@@ -29,7 +29,7 @@ class SentencesState {
     return SentencesState(
       sentences: sentences ?? this.sentences,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage, 
+      errorMessage: errorMessage,
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
     );
@@ -48,12 +48,15 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     if (state.isLoading) return;
 
     // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
-    // chyba że chcesz, żeby znikały i pojawiał się spinner. 
+    // chyba że chcesz, żeby znikały i pojawiał się spinner.
     // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final response = await _repository.getSentences(page: page, perPage: _perPage);
+      final response = await _repository.getSentences(
+        page: page,
+        perPage: _perPage,
+      );
 
       state = state.copyWith(
         isLoading: false,
@@ -62,10 +65,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
         currentPage: page,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
@@ -75,7 +75,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     // Ładujemy ponownie tę samą stronę, na której jesteśmy
     await loadSentences(page: state.currentPage);
   }
-  
+
   /* 
   // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
   Future<void> goToLastPage() async {
@@ -96,9 +96,23 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
       loadSentences(page: state.currentPage - 1);
     }
   }
+
+  // Usuwa element z lokalnego stanu (UI odświeży się natychmiast)
+  void removeSentenceLocally(int sentenceId) {
+    // std::remove_if w C++ style
+    final updatedList = state.sentences
+        .where((s) => s.id != sentenceId)
+        .toList();
+
+    state = state.copyWith(
+      sentences: updatedList,
+      // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
+    );
+  }
 }
 
-final sentencesProvider = StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
-  final repository = ref.watch(sentencesRepositoryProvider);
-  return SentencesNotifier(repository);
-});
+final sentencesProvider =
+    StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
+      final repository = ref.watch(sentencesRepositoryProvider);
+      return SentencesNotifier(repository);
+    });

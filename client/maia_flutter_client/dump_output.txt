@@ -177,6 +177,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/add_sentence_dialog.dart';
+import 'presentation/widgets/sentence_tile.dart'; 
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -240,6 +241,7 @@ class SentencesPage extends ConsumerWidget {
         ),
       ),
 
+
       body: Column(
         children: [
           if (state.errorMessage != null)
@@ -254,102 +256,39 @@ class SentencesPage extends ConsumerWidget {
             ),
 
           Expanded(
-            // ZMIANA LOGIKI WYŚWIETLANIA:
-
-            // 1. Jeśli ładujemy i nie mamy żadnych danych -> Wielki Loader (Inicjalizacja)
             child: state.isLoading && state.sentences.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                // 2. Jeśli nie ładujemy i lista pusta -> Info o braku danych
                 : state.sentences.isEmpty
-                ? const Center(child: Text("Brak zdań do wyświetlenia."))
-                // 3. Mamy dane (nawet jeśli właśnie trwa odświeżanie) -> Pokaż listę
-                : Stack(
-                    children: [
-                      // Warstwa 1: Lista
-                      ListView.separated(
-                        itemCount: state.sentences.length,
-                        padding: const EdgeInsets.only(
-                          left: 8,
-                          top: 8,
-                          right: 8,
-                          bottom: 20,
-                        ),
-                        //separator miedzy kafelkami
-                        separatorBuilder: (context, index) {
-                          return Divider(
-                            height:
-                                16, // Wysokość przestrzeni, w której rysuje się linia
-                            thickness: 0.5, // Grubość samej kreski
-                            color: Colors.grey.shade400, // Kolor linii
-                            indent:
-                                8, // Wcięcie z lewej strony (żeby nie dotykała krawędzi)
-                            endIndent: 8, // Wcięcie z prawej strony
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          final item = state.sentences[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            elevation: 2,
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                child: Text(item.id.toString()),
-                              ),
-                              title: Text(
-                                item.sentence,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.translation,
-                                    style: const TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.language,
-                                        size: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.language,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              isThreeLine: true,
+                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                    : Stack(
+                        children: [
+                          ListView.separated(
+                            itemCount: state.sentences.length,
+                            padding: const EdgeInsets.all(8),
+                            separatorBuilder: (context, index) {
+                              return Divider(
+                                height: 16,
+                                thickness: 0.5,
+                                color: Colors.grey.shade400,
+                                indent: 8,
+                                endIndent: 8,
+                              );
+                            },
+                            itemBuilder: (context, index) {
+                              final item = state.sentences[index];
+                              // --- UŻYCIE NOWEGO WIDGETU ---
+                              return SentenceTile(sentence: item);
+                            },
+                          ),
+                          if (state.isLoading)
+                            const Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: LinearProgressIndicator(minHeight: 4),
                             ),
-                          );
-                        },
+                        ],
                       ),
-
-                      // Warstwa 2: Dyskretny pasek ładowania na górze (tylko przy odświeżaniu)
-                      if (state.isLoading)
-                        const Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: LinearProgressIndicator(minHeight: 4),
-                        ),
-                    ],
-                  ),
           ),
         ],
       ),
@@ -357,6 +296,65 @@ class SentencesPage extends ConsumerWidget {
   }
 }
 
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/delete_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+
+// Używamy prostego Providera, a nie StateNotifier, bo ten kontroler
+// nie przechowuje stanu (stateless logic), tylko wykonuje akcję.
+final deleteSentenceControllerProvider = Provider((ref) {
+  return DeleteSentenceController(ref);
+});
+
+class DeleteSentenceController {
+  final Ref _ref;
+
+  DeleteSentenceController(this._ref);
+
+  Future<void> deleteSentence({
+    required BuildContext context,
+    required int sentenceId,
+  }) async {
+    // 1. "Fire and forget" logic from UI perspective (dialog już zamknięty)
+    
+    final repo = _ref.read(sentencesRepositoryProvider);
+    final notifier = _ref.read(sentencesProvider.notifier);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Wywołanie API (asynchronicznie)
+      await repo.deleteSentence(sentenceId);
+
+      // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
+      notifier.removeSentenceLocally(sentenceId);
+
+      // Feedback dla użytkownika (Snackbar)
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Usunięto zdanie.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      // Obsługa błędu
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Błąd usuwania: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
 
 
 ===============================
@@ -458,7 +456,7 @@ class SentencesState {
     return SentencesState(
       sentences: sentences ?? this.sentences,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage, 
+      errorMessage: errorMessage,
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
     );
@@ -477,12 +475,15 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     if (state.isLoading) return;
 
     // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
-    // chyba że chcesz, żeby znikały i pojawiał się spinner. 
+    // chyba że chcesz, żeby znikały i pojawiał się spinner.
     // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final response = await _repository.getSentences(page: page, perPage: _perPage);
+      final response = await _repository.getSentences(
+        page: page,
+        perPage: _perPage,
+      );
 
       state = state.copyWith(
         isLoading: false,
@@ -491,10 +492,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
         currentPage: page,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
@@ -504,7 +502,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     // Ładujemy ponownie tę samą stronę, na której jesteśmy
     await loadSentences(page: state.currentPage);
   }
-  
+
   /* 
   // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
   Future<void> goToLastPage() async {
@@ -525,12 +523,27 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
       loadSentences(page: state.currentPage - 1);
     }
   }
+
+  // Usuwa element z lokalnego stanu (UI odświeży się natychmiast)
+  void removeSentenceLocally(int sentenceId) {
+    // std::remove_if w C++ style
+    final updatedList = state.sentences
+        .where((s) => s.id != sentenceId)
+        .toList();
+
+    state = state.copyWith(
+      sentences: updatedList,
+      // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
+    );
+  }
 }
 
-final sentencesProvider = StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
-  final repository = ref.watch(sentencesRepositoryProvider);
-  return SentencesNotifier(repository);
-});
+final sentencesProvider =
+    StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
+      final repository = ref.watch(sentencesRepositoryProvider);
+      return SentencesNotifier(repository);
+    });
+
 
 
 ===============================
@@ -660,6 +673,118 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
               : const Text('Zapisz'),
         ),
       ],
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/sentence_model.dart';
+import '../delete_sentence_controller.dart';
+
+class SentenceTile extends ConsumerWidget {
+  final Sentence sentence;
+
+  const SentenceTile({super.key, required this.sentence});
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Potwierdzenie"),
+        content: const Text("Usunąć to zdanie?"),
+        actions: [
+          // Przycisk "Nie"
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Zamknij dialog
+            },
+            child: const Text("Nie"),
+          ),
+          // Przycisk "Tak" - Czerwony
+          TextButton(
+            onPressed: () {
+              // 1. Najpierw zamykamy dialog (non-blocking feel)
+              Navigator.of(ctx).pop();
+              
+              // 2. Delegujemy operację do kontrolera
+              ref.read(deleteSentenceControllerProvider).deleteSentence(
+                    context: context,
+                    sentenceId: sentence.id,
+                  );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red, // Czerwony tekst
+            ),
+            child: const Text("Tak"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          child: Text(sentence.id.toString()),
+        ),
+        title: Text(
+          sentence.sentence,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              sentence.translation,
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.language,
+                  size: 14,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  sentence.language,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        isThreeLine: true,
+        // --- IKONA KOSZA PO PRAWEJ ---
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          onPressed: () => _showDeleteConfirmation(context, ref),
+          tooltip: 'Usuń zdanie',
+        ),
+      ),
     );
   }
 }
@@ -804,6 +929,15 @@ class SentencesRepository {
     } catch (e) {
       // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
       throw Exception('Failed to create sentence: $e');
+    }
+  }
+
+  Future<void> deleteSentence(int id) async {
+    try {
+      // Endpoint: DELETE /api/sentences/{sentence_id}
+      await _dio.delete('/api/sentences/$id');
+    } catch (e) {
+      throw Exception('Failed to delete sentence: $e');
     }
   }
 }
