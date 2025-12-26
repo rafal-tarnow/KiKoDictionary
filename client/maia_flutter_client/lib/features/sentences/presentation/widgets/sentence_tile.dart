@@ -25,14 +25,13 @@ class SentenceTile extends ConsumerWidget {
           // Przycisk "Tak" - Czerwony
           TextButton(
             onPressed: () {
-              // 1. Najpierw zamykamy dialog (non-blocking feel)
+              // 1. Najpierw zamykamy dialog
               Navigator.of(ctx).pop();
-              
+
               // 2. Delegujemy operację do kontrolera
-              ref.read(deleteSentenceControllerProvider).deleteSentence(
-                    context: context,
-                    sentenceId: sentence.id,
-                  );
+              ref
+                  .read(deleteSentenceControllerProvider)
+                  .deleteSentence(context: context, sentenceId: sentence.id);
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red, // Czerwony tekst
@@ -57,9 +56,7 @@ class SentenceTile extends ConsumerWidget {
         ),
         title: Text(
           sentence.sentence,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,29 +72,54 @@ class SentenceTile extends ConsumerWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(
-                  Icons.language,
-                  size: 14,
-                  color: Colors.grey[600],
-                ),
+                Icon(Icons.language, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
                   sentence.language,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
           ],
         ),
         isThreeLine: true,
-        // --- IKONA KOSZA PO PRAWEJ ---
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () => _showDeleteConfirmation(context, ref),
-          tooltip: 'Usuń zdanie',
+
+        // --- SEKCJA TRAILING (POPRAWIONA) ---
+        // Używamy FittedBox, aby uniknąć błędu "Bottom overflowed"
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown, // Skaluje w dół, jeśli brakuje miejsca
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Zajmuje tylko tyle miejsca ile trzeba
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. Ikona USUWANIA (Czerwona)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _showDeleteConfirmation(context, ref),
+                tooltip: 'Usuń zdanie',
+                // Ustawienia kompaktowe:
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32, // Lekko mniejsza ikona dla bezpieczeństwa
+              ),
+              
+              const SizedBox(height: 8), // Mniejszy odstęp (było 12, teraz 8)
+
+              // 2. Ikona EDYCJI (Niebieska)
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                   // TODO: Tu logika edycji
+                   print("Kliknięto edycję id: ${sentence.id}");
+                },
+                tooltip: 'Edytuj zdanie',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+              ),
+            ],
+          ),
         ),
       ),
     );
