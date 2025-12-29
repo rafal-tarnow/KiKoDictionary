@@ -2,6 +2,7 @@
 
 
 Development enviroment run:
+source .venv/bin/activate
 
 uvicorn main:app --host 0.0.0.0 --port 8003 \
   --ssl-keyfile /home/rafal/fastapi_ssl/server.key \

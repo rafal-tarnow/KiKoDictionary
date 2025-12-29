@@ -67,3 +67,58 @@ sftp://rafal@ssh.rafal-kruszyna.org
 Na serwerze jest uruchomiona instancja nexcloud
 https://rafal-kruszyna.org/nextcloud
 
+
+
+## 🛠️ Development Lokalny (Uruchomienie wielu serwisów)
+
+Ten projekt składa się z kilku mikroserwisów. Aby uniknąć ręcznego uruchamiania każdego z nich w osobnych terminalach, używamy narzędzia **Honcho** (Pythonowy port Foremana), które zarządza procesami na podstawie pliku `Procfile`.
+
+### 1. Wymagania wstępne
+
+Upewnij się, że masz zainstalowane `pipx` (do izolacji narzędzi) oraz samo `honcho`:
+
+```bash
+# Instalacja honcho (jeśli jeszcze nie masz)
+pipx install honcho
+
+Instalacja zależności
+Zanim uruchomisz serwisy po raz pierwszy, musisz przygotować ich środowiska wirtualne:
+
+# Serwis Captcha (standardowy venv)
+cd captcha-microservice
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+deactivate
+cd ..
+
+# Serwis Sentences (standardowy venv)
+cd sentences-microservice
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+deactivate
+cd ..
+
+# Serwis Users (Poetry)
+cd users-microservice
+poetry install
+cd ..
+
+3. Uruchamianie (Start Serwisów)
+Będąc w głównym katalogu projektu, uruchom jedną komendę:
+
+cd KIKOFastapiServer
+honcho start
+
+Co się wtedy dzieje?
+Honcho odczytuje plik Procfile i uruchamia wszystkie mikroserwisy jednocześnie, każdy na dedykowanym porcie. Logi ze wszystkich serwisów są strumieniowane do jednej konsoli (oznaczone różnymi kolorami).
+
+Serwis	Technologia	Port Lokalny	URL
+Captcha	FastAPI + venv	8001	http://localhost:8001
+Sentences	FastAPI + venv	8002	http://localhost:8002
+Users	FastAPI + Poetry	8003	http://localhost:8003
+Aby zatrzymać wszystkie serwisy, po prostu naciśnij Ctrl + C w terminalu.
+
+
+

@@ -1,0 +1,35 @@
+# ==============================================================================
+# PLIK KONFIGURACYJNY DO LOKALNEGO DEVELOPEMENTU (HONCHO / FOREMAN)
+# ==============================================================================
+#
+# CO TO JEST:
+# Ten plik definiuje listę procesów (mikroserwisów), które są potrzebne
+# do działania całej aplikacji w środowisku lokalnym.
+#
+# PO CO TO JEST:
+# Zamiast otwierać 3 osobne terminale i ręcznie wpisywać komendy startowe,
+# używamy menedżera procesów, który uruchamia wszystko naraz,
+# zbiera logi w jednym miejscu i pozwala zamknąć wszystko jednym Ctrl+C.
+#
+# WYMAGANIA:
+# Zainstalowane narzędzie 'honcho'. Jeśli nie masz:
+# $ pipx install honcho
+#
+# JAK URUCHOMIĆ:
+# Będąc w głównym katalogu projektu (tam gdzie jest ten plik), wpisz:
+# $ honcho start
+#
+# UWAGI:
+# - Każdy serwis musi działać na unikalnym porcie (8001, 8002, 8003).
+# - Lokalnie używamy flagi --reload, aby kod odświeżał się po zapisaniu zmian.
+# ==============================================================================
+
+# --- Serwis 1: Captcha (venv) ---
+captcha: cd captcha-microservice && .venv/bin/uvicorn main:app --reload --port 8001
+
+# --- Serwis 2: Sentences (venv) ---
+sentences: cd sentences-microservice && .venv/bin/uvicorn main:app --reload --port 8002
+
+# --- Serwis 3: Users (Poetry) ---
+# Tutaj używamy 'poetry run', aby wykorzystać środowisko zarządzane przez Poetry
+users: cd users-microservice && poetry run uvicorn main:app --reload --port 8003

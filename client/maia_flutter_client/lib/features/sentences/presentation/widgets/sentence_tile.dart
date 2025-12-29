@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/sentence_model.dart';
 import '../delete_sentence_controller.dart';
+import '../edit_sentence_dialog.dart';
 
 class SentenceTile extends ConsumerWidget {
   final Sentence sentence;
@@ -112,6 +113,10 @@ class SentenceTile extends ConsumerWidget {
                 onPressed: () {
                    // TODO: Tu logika edycji
                    print("Kliknięto edycję id: ${sentence.id}");
+                   showDialog(
+                     context: context,
+                     builder: (context) => EditSentenceDialog(sentence: sentence),
+                   );
                 },
                 tooltip: 'Edytuj zdanie',
                 padding: EdgeInsets.zero,

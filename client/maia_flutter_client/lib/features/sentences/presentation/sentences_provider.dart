@@ -109,6 +109,16 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
       // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
     );
   }
+
+  void updateSentenceLocally(Sentence updatedSentence) {
+    // Tworzymy nową listę, mapując starą
+    final newSentences = state.sentences.map((s) {
+      return s.id == updatedSentence.id ? updatedSentence : s;
+    }).toList();
+
+    // Emitujemy nowy stan
+    state = state.copyWith(sentences: newSentences);
+  }
 }
 
 final sentencesProvider =

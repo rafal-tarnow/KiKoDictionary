@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_provider.dart';
 import 'sentence_model.dart';
 import 'sentence_create_model.dart';
+import 'sentence_update_model.dart';
 
 // Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
 class SentencesResponse {
@@ -74,4 +75,23 @@ class SentencesRepository {
       throw Exception('Failed to delete sentence: $e');
     }
   }
+
+  Future<Sentence> updateSentence({
+    required int id,
+    required SentenceUpdate data,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/sentences/$id',
+        data: data.toJson(),
+      );
+      
+      // API zwraca zaktualizowany obiekt Sentence (według dokumnetacji)
+      // Od razu go parsujemy i zwracamy wyżej.
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to update sentence: $e');
+    }
+  }
+
 }

@@ -27,7 +27,7 @@ class DeleteSentenceController {
     try {
       // Wywołanie API (asynchronicznie)
       await repo.deleteSentence(sentenceId);
-
+      if (!context.mounted) return;
       // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
       notifier.removeSentenceLocally(sentenceId);
 
