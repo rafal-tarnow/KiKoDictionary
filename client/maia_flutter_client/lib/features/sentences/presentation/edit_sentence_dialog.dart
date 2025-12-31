@@ -72,7 +72,7 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
       // Dialog zamiast AlertDialog, żeby mieć większą kontrolę nad layoutem
       insetPadding: const EdgeInsets.all(16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth), // Max szerokość na tabletach
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth*0.9), // Max szerokość na tabletach
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -119,7 +119,7 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                           minLines: 3, // Domyślnie wysokie na 3 linie
                           maxLines: null, // Rozszerza się w nieskończoność
                           keyboardType: TextInputType.multiline,
-                          validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
                         ),
                         const SizedBox(height: 16),
                         
@@ -134,20 +134,54 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                           minLines: 2,
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
-                          validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
                         ),
                         const SizedBox(height: 16),
                         
+                        // --- ZMIANA: Zwykły Label informacyjny ---
+                        // Zamiast pola tekstowego pokazujemy po prostu informację
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0), // Lekkie wcięcie, żeby zrównać z labelami inputów
+                          child: Row(
+                            children: [
+                              const Icon(Icons.language, color: Colors.grey, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Język: ',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.light 
+                                      ? Colors.grey.shade200 
+                                      : Colors.grey.shade700,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  widget.sentence.language.toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        /* 
+                        // --- Oryginalna wersja edycyjna (zakomentowana) ---
                         TextFormField(
                           controller: _languageController,
                           decoration: const InputDecoration(
                             labelText: 'Język',
                             border: OutlineInputBorder(),
-                            helperText: 'Kod języka, np. EN, DE, ES',
+                            helperText: 'Kod języka, np. en, de, es', //ISO 639-1 
                           ),
                           enabled: !isLoading,
-                          validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
                         ),
+                        */
                       ],
                     ),
                   ),

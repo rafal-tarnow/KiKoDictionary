@@ -41,7 +41,8 @@ Rectangle {
             title: qsTr("Development REST API server")
             url_captcha: "https://maia-sentences.rafal-kruszyna.org/"
             url_users: "http://127.0.0.1:8002"
-            url_sentences: "http://127.0.0.1:8003/api"
+            //url_sentences: "http://127.0.0.1:8003/api"
+            url_sentences: "http://10.139.19.47:8003/api"
             icon: "qrc:/qt/qml/ColorPalette/assets/images/qt.png"
         }
 

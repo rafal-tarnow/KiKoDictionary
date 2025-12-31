@@ -1,37 +1,3 @@
-// Copyright (C) 2023 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-
-
-// import QtQuick
-// import QtQuick.Controls
-// import QtQuick.Layouts
-
-// Window {
-//     id: root
-
-//     visible: true
-
-//     width: 450
-//     height: 700
-
-//     //width: Screen.width
-//     //height: Screen.height
-
-//     // Image{
-//     // anchors.fill: parent
-//     // source: "https://as1.ftcdn.net/v2/jpg/04/97/31/24/1000_F_497312401_fmQQiKYB8QsgZNsdXveTMLLYvMwe3lV9.jpg"
-//     // }
-
-//     Loader{
-//     anchors.fill: parent
-//     asynchronous: true
-//     source: "http://127.0.0.1/View.qml"
-//     }
-// }
-
-
-
-
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -51,6 +17,7 @@ Window {
     height: 700
     visible: true
     title: qsTr("Color Palette Client")
+    color: "#e0e0e0"
 
     enum DataView {
         UserView = 0,
@@ -69,9 +36,10 @@ Window {
 
     Action {
         id: navigateBackAction
-        icon.source: "qrc:/qt/qml/ColorPalette/assets/images/navi-drawer-svgrepo-com.svg"
-        icon.width: 20
-        icon.height: 20
+        //icon.source: "qrc:/qt/qml/ColorPalette/assets/images/navi-drawer-svgrepo-com.svg"
+        icon.source: "qrc:/qt/qml/ColorPalette/assets/images/drawer_flutter.svg"
+        icon.width: 10
+        icon.height: 10
         onTriggered: {
             drawer.open()
         }
@@ -116,28 +84,30 @@ Window {
     }
 
     Rectangle{
-        color: "#ff8888"
+        id: mainView
+        //color: "blue"
         anchors.horizontalCenter: parent.horizontalCenter
         width: window.width > 500 ? 500 : window.width
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        border.width: 1
-        border.color: "blue"
 
         ToolBar {
             id: menuBar
-            anchors.margins: 1
+            //anchors.margins: 1
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
+            implicitHeight: 56
             z: 2
             RowLayout{
                 spacing: 20
                 anchors.fill: parent
 
-                ToolButton {
+                RoundButton {
                     action: navigateBackAction
                     visible: true
+                    icon.width: 18
+                    icon.height: 18
                 }
                 Item{
                     Layout.fillHeight: true
@@ -187,8 +157,8 @@ Window {
             }
             background: Rectangle{
                 color: UIStyle.colorPrimary
-                border.width: 1
-                border.color: "yellow"
+                // border.width: 1
+                // border.color: "yellow"
             }
         }
 
@@ -297,12 +267,18 @@ Window {
             anchors.bottom: parent.bottom
             visible: false
         }
+
+
+
     }
+
 
     Drawer{
         id: drawer
         width: 200
         height: parent.height
+
+        edge: Qt.LeftEdge
 
         ListView {
             id: listView
@@ -341,7 +317,6 @@ Window {
 
 
 
-
     //! [RestService QML element]
     RestService {
         id: paletteService
@@ -370,6 +345,5 @@ Window {
     //! [RestService QML element]
 
 }
-
 
 

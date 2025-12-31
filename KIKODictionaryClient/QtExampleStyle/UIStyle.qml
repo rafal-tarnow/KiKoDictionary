@@ -28,7 +28,8 @@ QtObject {
     readonly property color colorSecondary_2: "#fcf6bd" //żółty
     readonly property color colorGreen: "#d0f4de" //green
     readonly property color colorSecondary: "#a9def9" //blue
-    readonly property color colorPrimary: "#00a884" //purple
+    //readonly property color colorPrimary: "#00a884" //purple
+    readonly property color colorPrimary: "#f8e9f9" //purple
 
 
     function iconPath(baseImagePath) {

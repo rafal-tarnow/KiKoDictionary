@@ -63,7 +63,8 @@ qt_add_qml_module(dudu
         assets/images/user.svg
         assets/images/user_logged.svg
         assets/images/plus.svg
-        assets/images/navi-drawer-svgrepo-com.svg
+        #assets/images/navi-drawer-svgrepo-com.svg
+        assets/images/drawer_flutter.svg
         qtquickcontrols2.conf
         QML_FILES ColorPalette/SentenceDialogDelete.qml
         QML_FILES common/ScrollablePage.qml
