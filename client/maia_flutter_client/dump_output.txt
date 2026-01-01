@@ -13,6 +13,7 @@ import 'features/words/words_page.dart';
 import 'features/sentences/sentences_page.dart';
 import 'features/test/test_page.dart';
 import 'core/app_sizes.dart'; // Import stałych
+import 'features/health/services_health_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -23,6 +24,7 @@ class MainShell extends ConsumerWidget {
     WordsPage(),
     SentencesPage(),
     TestPage(),
+    ServicesHealthPage(),
   ];
 
   static const List<String> _titles = [
@@ -30,7 +32,8 @@ class MainShell extends ConsumerWidget {
     'Dictionary',
     'Words',
     'Sentences',
-    'Test'
+    'Test',
+    'Health Check'
   ];
 
   @override
@@ -163,6 +166,226 @@ class TestPage extends StatelessWidget{
   Widget build(BuildContext context) {
     return const Center(
       child: Text('Sentences page')
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/services_health_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'widgets/server_monitor_tile.dart';
+
+class ServicesHealthPage extends StatelessWidget {
+  const ServicesHealthPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Health Check"),
+      ),
+      body: SingleChildScrollView( // Odpowiednik ScrollablePage
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- DEV SERVERS ---
+            _buildSectionHeader("Dev servers"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "http://127.0.0.1:8001",
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "http://127.0.0.1:8002",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "http://127.0.0.1:8003",
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION ---
+            _buildSectionHeader("Production"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "https://maia-users.rafal-kruszyna.org",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "https://maia-sentences.rafal-kruszyna.org",
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION LOCAL ---
+            _buildSectionHeader("Production local"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "http://192.168.0.102:8001",
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "http://192.168.0.102:8002",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "http://192.168.0.102:8003",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18, // pointSize 15 w QML to mniej więcej 18-20 w Flutter
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/server_health_provider.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Enum określający stan serwera
+enum ServerStatus { loading, online, offline }
+
+// Provider, który tworzy osobną instancję Dio dla health checków.
+// Dlaczego osobna? Bo chcemy krótki timeout (np. 2 sekundy), a nie domyślny.
+final healthCheckDioProvider = Provider<Dio>((ref) {
+  return Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 3), // Krótki timeout
+    receiveTimeout: const Duration(seconds: 3),
+    validateStatus: (status) {
+      // Uznajemy za sukces wszystko poniżej 500 (nawet 404 oznacza, że serwer odpowiada)
+      return status != null && status < 500;
+    },
+  ));
+});
+
+// Family Provider: Tworzy logikę sprawdzania dla konkretnego adresu URL.
+// Zwraca ServerStatus.
+final serverHealthProvider = FutureProvider.family<ServerStatus, String>((ref, url) async {
+  final dio = ref.watch(healthCheckDioProvider);
+  
+  try {
+    // Wysyłamy proste zapytanie GET lub HEAD. 
+    // Jeśli API ma endpoint /health, warto go użyć. Jeśli nie, root '/' wystarczy.
+    // Dodajemy cache breaker, żeby przeglądarka/dio nie cache'owały wyniku
+    final checkUrl = '$url/?t=${DateTime.now().millisecondsSinceEpoch}';
+    
+    await dio.get(checkUrl);
+    
+    return ServerStatus.online;
+  } catch (e) {
+    // Jeśli timeout lub błąd sieci -> offline
+    return ServerStatus.offline;
+  }
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/widgets/server_monitor_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../server_health_provider.dart';
+
+class ServerMonitorTile extends ConsumerWidget {
+  final String serverUrl;
+  final String serviceName;
+
+  const ServerMonitorTile({
+    super.key,
+    required this.serverUrl,
+    required this.serviceName,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy stan dla konkretnego URL-a
+    final healthState = ref.watch(serverHealthProvider(serverUrl));
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // Ikona statusu (zamiast Rectangle z QML)
+            _buildStatusIndicator(healthState),
+            
+            const SizedBox(width: 16),
+            
+            // Tekst
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    serviceName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    serverUrl,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+
+            // Przycisk odświeżania (opcjonalnie)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.grey),
+              onPressed: () {
+                // Wymusza ponowne pobranie danych dla tego URL
+                ref.invalidate(serverHealthProvider(serverUrl));
+              },
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(AsyncValue<ServerStatus> state) {
+    return state.when(
+      data: (status) {
+        final color = status == ServerStatus.online ? Colors.green : Colors.red;
+        final icon = status == ServerStatus.online ? Icons.check_circle : Icons.error;
+        return Icon(icon, color: color, size: 24);
+      },
+      loading: () => const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (_, __) => const Icon(Icons.error, color: Colors.red, size: 24),
     );
   }
 }
@@ -1420,6 +1643,12 @@ class MainDrawer extends ConsumerWidget {
             icon: Icons.quiz,
             index: 4,
             isSelected: selectedIndex == 4,
+          ),
+          _DrawerTile(
+            title: 'Health Check',
+            icon: Icons.dns,
+            index: 5,
+            isSelected: selectedIndex == 5
           ),
         ],
       ),

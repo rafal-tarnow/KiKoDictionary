@@ -61,6 +61,12 @@ class MainDrawer extends ConsumerWidget {
             index: 4,
             isSelected: selectedIndex == 4,
           ),
+          _DrawerTile(
+            title: 'Health Check',
+            icon: Icons.dns,
+            index: 5,
+            isSelected: selectedIndex == 5
+          ),
         ],
       ),
     );
