@@ -10,7 +10,7 @@ blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
 
 # Ścieżka startowa (można zmienić na inny katalog)
-start_path = './lib/features/test'
+start_path = './lib'
 
 # Plik wynikowy
 output_file = 'dump_output.txt'

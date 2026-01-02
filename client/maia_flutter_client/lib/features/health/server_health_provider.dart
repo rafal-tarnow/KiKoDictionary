@@ -1,38 +1,24 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import './services/health_check_service.dart';
 
-// Enum określający stan serwera
-enum ServerStatus { loading, online, offline }
+final healthCheckServiceProvider = Provider((ref) => HealthCheckService());
 
-// Provider, który tworzy osobną instancję Dio dla health checków.
-// Dlaczego osobna? Bo chcemy krótki timeout (np. 2 sekundy), a nie domyślny.
-final healthCheckDioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 3), // Krótki timeout
-    receiveTimeout: const Duration(seconds: 3),
-    validateStatus: (status) {
-      // Uznajemy za sukces wszystko poniżej 500 (nawet 404 oznacza, że serwer odpowiada)
-      return status != null && status < 500;
-    },
-  ));
-});
+// StreamProvider automatycznie obsługuje stan Loading/Error/Data
+// .family pozwala przekazać URL
+final serverHealthProvider = StreamProvider.autoDispose.family<bool, String>((ref, url) async* {
+  final service = ref.watch(healthCheckServiceProvider);
 
-// Family Provider: Tworzy logikę sprawdzania dla konkretnego adresu URL.
-// Zwraca ServerStatus.
-final serverHealthProvider = FutureProvider.family<ServerStatus, String>((ref, url) async {
-  final dio = ref.watch(healthCheckDioProvider);
-  
-  try {
-    // Wysyłamy proste zapytanie GET lub HEAD. 
-    // Jeśli API ma endpoint /health, warto go użyć. Jeśli nie, root '/' wystarczy.
-    // Dodajemy cache breaker, żeby przeglądarka/dio nie cache'owały wyniku
-    final checkUrl = '$url/?t=${DateTime.now().millisecondsSinceEpoch}';
-    
-    await dio.get(checkUrl);
-    
-    return ServerStatus.online;
-  } catch (e) {
-    // Jeśli timeout lub błąd sieci -> offline
-    return ServerStatus.offline;
+  // 1. Sprawdź natychmiast przy starcie
+  yield await service.checkHost(url);
+
+  // 2. Uruchom pętlę (Timer) - co 5 sekund (jak w C++ interval)
+  // Stream.periodic działa jak QTimer
+  final stream = Stream.periodic(const Duration(seconds: 5), (_) {
+    return service.checkHost(url);
+  });
+
+  // 3. Emituj wyniki z pętli
+  await for (final isAlive in stream) {
+    yield await isAlive; // await tutaj, bo checkHost zwraca Future
   }
 });

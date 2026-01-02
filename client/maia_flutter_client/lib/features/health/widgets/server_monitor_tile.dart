@@ -14,64 +14,69 @@ class ServerMonitorTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Obserwujemy stan dla konkretnego URL-a
-    final healthState = ref.watch(serverHealthProvider(serverUrl));
+    // Obserwujemy StreamProvidera
+    final AsyncValue<bool> healthState = ref.watch(serverHealthProvider(serverUrl));
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            // Ikona statusu (zamiast Rectangle z QML)
+            // Ikona statusu z obsługą ładowania
             _buildStatusIndicator(healthState),
             
             const SizedBox(width: 16),
             
-            // Tekst
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     serviceName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
                     serverUrl,
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-
-            // Przycisk odświeżania (opcjonalnie)
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.grey),
-              onPressed: () {
-                // Wymusza ponowne pobranie danych dla tego URL
-                ref.invalidate(serverHealthProvider(serverUrl));
-              },
-            )
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusIndicator(AsyncValue<ServerStatus> state) {
+  Widget _buildStatusIndicator(AsyncValue<bool> state) {
     return state.when(
-      data: (status) {
-        final color = status == ServerStatus.online ? Colors.green : Colors.red;
-        final icon = status == ServerStatus.online ? Icons.check_circle : Icons.error;
-        return Icon(icon, color: color, size: 24);
+      // Gdy mamy dane (true/false)
+      data: (isAlive) {
+        return Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isAlive ? Colors.green : Colors.red,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isAlive ? Icons.check : Icons.close,
+            color: Colors.white,
+            size: 16,
+          ),
+        );
       },
+      // Gdy się ładuje (pierwsze zapytanie)
       loading: () => const SizedBox(
-        width: 20,
-        height: 20,
+        width: 24,
+        height: 24,
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      error: (_, __) => const Icon(Icons.error, color: Colors.red, size: 24),
+      // Gdy wystąpi błąd w samym Streamie (rzadkie przy try-catch w serwisie)
+      error: (_, __) => const Icon(Icons.error_outline, color: Colors.grey),
     );
   }
 }

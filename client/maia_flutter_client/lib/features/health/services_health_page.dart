@@ -7,10 +7,13 @@ class ServicesHealthPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Health Check"),
-      ),
-      body: SingleChildScrollView( // Odpowiednik ScrollablePage
+      // appBar: AppBar(
+      //   title: const Text("Health Check"),
+      // ),
+      //backgroundColor: const Color(0xFFFFFFFF),
+
+      body: SingleChildScrollView(
+        // Odpowiednik ScrollablePage
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,7 +30,7 @@ class ServicesHealthPage extends StatelessWidget {
             ),
             const ServerMonitorTile(
               serviceName: "sentences-microservice",
-              serverUrl: "http://127.0.0.1:8003",
+              serverUrl: "http://10.139.19.47:8003",
             ),
 
             const SizedBox(height: 24),
@@ -36,7 +39,8 @@ class ServicesHealthPage extends StatelessWidget {
             _buildSectionHeader("Production"),
             const ServerMonitorTile(
               serviceName: "captcha-microservice",
-              serverUrl: "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
+              serverUrl:
+                  "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
             ),
             const ServerMonitorTile(
               serviceName: "users-microservice",

@@ -1,4 +1,158 @@
 ===============================
+Ścieżka do pliku: ./lib/app.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/navigation_provider.dart';
+import 'core/widgets/main_drawer.dart';
+import 'features/home/home_page.dart';
+import 'features/dictionary/dictionary_page.dart';
+import 'features/words/words_page.dart';
+import 'features/sentences/sentences_page.dart';
+import 'features/test/test_page.dart';
+import 'core/app_sizes.dart'; // Import stałych
+import 'features/health/services_health_page.dart';
+
+class MainShell extends ConsumerWidget {
+  const MainShell({super.key});
+
+  static const List<Widget> _pages = [
+    HomePage(),
+    DictionaryPage(),
+    WordsPage(),
+    SentencesPage(),
+    TestPage(),
+    ServicesHealthPage(),
+  ];
+
+  static const List<String> _titles = [
+    'Ogłoszenia parafialne',
+    'Dictionary',
+    'Words',
+    'Sentences',
+    'Test',
+    'Health Check'
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = ref.watch(navigationIndexProvider);
+
+    return Container( //szare tło aplikacji
+      // Zamieniamy surfaceVariant na surfaceContainerHighest
+      color: const Color(0xFFE0E0E0), 
+      // color: Theme.of(
+      //   context,
+      // ).colorScheme.surfaceContainer,
+      //color: const Color(0xFFE0E0E0), 
+      // color: Theme.of(
+      //   context,
+      // ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth),
+          child: Container(
+            // Ten kontener dodaje cień i ogranicza Scaffold
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: ClipRect( //ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
+              child: Scaffold(
+                //backgroundColor: Theme.of(context).colorScheme.surface,
+                backgroundColor: const Color(0xFFFFFFFF),
+                appBar: AppBar(
+                  title: Text(_titles[selectedIndex]),
+                  elevation: 2,
+                ),
+                drawer: const MainDrawer(),
+                body: _pages[selectedIndex],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/main.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app.dart';
+
+void main() {
+  // ProviderScope przechowuje stan wszystkich providerów
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'English Learning App',
+      theme: ThemeData(
+        //colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const MainShell(),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/dictionary/dictionary_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class DictionaryPage extends StatelessWidget{
+  const DictionaryPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text("Slownik - niebawem"),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/home/home_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Strona Główna - Nauka Angielskiego'));
+  }
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/test/test_page.dart
 
 Zawartość pliku:
@@ -23,7 +177,11 @@ class TestPage extends ConsumerWidget{
         children: [
           Text('Sentences page: $brickName'),
           Text('Bricks count: $bricksCount'),
-          Icon(brickStatus ? Icons.check_circle : Icons.error);      Colors.green : Colors.red  i  ; ?? jak zrobic icon? zeby icon byl czerwony 
+          Icon(
+            brickStatus ? Icons.check_circle : Icons.error,
+            color: brickStatus ? Colors.green : Colors.red,
+            size: 24,
+            ),
         ],
       ),
     );
@@ -67,7 +225,7 @@ class TestBackend with ChangeNotifier {
   }
 
   void _startStatusTimer(){
-    _timer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+    _statusTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
       brickStatus = !brickStatus;
 
       notifyListeners();
@@ -83,5 +241,1586 @@ class TestBackend with ChangeNotifier {
     });
   }
 }
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/services_health_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'widgets/server_monitor_tile.dart';
+
+class ServicesHealthPage extends StatelessWidget {
+  const ServicesHealthPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // appBar: AppBar(
+      //   title: const Text("Health Check"),
+      // ),
+      //backgroundColor: const Color(0xFFFFFFFF),
+
+      body: SingleChildScrollView(
+        // Odpowiednik ScrollablePage
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- DEV SERVERS ---
+            _buildSectionHeader("Dev servers"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "http://127.0.0.1:8001",
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "http://127.0.0.1:8002",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "http://10.139.19.47:8003",
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION ---
+            _buildSectionHeader("Production"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl:
+                  "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "https://maia-users.rafal-kruszyna.org",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "https://maia-sentences.rafal-kruszyna.org",
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION LOCAL ---
+            _buildSectionHeader("Production local"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "http://192.168.0.102:8001",
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "http://192.168.0.102:8002",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "http://192.168.0.102:8003",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18, // pointSize 15 w QML to mniej więcej 18-20 w Flutter
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/server_health_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import './services/health_check_service.dart';
+
+final healthCheckServiceProvider = Provider((ref) => HealthCheckService());
+
+// StreamProvider automatycznie obsługuje stan Loading/Error/Data
+// .family pozwala przekazać URL
+final serverHealthProvider = StreamProvider.autoDispose.family<bool, String>((ref, url) async* {
+  final service = ref.watch(healthCheckServiceProvider);
+
+  // 1. Sprawdź natychmiast przy starcie
+  yield await service.checkHost(url);
+
+  // 2. Uruchom pętlę (Timer) - co 5 sekund (jak w C++ interval)
+  // Stream.periodic działa jak QTimer
+  final stream = Stream.periodic(const Duration(seconds: 5), (_) {
+    return service.checkHost(url);
+  });
+
+  // 3. Emituj wyniki z pętli
+  await for (final isAlive in stream) {
+    yield await isAlive; // await tutaj, bo checkHost zwraca Future
+  }
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/services/health_check_service.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+
+class HealthCheckService {
+  final Dio _dio;
+
+  HealthCheckService()
+      : _dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+          contentType: 'application/json',
+          validateStatus: (status) => status == 200, // Tylko 200 nas interesuje
+        ));
+
+  /// Sprawdza konkretny endpoint wymagany przez C++ logic
+  Future<bool> checkHost(String baseUrl) async {
+    // Usuń slash na końcu jeśli jest
+    final cleanUrl = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    
+    // Konkretny endpoint z Twojego kodu C++
+    final targetUrl = '$cleanUrl/health/live';
+
+    try {
+      // Cache breaker, żeby nie pobierać starego wyniku
+      final response = await _dio.get(
+        targetUrl, 
+        queryParameters: {'t': DateTime.now().millisecondsSinceEpoch},
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        // Sprawdzenie logiki biznesowej: {"status": "ok"}
+        return response.data['status'] == 'ok';
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/widgets/server_monitor_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../server_health_provider.dart';
+
+class ServerMonitorTile extends ConsumerWidget {
+  final String serverUrl;
+  final String serviceName;
+
+  const ServerMonitorTile({
+    super.key,
+    required this.serverUrl,
+    required this.serviceName,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy StreamProvidera
+    final AsyncValue<bool> healthState = ref.watch(serverHealthProvider(serverUrl));
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // Ikona statusu z obsługą ładowania
+            _buildStatusIndicator(healthState),
+            
+            const SizedBox(width: 16),
+            
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    serviceName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    serverUrl,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(AsyncValue<bool> state) {
+    return state.when(
+      // Gdy mamy dane (true/false)
+      data: (isAlive) {
+        return Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isAlive ? Colors.green : Colors.red,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isAlive ? Icons.check : Icons.close,
+            color: Colors.white,
+            size: 16,
+          ),
+        );
+      },
+      // Gdy się ładuje (pierwsze zapytanie)
+      loading: () => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      // Gdy wystąpi błąd w samym Streamie (rzadkie przy try-catch w serwisie)
+      error: (_, __) => const Icon(Icons.error_outline, color: Colors.grey),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'presentation/sentences_provider.dart';
+import 'presentation/add_sentence_dialog.dart';
+import 'presentation/widgets/sentence_tile.dart'; 
+
+class SentencesPage extends ConsumerWidget {
+  const SentencesPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(sentencesProvider);
+    final notifier = ref.read(sentencesProvider.notifier);
+
+    return Scaffold(
+      //backgroundColor: Colors.transparent,
+      //backgroundColor: Colors.red,
+      backgroundColor: const Color(0xFFFFFFFF),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const AddSentenceDialog(),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            border: Border(
+              top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton.icon(
+                onPressed: state.currentPage > 1 && !state.isLoading
+                    ? () => notifier.previousPage()
+                    : null,
+                icon: const Icon(Icons.arrow_back),
+                label: const Text("Poprzednia"),
+              ),
+
+              Text(
+                "Strona ${state.currentPage}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              ElevatedButton.icon(
+                onPressed: !state.isLastPage && !state.isLoading
+                    ? () => notifier.nextPage()
+                    : null,
+                label: const Text("Następna"),
+                icon: const Icon(Icons.arrow_forward),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+
+      body: Column(
+        children: [
+          if (state.errorMessage != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.red.shade100,
+              width: double.infinity,
+              child: Text(
+                'Błąd: ${state.errorMessage}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+
+          Expanded(
+            child: state.isLoading && state.sentences.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : state.sentences.isEmpty
+                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                    : Stack(
+                        children: [
+                          ListView.separated(
+                            itemCount: state.sentences.length,
+                            padding: const EdgeInsets.all(8),
+                            separatorBuilder: (context, index) {
+                              return Divider(
+                                height: 16,
+                                thickness: 0.5,
+                                color: Colors.grey.shade400,
+                                indent: 8,
+                                endIndent: 8,
+                              );
+                            },
+                            itemBuilder: (context, index) {
+                              final item = state.sentences[index];
+                              // --- UŻYCIE NOWEGO WIDGETU ---
+                              return SentenceTile(sentence: item);
+                            },
+                          ),
+                          if (state.isLoading)
+                            const Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: LinearProgressIndicator(minHeight: 4),
+                            ),
+                        ],
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/delete_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+
+// Używamy prostego Providera, a nie StateNotifier, bo ten kontroler
+// nie przechowuje stanu (stateless logic), tylko wykonuje akcję.
+final deleteSentenceControllerProvider = Provider((ref) {
+  return DeleteSentenceController(ref);
+});
+
+class DeleteSentenceController {
+  final Ref _ref;
+
+  DeleteSentenceController(this._ref);
+
+  Future<void> deleteSentence({
+    required BuildContext context,
+    required int sentenceId,
+  }) async {
+    // 1. "Fire and forget" logic from UI perspective (dialog już zamknięty)
+    
+    final repo = _ref.read(sentencesRepositoryProvider);
+    final notifier = _ref.read(sentencesProvider.notifier);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Wywołanie API (asynchronicznie)
+      await repo.deleteSentence(sentenceId);
+      if (!context.mounted) return;
+      // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
+      notifier.removeSentenceLocally(sentenceId);
+
+      // Feedback dla użytkownika (Snackbar)
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Usunięto zdanie.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      // Obsługa błędu
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Błąd usuwania: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_create_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart'; // Potrzebne, żeby odświeżyć listę po sukcesie
+
+// Controller zarządza stanem operacji dodawania.
+// AsyncValue<void> oznacza, że operacja nie zwraca wartości, ale śledzimy jej status.
+class AddSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref; // Ref pozwala nam wchodzić w interakcję z innymi providerami
+
+  AddSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
+
+  Future<bool> addSentence({
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
+    state = const AsyncValue.loading();
+
+    try {
+      final dto = SentenceCreate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      await _repository.createSentence(dto);
+
+      // --- ZMIANA ---
+      // Zamiast zabijać providera (invalidate), prosimy go o odświeżenie danych.
+      // Dzięki temu zachowujemy numer strony.
+      await _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+      
+      // Jeśli wolałbyś skakać do ostatniej strony (bo tam dodał się element),
+      // odkomentuj metodę w providerze i użyj tutaj:
+      // await _ref.read(sentencesProvider.notifier).goToLastPage();
+
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      // 4. Błąd
+      state = AsyncValue.error(e, stack);
+      return false;
+    }
+  }
+}
+
+// Rejestracja providera
+final addSentenceControllerProvider = 
+    StateNotifierProvider<AddSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return AddSentenceController(repo, ref);
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_update_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+
+// Używamy StateNotifier do zarządzania stanem asynchronicznym (loading/error/data)
+// AsyncValue<void> informuje UI czy trwa zapisywanie.
+class EditSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref;
+
+  EditSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null));
+
+  Future<bool> editSentence({
+    required int id,
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    state = const AsyncValue.loading(); // Pokaż spinner
+
+    try {
+      final dto = SentenceUpdate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      // 1. Wywołanie API
+      final updatedSentence = await _repository.updateSentence(id: id, data: dto);
+
+      // 2. Aktualizacja lokalnego stanu listy (nie musimy odświeżać całej strony!)
+      _ref.read(sentencesProvider.notifier).updateSentenceLocally(updatedSentence);
+
+      state = const AsyncValue.data(null); // Sukces
+      return true;
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack); // Błąd
+      return false;
+    }
+  }
+}
+
+final editSentenceControllerProvider = 
+    StateNotifierProvider<EditSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return EditSentenceController(repo, ref);
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_dialog.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_model.dart';
+import 'edit_sentence_controller.dart';
+import '../../../core/app_sizes.dart';
+
+class EditSentenceDialog extends ConsumerStatefulWidget {
+  final Sentence sentence; // Przyjmujemy obiekt do edycji
+
+  const EditSentenceDialog({super.key, required this.sentence});
+
+  @override
+  ConsumerState<EditSentenceDialog> createState() => _EditSentenceDialogState();
+}
+
+class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Kontrolery
+  late TextEditingController _sentenceController;
+  late TextEditingController _translationController;
+  late TextEditingController _languageController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicjalizujemy kontrolery wartościami z obiektu przekazanego w konstruktorze
+    _sentenceController = TextEditingController(text: widget.sentence.sentence);
+    _translationController = TextEditingController(text: widget.sentence.translation);
+    _languageController = TextEditingController(text: widget.sentence.language);
+  }
+
+  @override
+  void dispose() {
+    _sentenceController.dispose();
+    _translationController.dispose();
+    _languageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Pobieramy notifiera kontrolera
+    final controller = ref.read(editSentenceControllerProvider.notifier);
+
+    final success = await controller.editSentence(
+      id: widget.sentence.id,
+      sentence: _sentenceController.text,
+      translation: _translationController.text,
+      language: _languageController.text,
+    );
+
+    // Sprawdzamy mounted zanim użyjemy contextu po await (C++ safety rule!)
+    if (success && mounted) {
+      Navigator.of(context).pop(); // Zamykamy dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Zaktualizowano zdanie'),
+          behavior: SnackBarBehavior.floating, // Wygląda lepiej
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncState = ref.watch(editSentenceControllerProvider);
+    final isLoading = asyncState.isLoading;
+
+    return Dialog(
+      // Dialog zamiast AlertDialog, żeby mieć większą kontrolę nad layoutem
+      insetPadding: const EdgeInsets.all(16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth*0.9), // Max szerokość na tabletach
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // Dialog zajmie tyle ile trzeba
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Edytuj zdanie #${widget.sentence.id}",
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 24),
+                
+                // Obsługa błędu
+                if (asyncState.hasError)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      'Błąd: ${asyncState.error}',
+                      style: TextStyle(color: Colors.red.shade800),
+                    ),
+                  ),
+
+                // Lista pól w Flexible/ScrollView na wypadek małego ekranu/klawiatury
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _sentenceController,
+                          decoration: const InputDecoration(
+                            labelText: 'Oryginał',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true, // Ważne przy multiline
+                          ),
+                          enabled: !isLoading,
+                          minLines: 3, // Domyślnie wysokie na 3 linie
+                          maxLines: null, // Rozszerza się w nieskończoność
+                          keyboardType: TextInputType.multiline,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _translationController,
+                          decoration: const InputDecoration(
+                            labelText: 'Tłumaczenie',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                          ),
+                          enabled: !isLoading,
+                          minLines: 2,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // --- ZMIANA: Zwykły Label informacyjny ---
+                        // Zamiast pola tekstowego pokazujemy po prostu informację
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0), // Lekkie wcięcie, żeby zrównać z labelami inputów
+                          child: Row(
+                            children: [
+                              const Icon(Icons.language, color: Colors.grey, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Język: ',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.light 
+                                      ? Colors.grey.shade200 
+                                      : Colors.grey.shade700,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  widget.sentence.language.toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        /* 
+                        // --- Oryginalna wersja edycyjna (zakomentowana) ---
+                        TextFormField(
+                          controller: _languageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Język',
+                            border: OutlineInputBorder(),
+                            helperText: 'Kod języka, np. en, de, es', //ISO 639-1 
+                          ),
+                          enabled: !isLoading,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                        ),
+                        */
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Przyciski akcji
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Anuluj'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton( // FilledButton to nowy standard Material 3 (zamiast ElevatedButton)
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Zapisz zmiany'),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/sentences_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_model.dart';
+import '../data/sentences_repository.dart';
+
+class SentencesState {
+  final List<Sentence> sentences;
+  final bool isLoading;
+  final String? errorMessage;
+  final int currentPage;
+  final int totalPages;
+
+  const SentencesState({
+    this.sentences = const [],
+    this.isLoading = false,
+    this.errorMessage,
+    this.currentPage = 1,
+    this.totalPages = 1,
+  });
+
+  bool get isLastPage => currentPage >= totalPages;
+
+  SentencesState copyWith({
+    List<Sentence>? sentences,
+    bool? isLoading,
+    String? errorMessage,
+    int? currentPage,
+    int? totalPages,
+  }) {
+    return SentencesState(
+      sentences: sentences ?? this.sentences,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+    );
+  }
+}
+
+class SentencesNotifier extends StateNotifier<SentencesState> {
+  final SentencesRepository _repository;
+  static const int _perPage = 10;
+
+  SentencesNotifier(this._repository) : super(const SentencesState()) {
+    loadSentences(page: 1);
+  }
+
+  Future<void> loadSentences({required int page}) async {
+    if (state.isLoading) return;
+
+    // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
+    // chyba że chcesz, żeby znikały i pojawiał się spinner.
+    // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final response = await _repository.getSentences(
+        page: page,
+        perPage: _perPage,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        sentences: response.sentences,
+        totalPages: response.totalPages,
+        currentPage: page,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  // --- NOWA METODA ---
+  // Odświeża aktualną stronę bez resetowania stanu do zera
+  Future<void> refreshCurrentPage() async {
+    // Ładujemy ponownie tę samą stronę, na której jesteśmy
+    await loadSentences(page: state.currentPage);
+  }
+
+  /* 
+  // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
+  Future<void> goToLastPage() async {
+     // Najpierw pobierzmy info (może doszła nowa strona?)
+     // To uproszczenie, w idealnym świecie API po dodaniu zwraca ID nowej strony
+     await loadSentences(page: state.totalPages);
+  }
+  */
+
+  void nextPage() {
+    if (!state.isLastPage) {
+      loadSentences(page: state.currentPage + 1);
+    }
+  }
+
+  void previousPage() {
+    if (state.currentPage > 1) {
+      loadSentences(page: state.currentPage - 1);
+    }
+  }
+
+  // Usuwa element z lokalnego stanu (UI odświeży się natychmiast)
+  void removeSentenceLocally(int sentenceId) {
+    // std::remove_if w C++ style
+    final updatedList = state.sentences
+        .where((s) => s.id != sentenceId)
+        .toList();
+
+    state = state.copyWith(
+      sentences: updatedList,
+      // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
+    );
+  }
+
+  void updateSentenceLocally(Sentence updatedSentence) {
+    // Tworzymy nową listę, mapując starą
+    final newSentences = state.sentences.map((s) {
+      return s.id == updatedSentence.id ? updatedSentence : s;
+    }).toList();
+
+    // Emitujemy nowy stan
+    state = state.copyWith(sentences: newSentences);
+  }
+}
+
+final sentencesProvider =
+    StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
+      final repository = ref.watch(sentencesRepositoryProvider);
+      return SentencesNotifier(repository);
+    });
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_dialog.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'add_sentence_controller.dart';
+
+class AddSentenceDialog extends ConsumerStatefulWidget {
+  const AddSentenceDialog({super.key});
+
+  @override
+  ConsumerState<AddSentenceDialog> createState() => _AddSentenceDialogState();
+}
+
+class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
+  // Klucz formularza pozwala na walidację
+  final _formKey = GlobalKey<FormState>();
+  
+  // Kontrolery pól tekstowych
+  final _sentenceController = TextEditingController();
+  final _translationController = TextEditingController();
+  final _languageController = TextEditingController(text: 'EN'); // Domyślna wartość
+
+  @override
+  void dispose() {
+    // Sprzątanie zasobów (jak destruktor w C++)
+    _sentenceController.dispose();
+    _translationController.dispose();
+    _languageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_formKey.currentState!.validate()) {
+      // Wywołujemy metodę z kontrolera Riverpod
+      final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
+            sentence: _sentenceController.text,
+            language: _languageController.text,
+            translation: _translationController.text,
+          );
+
+      if (success && mounted) {
+        Navigator.of(context).pop(); // Zamknij dialog po sukcesie
+        
+        // Pokaż powiadomienie (Snackbar)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dodano nowe zdanie!')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Obserwujemy stan asynchroniczny (loading/error)
+    final asyncState = ref.watch(addSentenceControllerProvider);
+    final isLoading = asyncState.isLoading;
+
+    return AlertDialog(
+      title: const Text('Dodaj nowe zdanie'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Wyświetlanie błędu z API, jeśli wystąpił
+              if (asyncState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Błąd: ${asyncState.error}',
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+                
+              TextFormField(
+                controller: _sentenceController,
+                decoration: const InputDecoration(labelText: 'Zdanie (np. Hello World)'),
+                enabled: !isLoading, // Blokuj inputy podczas wysyłania
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _translationController,
+                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Witaj Świecie)'),
+                enabled: !isLoading,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _languageController,
+                decoration: const InputDecoration(labelText: 'Język (np. EN)'),
+                enabled: !isLoading,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Anuluj'),
+        ),
+        ElevatedButton(
+          onPressed: isLoading ? null : _submit,
+          child: isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2)
+                ) 
+              : const Text('Zapisz'),
+        ),
+      ],
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/sentence_model.dart';
+import '../delete_sentence_controller.dart';
+import '../edit_sentence_dialog.dart';
+
+class SentenceTile extends ConsumerWidget {
+  final Sentence sentence;
+
+  const SentenceTile({super.key, required this.sentence});
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Potwierdzenie"),
+        content: const Text("Usunąć to zdanie?"),
+        actions: [
+          // Przycisk "Nie"
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Zamknij dialog
+            },
+            child: const Text("Nie"),
+          ),
+          // Przycisk "Tak" - Czerwony
+          TextButton(
+            onPressed: () {
+              // 1. Najpierw zamykamy dialog
+              Navigator.of(ctx).pop();
+
+              // 2. Delegujemy operację do kontrolera
+              ref
+                  .read(deleteSentenceControllerProvider)
+                  .deleteSentence(context: context, sentenceId: sentence.id);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red, // Czerwony tekst
+            ),
+            child: const Text("Tak"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          child: Text(sentence.id.toString()),
+        ),
+        title: Text(
+          sentence.sentence,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              sentence.translation,
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.language, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  sentence.language,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+        isThreeLine: true,
+
+        // --- SEKCJA TRAILING (POPRAWIONA) ---
+        // Używamy FittedBox, aby uniknąć błędu "Bottom overflowed"
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown, // Skaluje w dół, jeśli brakuje miejsca
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Zajmuje tylko tyle miejsca ile trzeba
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. Ikona USUWANIA (Czerwona)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _showDeleteConfirmation(context, ref),
+                tooltip: 'Usuń zdanie',
+                // Ustawienia kompaktowe:
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32, // Lekko mniejsza ikona dla bezpieczeństwa
+              ),
+              
+              const SizedBox(height: 8), // Mniejszy odstęp (było 12, teraz 8)
+
+              // 2. Ikona EDYCJI (Niebieska)
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                   // TODO: Tu logika edycji
+                   print("Kliknięto edycję id: ${sentence.id}");
+                   showDialog(
+                     context: context,
+                     builder: (context) => EditSentenceDialog(sentence: sentence),
+                   );
+                },
+                tooltip: 'Edytuj zdanie',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_create_model.dart
+
+Zawartość pliku:
+
+class SentenceCreate {
+  final String sentence;
+  final String language;
+  final String translation;
+
+  const SentenceCreate({
+    required this.sentence,
+    required this.language,
+    required this.translation,
+  });
+
+  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
+  // W C++ to byłaby metoda serializująca do QJsonObject.
+  Map<String, dynamic> toJson() {
+    return {
+      'sentence': sentence,
+      'language': language,
+      'translation': translation,
+    };
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_model.dart
+
+Zawartość pliku:
+
+import 'package:equatable/equatable.dart';
+
+// Equatable pozwala porównywać obiekty po wartościach pól, a nie referencji w pamięci.
+// To jak przeładowanie operatora == w C++.
+class Sentence extends Equatable {
+  final int id;
+  final String sentence;
+  final String language;
+  final String translation;
+  // created_at przychodzi jako string, w prawdziwym projekcie parsujemy to na DateTime
+  final String createdAt; 
+
+  const Sentence({
+    required this.id,
+    required this.sentence,
+    required this.language,
+    required this.translation,
+    required this.createdAt,
+  });
+
+  // Factory constructor - w C++ to byłaby statyczna metoda "createFromJson"
+  factory Sentence.fromJson(Map<String, dynamic> json) {
+    return Sentence(
+      id: json['id'] as int,
+      sentence: json['sentence'] as String,
+      language: json['language'] as String,
+      translation: json['translation'] as String,
+      createdAt: json['created_at'] as String,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, sentence, language, translation, createdAt];
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentences_repository.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/dio_provider.dart';
+import 'sentence_model.dart';
+import 'sentence_create_model.dart';
+import 'sentence_update_model.dart';
+
+// Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
+class SentencesResponse {
+  final List<Sentence> sentences;
+  final int totalPages;
+
+  SentencesResponse(this.sentences, this.totalPages);
+}
+
+final sentencesRepositoryProvider = Provider<SentencesRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return SentencesRepository(dio);
+});
+
+class SentencesRepository {
+  final Dio _dio;
+
+  SentencesRepository(this._dio);
+
+  // Zmieniamy typ zwracany na naszą strukturę SentencesResponse
+  Future<SentencesResponse> getSentences({required int page, int perPage = 10}) async {
+    try {
+      final response = await _dio.get(
+        '/api/sentences/',
+        queryParameters: {
+          'page': page,
+          'per_page': perPage,
+        },
+      );
+
+      // 1. Odbieramy główny obiekt JSON (Map<String, dynamic>)
+      final Map<String, dynamic> json = response.data;
+
+      // 2. Wyciągamy listę z klucza "data"
+      final List<dynamic> rawList = json['data'];
+      
+      // 3. Wyciągamy liczbę stron z klucza "total_pages"
+      final int totalPages = json['total_pages'] ?? 1; // domyślnie 1 jakby api nie dało
+
+      // 4. Mapujemy listę
+      final sentences = rawList.map((e) => Sentence.fromJson(e)).toList();
+
+      // Zwracamy komplet danych
+      return SentencesResponse(sentences, totalPages);
+
+    } catch (e) {
+      throw Exception('Failed to load sentences: $e');
+    }
+  }
+
+  Future<void> createSentence(SentenceCreate data) async {
+    try {
+      // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
+      await _dio.post(
+        '/api/sentences/',
+        data: data.toJson(),
+      );
+    } catch (e) {
+      // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
+      throw Exception('Failed to create sentence: $e');
+    }
+  }
+
+  Future<void> deleteSentence(int id) async {
+    try {
+      // Endpoint: DELETE /api/sentences/{sentence_id}
+      await _dio.delete('/api/sentences/$id');
+    } catch (e) {
+      throw Exception('Failed to delete sentence: $e');
+    }
+  }
+
+  Future<Sentence> updateSentence({
+    required int id,
+    required SentenceUpdate data,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/sentences/$id',
+        data: data.toJson(),
+      );
+      
+      // API zwraca zaktualizowany obiekt Sentence (według dokumnetacji)
+      // Od razu go parsujemy i zwracamy wyżej.
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to update sentence: $e');
+    }
+  }
+
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_update_model.dart
+
+Zawartość pliku:
+
+class SentenceUpdate {
+  // W API te pola są 'anyOf string/null', więc tutaj String?
+  final String? sentence;
+  final String? language;
+  final String? translation;
+
+  const SentenceUpdate({
+    this.sentence,
+    this.language,
+    this.translation,
+  });
+
+  Map<String, dynamic> toJson() {
+    // Serializujemy tylko te pola, które nie są nullem (chociaż w edycji wyślemy wszystkie)
+    return {
+      if (sentence != null) 'sentence': sentence,
+      if (language != null) 'language': language,
+      if (translation != null) 'translation': translation,
+    };
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/words/words_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+
+class WordsPage extends StatelessWidget{
+  const WordsPage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Nauka slowek - niebawem'),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/app_sizes.dart
+
+Zawartość pliku:
+
+class AppSizes{
+  static const double maxMobileWidth = 550.0;
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/navigation_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final navigationIndexProvider = StateProvider<int>((ref) => 0);
+
+
+===============================
+Ścieżka do pliku: ./lib/core/widgets/main_drawer.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../navigation_provider.dart';
+
+class MainDrawer extends ConsumerWidget {
+  const MainDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Odczytujemy stan, żeby wiedzieć, który element podświetlić
+    final selectedIndex = ref.watch(navigationIndexProvider);
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: Colors.deepPurple),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'English Learner',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Twój postęp: 45%',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          _DrawerTile(
+            title: 'Ogłoszenia parafialne',
+            icon: Icons.home,
+            index: 0,
+            isSelected: selectedIndex == 0,
+          ),
+          _DrawerTile(
+            title: 'Slownik',
+            icon: Icons.menu_book,
+            index: 1,
+            isSelected: selectedIndex == 1,
+          ),
+          _DrawerTile(
+            title: 'Slowka',
+            icon: Icons.school,
+            index: 2,
+            isSelected: selectedIndex == 2,
+          ),
+          _DrawerTile(
+            title: 'Zwroty',
+            icon: Icons.chat,
+            index: 3,
+            isSelected: selectedIndex == 3,
+          ),
+          _DrawerTile(
+            title: 'Test',
+            icon: Icons.quiz,
+            index: 4,
+            isSelected: selectedIndex == 4,
+          ),
+          _DrawerTile(
+            title: 'Health Check',
+            icon: Icons.dns,
+            index: 5,
+            isSelected: selectedIndex == 5
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Prywatny pomocniczy widget tylko dla tego pliku (Clean Code)
+class _DrawerTile extends ConsumerWidget {
+  final String title;
+  final IconData icon;
+  final int index;
+  final bool isSelected;
+
+  const _DrawerTile({
+    required this.title,
+    required this.icon,
+    required this.index,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? Colors.deepPurple : null),
+      title: Text(title),
+      selected: isSelected,
+      onTap: () {
+        // 1. Zmień stan indeksu
+        ref.read(navigationIndexProvider.notifier).state = index;
+        // 2. Zamknij drawer (ekran boczny)
+        Navigator.pop(context);
+      },
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/network/dio_provider.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Provider zwracający skonfigurowaną instancję Dio.
+// Zmień baseUrl na adres swojego lokalnego serwera (dla emulatora Androida to zazwyczaj 10.0.2.2)
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio(BaseOptions(
+    //baseUrl: 'https://maia-sentences.rafal-kruszyna.org', // Jeśli API stoi lokalnie na porcie 8003
+    //baseUrl: 'http://localhost:8003', // Jeśli API stoi lokalnie na porcie 8003
+    baseUrl: 'http://10.139.19.47:8003',
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 5),
+  ));
+  return dio;
+});
 
 
