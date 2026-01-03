@@ -1,13 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- 1. KONIECZNE: Uprawnienie do korzystania z internetu , to jest konieczne zeby działały rzadzania http w trybie release-->
-    <uses-permission android:name="android.permission.INTERNET"/>
-
     <application
         android:label="maia_flutter_client"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">   <!-- 2. KONIECZNE: Zezwolenie na ruch HTTP (nieszyfrowany) -->
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
