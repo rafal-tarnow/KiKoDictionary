@@ -7,7 +7,8 @@ final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     //baseUrl: 'https://maia-sentences.rafal-kruszyna.org', // Jeśli API stoi lokalnie na porcie 8003
     //baseUrl: 'http://localhost:8003', // Jeśli API stoi lokalnie na porcie 8003
-    baseUrl: 'http://10.139.19.47:8003',
+    //baseUrl: 'http://10.139.19.47:8003',
+    baseUrl: 'https://dev-sentences.rafal-kruszyna.org',
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));

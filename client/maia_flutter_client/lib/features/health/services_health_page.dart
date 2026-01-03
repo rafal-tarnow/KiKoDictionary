@@ -30,7 +30,8 @@ class ServicesHealthPage extends StatelessWidget {
             ),
             const ServerMonitorTile(
               serviceName: "sentences-microservice",
-              serverUrl: "http://10.139.19.47:8003",
+              //serverUrl: "http://10.139.19.47:8003",
+              serverUrl: "https://dev-sentences.rafal-kruszyna.org",
             ),
 
             const SizedBox(height: 24),
