@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentence_model.dart';
 import '../data/sentences_repository.dart';
+import '../../../core/network/api_error_handler.dart';
 
 class SentencesState {
   final List<Sentence> sentences;
@@ -47,9 +48,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
   Future<void> loadSentences({required int page}) async {
     if (state.isLoading) return;
 
-    // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
-    // chyba że chcesz, żeby znikały i pojawiał się spinner.
-    // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
+    // Resetujemy błąd przy nowej próbie
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
@@ -63,9 +62,13 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
         sentences: response.sentences,
         totalPages: response.totalPages,
         currentPage: page,
+        errorMessage: null, // Sukces = brak błędu
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      // TU JEST ZMIANA: Używamy naszego parsera błędów
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
+      state = state.copyWith(isLoading: false, errorMessage: friendlyMessage);
     }
   }
 

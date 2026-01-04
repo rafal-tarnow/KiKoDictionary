@@ -280,7 +280,8 @@ class ServicesHealthPage extends StatelessWidget {
             ),
             const ServerMonitorTile(
               serviceName: "sentences-microservice",
-              serverUrl: "http://10.139.19.47:8003",
+              //serverUrl: "http://10.139.19.47:8003",
+              serverUrl: "https://dev-sentences.rafal-kruszyna.org",
             ),
 
             const SizedBox(height: 24),
@@ -542,7 +543,7 @@ class SentencesPage extends ConsumerWidget {
 
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Theme.of(
               context,
@@ -1052,6 +1053,7 @@ Zawartość pliku:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentence_model.dart';
 import '../data/sentences_repository.dart';
+import '../../../core/network/api_error_handler.dart';
 
 class SentencesState {
   final List<Sentence> sentences;
@@ -1098,9 +1100,7 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
   Future<void> loadSentences({required int page}) async {
     if (state.isLoading) return;
 
-    // Tu mała zmiana: zachowujemy stare zdania podczas ładowania (lepszy UX),
-    // chyba że chcesz, żeby znikały i pojawiał się spinner.
-    // Obecnie ustawiasz isLoading: true, co w UI wyświetla spinner zamiast listy.
+    // Resetujemy błąd przy nowej próbie
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
@@ -1114,9 +1114,13 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
         sentences: response.sentences,
         totalPages: response.totalPages,
         currentPage: page,
+        errorMessage: null, // Sukces = brak błędu
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      // TU JEST ZMIANA: Używamy naszego parsera błędów
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
+      state = state.copyWith(isLoading: false, errorMessage: friendlyMessage);
     }
   }
 
@@ -1577,7 +1581,7 @@ class SentencesRepository {
       return SentencesResponse(sentences, totalPages);
 
     } catch (e) {
-      throw Exception('Failed to load sentences: $e');
+      rethrow;
     }
   }
 
@@ -1589,8 +1593,7 @@ class SentencesRepository {
         data: data.toJson(),
       );
     } catch (e) {
-      // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
-      throw Exception('Failed to create sentence: $e');
+      rethrow;
     }
   }
 
@@ -1599,7 +1602,7 @@ class SentencesRepository {
       // Endpoint: DELETE /api/sentences/{sentence_id}
       await _dio.delete('/api/sentences/$id');
     } catch (e) {
-      throw Exception('Failed to delete sentence: $e');
+      rethrow;
     }
   }
 
@@ -1617,7 +1620,7 @@ class SentencesRepository {
       // Od razu go parsujemy i zwracamy wyżej.
       return Sentence.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to update sentence: $e');
+      rethrow;
     }
   }
 
@@ -1816,11 +1819,52 @@ final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     //baseUrl: 'https://maia-sentences.rafal-kruszyna.org', // Jeśli API stoi lokalnie na porcie 8003
     //baseUrl: 'http://localhost:8003', // Jeśli API stoi lokalnie na porcie 8003
-    baseUrl: 'http://10.139.19.47:8003',
+    //baseUrl: 'http://10.139.19.47:8003',
+    baseUrl: 'https://dev-sentences.rafal-kruszyna.org',
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));
   return dio;
 });
+
+
+===============================
+Ścieżka do pliku: ./lib/core/network/api_error_handler.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+
+class ApiErrorHandler {
+  // Metoda statyczna, działająca jak fabryka komunikatów
+  static String getErrorMessage(Object error) {
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return "Upłynął limit czasu połączenia. Sprawdź internet.";
+        
+        case DioExceptionType.badResponse:
+          final statusCode = error.response?.statusCode;
+          if (statusCode == 404) return "Nie znaleziono zasobu (404).";
+          if (statusCode == 500) return "Błąd wewnętrzny serwera (500).";
+          return "Błąd serwera: $statusCode";
+
+        case DioExceptionType.connectionError:
+          return "Brak połączenia z serwerem. Upewnij się, że masz internet lub serwer jest dostępny.";
+
+        case DioExceptionType.cancel:
+          return "Żądanie zostało anulowane.";
+
+        default:
+          return "Wystąpił nieznany błąd sieciowy.";
+      }
+    } else {
+      // Błędy nietypowe (np. błąd parsowania JSON, błąd w kodzie Dart)
+      return "Wystąpił niespodziewany błąd: ${error.toString()}"; // W wersji PRO tutaj logujemy do Sentry/Crashlytics
+    }
+  }
+}
 
 

@@ -29,7 +29,7 @@ class SentencesPage extends ConsumerWidget {
 
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Theme.of(
               context,

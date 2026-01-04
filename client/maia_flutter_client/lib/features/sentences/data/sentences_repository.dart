@@ -50,7 +50,7 @@ class SentencesRepository {
       return SentencesResponse(sentences, totalPages);
 
     } catch (e) {
-      throw Exception('Failed to load sentences: $e');
+      rethrow;
     }
   }
 
@@ -62,8 +62,7 @@ class SentencesRepository {
         data: data.toJson(),
       );
     } catch (e) {
-      // Tutaj w produkcji można mapować błędy Dio (np. 422) na czytelne wyjątki domenowe
-      throw Exception('Failed to create sentence: $e');
+      rethrow;
     }
   }
 
@@ -72,7 +71,7 @@ class SentencesRepository {
       // Endpoint: DELETE /api/sentences/{sentence_id}
       await _dio.delete('/api/sentences/$id');
     } catch (e) {
-      throw Exception('Failed to delete sentence: $e');
+      rethrow;
     }
   }
 
@@ -90,7 +89,7 @@ class SentencesRepository {
       // Od razu go parsujemy i zwracamy wyżej.
       return Sentence.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to update sentence: $e');
+      rethrow;
     }
   }
 
