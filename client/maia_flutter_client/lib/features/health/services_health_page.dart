@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'widgets/server_monitor_tile.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class ServicesHealthPage extends StatelessWidget {
   const ServicesHealthPage({super.key});
@@ -7,9 +8,7 @@ class ServicesHealthPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text("Health Check"),
-      // ),
+      drawer: const MainDrawer(),
       //backgroundColor: const Color(0xFFFFFFFF),
 
       body: SingleChildScrollView(

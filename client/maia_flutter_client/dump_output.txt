@@ -122,14 +122,19 @@ class MyApp extends StatelessWidget {
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class DictionaryPage extends StatelessWidget{
   const DictionaryPage({super.key});
   
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text("Slownik - niebawem"),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Dictionary"),
+        elevation: 2,
+        ),
+      drawer: const MainDrawer(),
     );
   }
 }
@@ -141,13 +146,21 @@ class DictionaryPage extends StatelessWidget{
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Strona Główna - Nauka Angielskiego'));
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Ogłoszenia parafialne"),
+        elevation: 2,
+        ),
+      drawer: const MainDrawer(),
+      body: Center(child: Text('Strona Główna - Nauka Angielskiego')),
+    );
   }
 }
 
@@ -160,20 +173,31 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/features/test/backend/backend_provider.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import '../../core/widgets/main_drawer.dart';
 
-class TestPage extends ConsumerWidget{
+class TestPage extends ConsumerWidget {
   const TestPage({super.key});
-  
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brickName = ref.watch(
+      testBackendProvider.select((testBackend) => testBackend.brickName),
+    );
+    final bricksCount = ref.watch(
+      testBackendProvider.select((testBackend) => testBackend.bricksCount),
+    );
+    final brickStatus = ref.watch(
+      testBackendProvider.select((testBackend) => testBackend.brickStatus),
+    );
 
-    final brickName = ref.watch(testBackendProvider.select((testBackend) => testBackend.brickName));
-    final bricksCount = ref.watch(testBackendProvider.select((testBackend) => testBackend.bricksCount));
-    final brickStatus = ref.watch(testBackendProvider.select((testBackend) => testBackend.brickStatus));
-
-    return Center(
-      // Teraz możesz użyć zmiennej brickName bezpośrednio
-      child: Column(
+    return Scaffold(
+      appBar: AppBar(
+         title: const Text("Test page"),
+         elevation: 2,
+      ),
+      drawer: const MainDrawer(),
+      body: Column(
         children: [
           Text('Sentences page: $brickName'),
           Text('Bricks count: $bricksCount'),
@@ -181,12 +205,41 @@ class TestPage extends ConsumerWidget{
             brickStatus ? Icons.check_circle : Icons.error,
             color: brickStatus ? Colors.green : Colors.red,
             size: 24,
-            ),
+          ),
+        ],
+      ),
+      floatingActionButton: SpeedDial(
+        animatedIcon: AnimatedIcons.menu_close,
+
+        renderOverlay: false,
+        //overlayColor: Colors.black,
+        //overlayOpacity: 0.3,
+
+        closeManually: false,
+        children: [
+          SpeedDialChild(
+            child: Icon(Icons.refresh),
+            label: 'Odśwież',
+            onTap: (){
+              _showShackBar(context, 'Odświeżono');
+            }
+          ),
+          SpeedDialChild(
+            child: Icon(Icons.add),
+            label: 'Dodaj zwrot',
+          ),
         ],
       ),
     );
   }
+
+  void _showShackBar(BuildContext context, String message){
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(milliseconds: 500),)
+    );
+  }
 }
+
 
 
 ===============================
@@ -250,6 +303,7 @@ Zawartość pliku:
 
 import 'package:flutter/material.dart';
 import 'widgets/server_monitor_tile.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class ServicesHealthPage extends StatelessWidget {
   const ServicesHealthPage({super.key});
@@ -257,9 +311,11 @@ class ServicesHealthPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text("Health Check"),
-      // ),
+      appBar: AppBar(
+        title: const Text("Health Check"),
+        elevation: 2,
+      ),
+      drawer: const MainDrawer(),
       //backgroundColor: const Color(0xFFFFFFFF),
 
       body: SingleChildScrollView(
@@ -516,7 +572,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/add_sentence_dialog.dart';
-import 'presentation/widgets/sentence_tile.dart'; 
+import 'presentation/widgets/sentence_tile.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -530,6 +587,12 @@ class SentencesPage extends ConsumerWidget {
       //backgroundColor: Colors.transparent,
       //backgroundColor: Colors.red,
       backgroundColor: const Color(0xFFFFFFFF),
+
+      appBar: AppBar(
+         title: const Text("Sentences"),
+         elevation: 2,
+      ),
+      drawer: const MainDrawer(),
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -1661,17 +1724,24 @@ class SentenceUpdate {
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
+import '../../core/widgets/main_drawer.dart';
 
-class WordsPage extends StatelessWidget{
+class WordsPage extends StatelessWidget {
   const WordsPage({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Nauka slowek - niebawem'),
+    return  Scaffold(
+      appBar: AppBar(
+        title: const Text("Words"),
+        elevation: 2,
+        ),
+      drawer: const MainDrawer(),
+      body: Center(child: Text('Nauka slowek - niebawem')),
     );
   }
 }
+
 
 
 ===============================

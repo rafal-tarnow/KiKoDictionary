@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/add_sentence_dialog.dart';
-import 'presentation/widgets/sentence_tile.dart'; 
+import 'presentation/widgets/sentence_tile.dart';
+import '../../core/widgets/main_drawer.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -16,6 +17,8 @@ class SentencesPage extends ConsumerWidget {
       //backgroundColor: Colors.transparent,
       //backgroundColor: Colors.red,
       backgroundColor: const Color(0xFFFFFFFF),
+
+      drawer: const MainDrawer(),
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {

@@ -5,6 +5,8 @@ allowed_extensions = ['.dart']
 
 # Lista zablokowanych katalogów
 blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
+#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'health' , 'sentences']
+#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'health']
 
 # Lista zablokowanych plików (pełne nazwy plików)
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
