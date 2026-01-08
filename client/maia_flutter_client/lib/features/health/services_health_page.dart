@@ -8,7 +8,6 @@ class ServicesHealthPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const MainDrawer(),
       //backgroundColor: const Color(0xFFFFFFFF),
 
       body: SingleChildScrollView(

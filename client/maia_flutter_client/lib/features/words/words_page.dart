@@ -7,7 +7,6 @@ class WordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      drawer: const MainDrawer(),
       body: Center(child: Text('Nauka slowek - niebawem')),
     );
   }

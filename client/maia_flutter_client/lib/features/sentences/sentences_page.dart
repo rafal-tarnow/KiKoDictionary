@@ -18,8 +18,6 @@ class SentencesPage extends ConsumerWidget {
       //backgroundColor: Colors.red,
       backgroundColor: const Color(0xFFFFFFFF),
 
-      drawer: const MainDrawer(),
-
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showDialog(

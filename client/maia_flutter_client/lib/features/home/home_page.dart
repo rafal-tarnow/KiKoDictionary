@@ -7,7 +7,6 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const MainDrawer(),
       body: Center(child: Text('Strona Główna - Nauka Angielskiego')),
     );
   }

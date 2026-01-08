@@ -18,3 +18,7 @@ samples, guidance on mobile development, and a full API reference.
 ## Run release version on android
 
 flutter run --release
+
+## Build web version
+
+flutter build web --base-href "/flutter/"

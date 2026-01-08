@@ -20,7 +20,6 @@ class TestPage extends ConsumerWidget {
     );
 
     return Scaffold(
-      drawer: const MainDrawer(),
       body: Column(
         children: [
           Text('Sentences page: $brickName'),
