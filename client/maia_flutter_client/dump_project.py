@@ -5,14 +5,14 @@ allowed_extensions = ['.dart']
 
 # Lista zablokowanych katalogów
 blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
-#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'health' , 'sentences']
-#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'health']
+#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health' , 'home' , 'sentences' , 'test' , 'words']
+#blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health' , 'home' , 'test' , 'words']
 
 # Lista zablokowanych plików (pełne nazwy plików)
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
 
 # Ścieżka startowa (można zmienić na inny katalog)
-start_path = './lib'
+start_path = './lib/'
 
 # Plik wynikowy
 output_file = 'dump_output.txt'

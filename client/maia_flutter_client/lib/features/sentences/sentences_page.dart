@@ -10,7 +10,7 @@ class SentencesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(sentencesProvider);
+    final sentencesState = ref.watch(sentencesProvider);
     final notifier = ref.read(sentencesProvider.notifier);
 
     return Scaffold(
@@ -43,7 +43,8 @@ class SentencesPage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ElevatedButton.icon(
-                onPressed: state.currentPage > 1 && !state.isLoading
+                onPressed:
+                    sentencesState.currentPage > 1 && !sentencesState.isLoading
                     ? () => notifier.previousPage()
                     : null,
                 icon: const Icon(Icons.arrow_back),
@@ -51,12 +52,13 @@ class SentencesPage extends ConsumerWidget {
               ),
 
               Text(
-                "Strona ${state.currentPage}",
+                "Strona ${sentencesState.currentPage}",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
 
               ElevatedButton.icon(
-                onPressed: !state.isLastPage && !state.isLoading
+                onPressed:
+                    !sentencesState.isLastPage && !sentencesState.isLoading
                     ? () => notifier.nextPage()
                     : null,
                 label: const Text("Następna"),
@@ -67,54 +69,79 @@ class SentencesPage extends ConsumerWidget {
         ),
       ),
 
-
       body: Column(
         children: [
-          if (state.errorMessage != null)
+          if (sentencesState.errorMessage != null)
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: Colors.red.shade100,
               width: double.infinity,
-              child: Text(
-                'Błąd: ${state.errorMessage}',
-                style: const TextStyle(color: Colors.red),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Błąd: ${sentencesState.errorMessage}',
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                  // Przycisk "Ponów" bezpośrednio przy błędzie
+                  TextButton.icon(
+                    onPressed: () {
+                      notifier.refreshCurrentPage();
+                    },
+                    icon: Icon(Icons.refresh, color: Colors.red.shade900),
+                    label: Text(
+                      "Ponów",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                ],
               ),
             ),
 
+          // Container(
+          //   padding: const EdgeInsets.all(8),
+          //   color: Colors.red.shade100,
+          //   width: double.infinity,
+          //   child: Text(
+          //     'Błąd: ${sentencesState.errorMessage}',
+          //     style: const TextStyle(color: Colors.red),
+          //   ),
+          // ),
           Expanded(
-            child: state.isLoading && state.sentences.isEmpty
+            child: sentencesState.isLoading && sentencesState.sentences.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : state.sentences.isEmpty
-                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
-                    : Stack(
-                        children: [
-                          ListView.separated(
-                            itemCount: state.sentences.length,
-                            padding: const EdgeInsets.all(8),
-                            separatorBuilder: (context, index) {
-                              return Divider(
-                                height: 16,
-                                thickness: 0.5,
-                                color: Colors.grey.shade400,
-                                indent: 8,
-                                endIndent: 8,
-                              );
-                            },
-                            itemBuilder: (context, index) {
-                              final item = state.sentences[index];
-                              // --- UŻYCIE NOWEGO WIDGETU ---
-                              return SentenceTile(sentence: item);
-                            },
-                          ),
-                          if (state.isLoading)
-                            const Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: LinearProgressIndicator(minHeight: 4),
-                            ),
-                        ],
+                : sentencesState.sentences.isEmpty
+                ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                : Stack(
+                    children: [
+                      ListView.separated(
+                        itemCount: sentencesState.sentences.length,
+                        padding: const EdgeInsets.all(8),
+                        separatorBuilder: (context, index) {
+                          return Divider(
+                            height: 16,
+                            thickness: 0.5,
+                            color: Colors.grey.shade400,
+                            indent: 8,
+                            endIndent: 8,
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final item = sentencesState.sentences[index];
+                          // --- UŻYCIE NOWEGO WIDGETU ---
+                          return SentenceTile(sentence: item);
+                        },
                       ),
+                      if (sentencesState.isLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(minHeight: 4),
+                        ),
+                    ],
+                  ),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'features/home/home_app_bar.dart';
 import 'features/dictionary/dictionary_page.dart';
 import 'features/words/words_page.dart';
 import 'features/sentences/sentences_page.dart';
+import 'features/sentences/sentences_app_bar.dart';
 import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
@@ -28,7 +29,7 @@ class MainShell extends ConsumerWidget {
     const HomeAppBar(),
     AppBar(title: const Text("Dictionary"), elevation: 2,),
     AppBar(title: const Text("Words"), elevation: 2,),
-    AppBar(title: const Text("Sentences"), elevation: 2,),
+    const SentencesAppBar(),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
   ];
