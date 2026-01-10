@@ -10,17 +10,14 @@ class AddSentenceDialog extends ConsumerStatefulWidget {
 }
 
 class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
-  // Klucz formularza pozwala na walidację
   final _formKey = GlobalKey<FormState>();
   
-  // Kontrolery pól tekstowych
   final _sentenceController = TextEditingController();
   final _translationController = TextEditingController();
-  final _languageController = TextEditingController(text: 'EN'); // Domyślna wartość
+  final _languageController = TextEditingController(text: 'EN');
 
   @override
   void dispose() {
-    // Sprzątanie zasobów (jak destruktor w C++)
     _sentenceController.dispose();
     _translationController.dispose();
     _languageController.dispose();
@@ -28,18 +25,16 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
   }
 
   Future<void> _submit() async {
+    // Przed wysłaniem warto upewnić się, że formularz jest poprawny
     if (_formKey.currentState!.validate()) {
-      // Wywołujemy metodę z kontrolera Riverpod
       final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
-            sentence: _sentenceController.text,
+            sentence: _sentenceController.text, // Może być pusty string
             language: _languageController.text,
-            translation: _translationController.text,
+            translation: _translationController.text, // Może być pusty string
           );
 
       if (success && mounted) {
-        Navigator.of(context).pop(); // Zamknij dialog po sukcesie
-        
-        // Pokaż powiadomienie (Snackbar)
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Dodano nowe zdanie!')),
         );
@@ -49,7 +44,6 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Obserwujemy stan asynchroniczny (loading/error)
     final asyncState = ref.watch(addSentenceControllerProvider);
     final isLoading = asyncState.isLoading;
 
@@ -61,7 +55,6 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Wyświetlanie błędu z API, jeśli wystąpił
               if (asyncState.hasError)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -73,20 +66,28 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
                 
               TextFormField(
                 controller: _sentenceController,
-                decoration: const InputDecoration(labelText: 'Zdanie (np. Hello World)'),
-                enabled: !isLoading, // Blokuj inputy podczas wysyłania
+                decoration: const InputDecoration(labelText: 'Zdanie (np. Witaj Świecie)'),
+                enabled: !isLoading,
+                // ZMIANA TUTAJ:
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  // Sprawdzamy, czy aktualne pole jest puste ORAZ czy drugie pole jest puste
+                  if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _translationController,
-                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Witaj Świecie)'),
+                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Hello World)'),
                 enabled: !isLoading,
+                // ZMIANA TUTAJ:
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  // To samo sprawdzenie w drugą stronę
+                  if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
                   return null;
                 },
               ),
