@@ -12,6 +12,7 @@ import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
 import 'features/health/services_health_page.dart';
+import 'features/captcha/captcha_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -23,6 +24,7 @@ class MainShell extends ConsumerWidget {
     SentencesPage(),
     TestPage(),
     ServicesHealthPage(),
+    CaptchaPage(),
   ];
 
   static final List<PreferredSizeWidget> _appBars = [
@@ -32,6 +34,7 @@ class MainShell extends ConsumerWidget {
     const SentencesAppBar(),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
+    AppBar(title: const Text("Captcha Demo"), elevation: 2,),
   ];
 
   // static const List<String> _titles = [

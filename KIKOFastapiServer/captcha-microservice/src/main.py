@@ -9,8 +9,8 @@ from src.core.config import settings
 app = FastAPI(
     title="CAPTCHA Microservice",
     version="1.0.0",
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc"
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # CORS configuration

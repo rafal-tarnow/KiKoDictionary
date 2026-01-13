@@ -67,6 +67,12 @@ class MainDrawer extends ConsumerWidget {
             index: 5,
             isSelected: selectedIndex == 5
           ),
+          _DrawerTile(
+            title: 'Captcha Test', 
+            icon: Icons.security, 
+            index: 6,
+            isSelected: selectedIndex == 6
+          ),
         ],
       ),
     );

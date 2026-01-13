@@ -12,6 +12,7 @@ import 'features/home/home_app_bar.dart';
 import 'features/dictionary/dictionary_page.dart';
 import 'features/words/words_page.dart';
 import 'features/sentences/sentences_page.dart';
+import 'features/sentences/sentences_app_bar.dart';
 import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
@@ -33,7 +34,7 @@ class MainShell extends ConsumerWidget {
     const HomeAppBar(),
     AppBar(title: const Text("Dictionary"), elevation: 2,),
     AppBar(title: const Text("Words"), elevation: 2,),
-    AppBar(title: const Text("Sentences"), elevation: 2,),
+    const SentencesAppBar(),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
   ];
@@ -616,6 +617,57 @@ class ServerMonitorTile extends ConsumerWidget {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_app_bar.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import './presentation/sentences_provider.dart';
+
+class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  const SentencesAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy stan, aby np. pokazać inny spinner na przycisku odświeżania,
+    // jeśli trwa ładowanie (opcjonalny bajer, tutaj prosta wersja).
+    final state = ref.watch(sentencesProvider);
+    final sentencesNotifier = ref.read(sentencesProvider.notifier);
+
+    return AppBar(
+      title: const Text("Sentences"),
+      elevation: 2,
+      actions: [
+        // Przycisk Odśwież
+        IconButton(
+          icon: state.isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54,)
+                )
+              : const Icon(Icons.refresh),
+          tooltip: "Odśwież listę",
+          onPressed: state.isLoading 
+              ? null // Zablokuj, jeśli już ładuje
+              : () {
+                  // Tu wywołujemy logikę "Backendu"
+                  sentencesNotifier.refreshCurrentPage();
+                },
+        ),
+        // Opcjonalnie inne przyciski, np. sortowanie
+        // IconButton(icon: Icon(Icons.filter_list), onPressed: () {}),
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
 
 Zawartość pliku:
@@ -665,7 +717,8 @@ class SentencesPage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ElevatedButton.icon(
-                onPressed: sentencesState.currentPage > 1 && !sentencesState.isLoading
+                onPressed:
+                    sentencesState.currentPage > 1 && !sentencesState.isLoading
                     ? () => notifier.previousPage()
                     : null,
                 icon: const Icon(Icons.arrow_back),
@@ -678,7 +731,8 @@ class SentencesPage extends ConsumerWidget {
               ),
 
               ElevatedButton.icon(
-                onPressed: !sentencesState.isLastPage && !sentencesState.isLoading
+                onPressed:
+                    !sentencesState.isLastPage && !sentencesState.isLoading
                     ? () => notifier.nextPage()
                     : null,
                 label: const Text("Następna"),
@@ -689,54 +743,79 @@ class SentencesPage extends ConsumerWidget {
         ),
       ),
 
-
       body: Column(
         children: [
           if (sentencesState.errorMessage != null)
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: Colors.red.shade100,
               width: double.infinity,
-              child: Text(
-                'Błąd: ${sentencesState.errorMessage}',
-                style: const TextStyle(color: Colors.red),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Błąd: ${sentencesState.errorMessage}',
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                  // Przycisk "Ponów" bezpośrednio przy błędzie
+                  TextButton.icon(
+                    onPressed: () {
+                      notifier.refreshCurrentPage();
+                    },
+                    icon: Icon(Icons.refresh, color: Colors.red.shade900),
+                    label: Text(
+                      "Ponów",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                ],
               ),
             ),
 
+          // Container(
+          //   padding: const EdgeInsets.all(8),
+          //   color: Colors.red.shade100,
+          //   width: double.infinity,
+          //   child: Text(
+          //     'Błąd: ${sentencesState.errorMessage}',
+          //     style: const TextStyle(color: Colors.red),
+          //   ),
+          // ),
           Expanded(
             child: sentencesState.isLoading && sentencesState.sentences.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : sentencesState.sentences.isEmpty
-                    ? const Center(child: Text("Brak zdań do wyświetlenia."))
-                    : Stack(
-                        children: [
-                          ListView.separated(
-                            itemCount: sentencesState.sentences.length,
-                            padding: const EdgeInsets.all(8),
-                            separatorBuilder: (context, index) {
-                              return Divider(
-                                height: 16,
-                                thickness: 0.5,
-                                color: Colors.grey.shade400,
-                                indent: 8,
-                                endIndent: 8,
-                              );
-                            },
-                            itemBuilder: (context, index) {
-                              final item = sentencesState.sentences[index];
-                              // --- UŻYCIE NOWEGO WIDGETU ---
-                              return SentenceTile(sentence: item);
-                            },
-                          ),
-                          if (sentencesState.isLoading)
-                            const Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: LinearProgressIndicator(minHeight: 4),
-                            ),
-                        ],
+                ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                : Stack(
+                    children: [
+                      ListView.separated(
+                        itemCount: sentencesState.sentences.length,
+                        padding: const EdgeInsets.all(8),
+                        separatorBuilder: (context, index) {
+                          return Divider(
+                            height: 16,
+                            thickness: 0.5,
+                            color: Colors.grey.shade400,
+                            indent: 8,
+                            endIndent: 8,
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final item = sentencesState.sentences[index];
+                          // --- UŻYCIE NOWEGO WIDGETU ---
+                          return SentenceTile(sentence: item);
+                        },
                       ),
+                      if (sentencesState.isLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(minHeight: 4),
+                        ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -1310,17 +1389,14 @@ class AddSentenceDialog extends ConsumerStatefulWidget {
 }
 
 class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
-  // Klucz formularza pozwala na walidację
   final _formKey = GlobalKey<FormState>();
   
-  // Kontrolery pól tekstowych
   final _sentenceController = TextEditingController();
   final _translationController = TextEditingController();
-  final _languageController = TextEditingController(text: 'EN'); // Domyślna wartość
+  final _languageController = TextEditingController(text: 'EN');
 
   @override
   void dispose() {
-    // Sprzątanie zasobów (jak destruktor w C++)
     _sentenceController.dispose();
     _translationController.dispose();
     _languageController.dispose();
@@ -1328,18 +1404,16 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
   }
 
   Future<void> _submit() async {
+    // Przed wysłaniem warto upewnić się, że formularz jest poprawny
     if (_formKey.currentState!.validate()) {
-      // Wywołujemy metodę z kontrolera Riverpod
       final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
-            sentence: _sentenceController.text,
+            sentence: _sentenceController.text, // Może być pusty string
             language: _languageController.text,
-            translation: _translationController.text,
+            translation: _translationController.text, // Może być pusty string
           );
 
       if (success && mounted) {
-        Navigator.of(context).pop(); // Zamknij dialog po sukcesie
-        
-        // Pokaż powiadomienie (Snackbar)
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Dodano nowe zdanie!')),
         );
@@ -1349,7 +1423,6 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Obserwujemy stan asynchroniczny (loading/error)
     final asyncState = ref.watch(addSentenceControllerProvider);
     final isLoading = asyncState.isLoading;
 
@@ -1361,7 +1434,6 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Wyświetlanie błędu z API, jeśli wystąpił
               if (asyncState.hasError)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -1373,20 +1445,28 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
                 
               TextFormField(
                 controller: _sentenceController,
-                decoration: const InputDecoration(labelText: 'Zdanie (np. Hello World)'),
-                enabled: !isLoading, // Blokuj inputy podczas wysyłania
+                decoration: const InputDecoration(labelText: 'Zdanie (np. Witaj Świecie)'),
+                enabled: !isLoading,
+                // ZMIANA TUTAJ:
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  // Sprawdzamy, czy aktualne pole jest puste ORAZ czy drugie pole jest puste
+                  if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _translationController,
-                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Witaj Świecie)'),
+                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Hello World)'),
                 enabled: !isLoading,
+                // ZMIANA TUTAJ:
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  // To samo sprawdzenie w drugą stronę
+                  if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
                   return null;
                 },
               ),

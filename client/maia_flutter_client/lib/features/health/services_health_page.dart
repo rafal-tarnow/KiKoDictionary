@@ -20,7 +20,8 @@ class ServicesHealthPage extends StatelessWidget {
             _buildSectionHeader("Dev servers"),
             const ServerMonitorTile(
               serviceName: "captcha-microservice",
-              serverUrl: "http://127.0.0.1:8001",
+              //serverUrl: "http://127.0.0.1:8001",
+              serverUrl: "https://dev-captcha.rafal-kruszyna.org",
             ),
             const ServerMonitorTile(
               serviceName: "users-microservice",
