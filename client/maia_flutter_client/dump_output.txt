@@ -17,6 +17,7 @@ import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
 import 'features/health/services_health_page.dart';
+import 'features/captcha/captcha_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -28,6 +29,7 @@ class MainShell extends ConsumerWidget {
     SentencesPage(),
     TestPage(),
     ServicesHealthPage(),
+    CaptchaPage(),
   ];
 
   static final List<PreferredSizeWidget> _appBars = [
@@ -37,6 +39,7 @@ class MainShell extends ConsumerWidget {
     const SentencesAppBar(),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
+    AppBar(title: const Text("Captcha Demo"), elevation: 2,),
   ];
 
   // static const List<String> _titles = [
@@ -355,6 +358,513 @@ class TestBackend with ChangeNotifier {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/captcha/captcha_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/widgets/main_drawer.dart';
+import 'presentation/captcha_controller.dart';
+import 'presentation/widgets/captcha_box.dart';
+
+class CaptchaPage extends ConsumerStatefulWidget {
+  const CaptchaPage({super.key});
+
+  @override
+  ConsumerState<CaptchaPage> createState() => _CaptchaPageState();
+}
+
+class _CaptchaPageState extends ConsumerState<CaptchaPage> {
+  final _captchaInputController = TextEditingController();
+
+  @override
+  void dispose() {
+    _captchaInputController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verify() async {
+    // Ukrywamy klawiaturę
+    FocusScope.of(context).unfocus();
+    
+    final answer = _captchaInputController.text;
+    if (answer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Wpisz kod!")),
+      );
+      return;
+    }
+
+    final success = await ref
+        .read(captchaControllerProvider.notifier)
+        .verifyCaptcha(answer);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Captcha zweryfikowana pomyślnie!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Obserwujemy stan, aby wiedzieć np. czy trwa ładowanie
+    final captchaState = ref.watch(captchaControllerProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Captcha Test"),
+        elevation: 2,
+      ),
+      drawer: const MainDrawer(), // Dodajemy boczny pasek
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Demonstracja modułu Captcha",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Poniższy komponent jest niezależny i gotowy do użycia na ekranach logowania/rejestracji.",
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 32),
+
+            // --- REUŻYWALNY WIDGET CAPTCHA ---
+            CaptchaBox(
+              answerController: _captchaInputController,
+              onRefresh: () {
+                // Opcjonalny callback, np. logowanie zdarzenia
+                debugPrint("Użytkownik odświeżył captchę");
+              },
+            ),
+            // ---------------------------------
+
+            const SizedBox(height: 24),
+
+            // Przycisk "Verify" - specyficzny dla tej strony testowej
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: captchaState.isLoading ? null : _verify,
+                icon: const Icon(Icons.check_circle_outline),
+                label: captchaState.isLoading
+                    ? const SizedBox(
+                        width: 20, 
+                        height: 20, 
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                    : const Text("ZWERYFIKUJ CAPTCHĘ"),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/captcha/presentation/captcha_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/captcha_repository.dart';
+import '../data/models/captcha_model.dart';
+import '../../../../core/network/api_error_handler.dart';
+
+// Stan dla naszego kontrolera
+class CaptchaState {
+  final CaptchaModel? captcha; // Obecny obrazek i ID
+  final bool isLoading;
+  final String? errorMessage;
+  final bool? isVerified; // null = nie sprawdzano, true = ok, false = źle
+
+  const CaptchaState({
+    this.captcha,
+    this.isLoading = false,
+    this.errorMessage,
+    this.isVerified,
+  });
+
+  CaptchaState copyWith({
+    CaptchaModel? captcha,
+    bool? isLoading,
+    String? errorMessage,
+    bool? isVerified,
+  }) {
+    return CaptchaState(
+      captcha: captcha ?? this.captcha,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage, // Jeśli null to czyścimy błąd
+      isVerified: isVerified ?? this.isVerified,
+    );
+  }
+}
+
+class CaptchaController extends StateNotifier<CaptchaState> {
+  final CaptchaRepository _repository;
+
+  CaptchaController(this._repository) : super(const CaptchaState()) {
+    // Automatycznie pobierz captchę przy starcie
+    fetchCaptcha();
+  }
+
+  Future<void> fetchCaptcha() async {
+    state = state.copyWith(isLoading: true, errorMessage: null, isVerified: null);
+    try {
+      final captcha = await _repository.generateCaptcha();
+      state = state.copyWith(
+        isLoading: false,
+        captcha: captcha,
+        errorMessage: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: ApiErrorHandler.getErrorMessage(e),
+      );
+    }
+  }
+
+  Future<bool> verifyCaptcha(String answer) async {
+    if (state.captcha == null) return false;
+
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final isValid = await _repository.verifyCaptcha(
+        CaptchaVerifyRequest(id: state.captcha!.id, answer: answer),
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        isVerified: isValid,
+      );
+      
+      // Jeśli walidacja nie przeszła, można automatycznie odświeżyć captchę, 
+      // bo zazwyczaj token jest jednorazowy.
+      if (!isValid) {
+         // Opcjonalnie: await fetchCaptcha(); 
+         // Wiele systemów wymaga nowej captchy po błędnej próbie.
+      }
+      
+      return isValid;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: ApiErrorHandler.getErrorMessage(e),
+        isVerified: false,
+      );
+      return false;
+    }
+  }
+  
+  // Metoda pomocnicza do resetowania stanu weryfikacji (np. gdy użytkownik zaczyna pisać)
+  void resetVerificationStatus() {
+    if (state.isVerified != null) {
+      state = state.copyWith(isVerified: null);
+    }
+  }
+}
+
+// Używamy .autoDispose, aby stan się czyścił po wyjściu z ekranu
+final captchaControllerProvider = 
+    StateNotifierProvider.autoDispose<CaptchaController, CaptchaState>((ref) {
+  final repo = ref.watch(captchaRepositoryProvider);
+  return CaptchaController(repo);
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/captcha/presentation/widgets/captcha_box.dart
+
+Zawartość pliku:
+
+import 'dart:convert'; // Do base64Decode
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../captcha_controller.dart';
+
+class CaptchaBox extends ConsumerStatefulWidget {
+  final TextEditingController answerController;
+  final VoidCallback? onRefresh;
+
+  const CaptchaBox({
+    super.key, 
+    required this.answerController,
+    this.onRefresh,
+  });
+
+  @override
+  ConsumerState<CaptchaBox> createState() => _CaptchaBoxState();
+}
+
+class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
+  
+  @override
+  void initState() {
+    super.initState();
+    widget.answerController.addListener(() {
+      ref.read(captchaControllerProvider.notifier).resetVerificationStatus();
+    });
+  }
+
+  // --- NOWA METODA POMOCNICZA ---
+  // Usuwa nagłówek "data:image/png;base64," jeśli istnieje
+  String _cleanBase64(String base64String) {
+    if (base64String.contains(',')) {
+      return base64String.split(',').last;
+    }
+    return base64String;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(captchaControllerProvider);
+    final controller = ref.read(captchaControllerProvider.notifier);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. Obrazek Captcha
+            Container(
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: state.isLoading && state.captcha == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : state.captcha != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            // --- TUTAJ POPRAWKA ---
+                            // Używamy metody pomocniczej _cleanBase64
+                            base64Decode(_cleanBase64(state.captcha!.image)), 
+                            fit: BoxFit.contain, // Zmienione na contain, żeby nie ucinało tekstu captchy
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('Błąd wyświetlania obrazka: $error');
+                              return const Center(child: Icon(Icons.broken_image));
+                            },
+                          ),
+                        )
+                      : const Center(child: Text("Brak Captchy")),
+            ),
+
+            const SizedBox(height: 12),
+
+            // 2. Wiersz: Pole tekstowe + Przycisk odświeżania
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: widget.answerController,
+                    decoration: InputDecoration(
+                      labelText: 'Wpisz kod z obrazka',
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      enabledBorder: state.isVerified == false
+                          ? const OutlineInputBorder(borderSide: BorderSide(color: Colors.red))
+                          : null,
+                      focusedBorder: state.isVerified == false
+                          ? const OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2))
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: state.isLoading 
+                    ? null 
+                    : () {
+                        controller.fetchCaptcha();
+                        widget.answerController.clear();
+                        if(widget.onRefresh != null) widget.onRefresh!();
+                      },
+                  icon: state.isLoading
+                      ? const SizedBox(
+                          width: 20, 
+                          height: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2)
+                        )
+                      : const Icon(Icons.refresh),
+                  tooltip: "Nowy kod",
+                ),
+              ],
+            ),
+            
+            // 3. Informacja o błędzie
+            if (state.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  state.errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+              
+            if (state.isVerified == false)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text(
+                  "Niepoprawny kod. Spróbuj ponownie.",
+                  style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              
+             if (state.isVerified == true)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text(
+                  "Kod poprawny!",
+                  style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/captcha/data/captcha_dio_provider.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Provider dedykowany dla mikroserwisu Captcha (port 8001)
+final captchaDioProvider = Provider<Dio>((ref) {
+  final dio = Dio(BaseOptions(
+    // Dostosuj adres IP do swojego środowiska (podobnie jak w dio_provider.dart)
+    // Jeśli używasz emulatora: http://10.0.2.2:8001
+    // Jeśli fizyczne urządzenie/web: Twój adres LAN lub domena
+    //baseUrl: 'http://127.0.0.1:8001', 
+    baseUrl: 'https://dev-captcha.rafal-kruszyna.org',
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 5),
+  ));
+  return dio;
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/captcha/data/captcha_repository.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import './captcha_dio_provider.dart';
+import 'models/captcha_model.dart';
+
+// Provider repozytorium
+final captchaRepositoryProvider = Provider<CaptchaRepository>((ref) {
+  final dio = ref.watch(captchaDioProvider);
+  return CaptchaRepository(dio);
+});
+
+class CaptchaRepository {
+  final Dio _dio;
+
+  CaptchaRepository(this._dio);
+
+  Future<CaptchaModel> generateCaptcha() async {
+    try {
+      final response = await _dio.get('/api/v1/captcha');
+      return CaptchaModel.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyCaptcha(CaptchaVerifyRequest request) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/captcha/verify',
+        data: request.toJson(),
+      );
+      final result = CaptchaVerifyResponse.fromJson(response.data);
+      return result.isValid;
+    } catch (e) {
+      // Jeśli serwer zwróci 422 (błąd walidacji), to technicznie nie jest poprawna captcha
+      // Możesz tu obsłużyć to inaczej, ale na razie uznajmy to za false lub rzućmy błąd.
+      rethrow; 
+    }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/captcha/data/models/captcha_model.dart
+
+Zawartość pliku:
+
+class CaptchaModel {
+  final String id; // UUID
+  final String image; // Base64 string
+
+  CaptchaModel({required this.id, required this.image});
+
+  factory CaptchaModel.fromJson(Map<String, dynamic> json) {
+    return CaptchaModel(
+      id: json['id'] as String,
+      image: json['image'] as String,
+    );
+  }
+}
+
+class CaptchaVerifyRequest {
+  final String id;
+  final String answer;
+
+  CaptchaVerifyRequest({required this.id, required this.answer});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'answer': answer,
+    };
+  }
+}
+
+class CaptchaVerifyResponse {
+  final bool isValid;
+
+  CaptchaVerifyResponse({required this.isValid});
+
+  factory CaptchaVerifyResponse.fromJson(Map<String, dynamic> json) {
+    return CaptchaVerifyResponse(
+      isValid: json['is_valid'] as bool,
+    );
+  }
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/health/services_health_page.dart
 
 Zawartość pliku:
@@ -381,7 +891,8 @@ class ServicesHealthPage extends StatelessWidget {
             _buildSectionHeader("Dev servers"),
             const ServerMonitorTile(
               serviceName: "captcha-microservice",
-              serverUrl: "http://127.0.0.1:8001",
+              //serverUrl: "http://127.0.0.1:8001",
+              serverUrl: "https://dev-captcha.rafal-kruszyna.org",
             ),
             const ServerMonitorTile(
               serviceName: "users-microservice",
@@ -1958,6 +2469,12 @@ class MainDrawer extends ConsumerWidget {
             icon: Icons.dns,
             index: 5,
             isSelected: selectedIndex == 5
+          ),
+          _DrawerTile(
+            title: 'Captcha Test', 
+            icon: Icons.security, 
+            index: 6,
+            isSelected: selectedIndex == 6
           ),
         ],
       ),

@@ -1,16 +1,40 @@
+// lib/core/network/dio_provider.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/auth/data/token_storage.dart'; // Import storage
 
-// Provider zwracający skonfigurowaną instancję Dio.
-// Zmień baseUrl na adres swojego lokalnego serwera (dla emulatora Androida to zazwyczaj 10.0.2.2)
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
-    //baseUrl: 'https://maia-sentences.rafal-kruszyna.org', // Jeśli API stoi lokalnie na porcie 8003
-    //baseUrl: 'http://localhost:8003', // Jeśli API stoi lokalnie na porcie 8003
-    //baseUrl: 'http://10.139.19.47:8003',
-    baseUrl: 'https://dev-sentences.rafal-kruszyna.org',
+    baseUrl: 'https://dev-sentences.rafal-kruszyna.org', // lub gateway URL
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));
+
+  // Dodajemy interceptor
+  final storage = ref.watch(tokenStorageProvider);
+  
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      // Przed każdym zapytaniem pobierz token z bezpiecznego magazynu
+      final token = await storage.getToken();
+      
+      // Jeśli mamy token, dodaj nagłówek
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer ${token.accessToken}';
+      }
+      
+      return handler.next(options);
+    },
+    onError: (DioException error, handler) async {
+      // Obsługa 401 (Token wygasł)
+      if (error.response?.statusCode == 401) {
+        // TU w przyszłości dodasz logikę "Refresh Token"
+        // Na razie proste wylogowanie w UI jeśli token wygasł
+      }
+      return handler.next(error);
+    }
+  ));
+
   return dio;
 });

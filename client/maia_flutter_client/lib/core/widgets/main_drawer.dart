@@ -56,22 +56,28 @@ class MainDrawer extends ConsumerWidget {
             isSelected: selectedIndex == 3,
           ),
           _DrawerTile(
-            title: 'Test',
-            icon: Icons.quiz,
+            title: 'Rejestracja',
+            icon: Icons.chat,
             index: 4,
             isSelected: selectedIndex == 4,
           ),
           _DrawerTile(
+            title: 'Test',
+            icon: Icons.quiz,
+            index: 5,
+            isSelected: selectedIndex == 5,
+          ),
+          _DrawerTile(
             title: 'Health Check',
             icon: Icons.dns,
-            index: 5,
-            isSelected: selectedIndex == 5
+            index: 6,
+            isSelected: selectedIndex == 6
           ),
           _DrawerTile(
             title: 'Captcha Test', 
             icon: Icons.security, 
-            index: 6,
-            isSelected: selectedIndex == 6
+            index: 7,
+            isSelected: selectedIndex == 7
           ),
         ],
       ),
