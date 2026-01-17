@@ -12,7 +12,7 @@ class ApiErrorHandler {
         
         case DioExceptionType.badResponse:
           final statusCode = error.response?.statusCode;
-          if (statusCode == 404) return "Nie znaleziono zasobu (404).";
+          if (statusCode == 404) return "Nie znaleziono zasobu na serwerze (404).";
           if (statusCode == 500) return "Błąd wewnętrzny serwera (500).";
           return "Błąd serwera: $statusCode";
 

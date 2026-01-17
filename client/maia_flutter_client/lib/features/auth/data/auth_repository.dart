@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/dio_provider.dart';
+// ZMIANA: Importujemy provider dedykowany dla auth
+import 'auth_dio_provider.dart'; 
 import 'models/auth_token.dart';
 
 final authRepositoryProvider = Provider((ref) {
-  final dio = ref.watch(dioProvider); // Używamy Twojego głównego Dio
+  // ZMIANA: Watchujemy authDioProvider zamiast głównego dioProvider
+  final dio = ref.watch(authDioProvider); 
   return AuthRepository(dio);
 });
 

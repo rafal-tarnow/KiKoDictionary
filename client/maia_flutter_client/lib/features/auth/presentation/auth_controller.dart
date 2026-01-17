@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/core/network/api_error_handler.dart';
 import '../data/auth_repository.dart';
 import '../data/token_storage.dart';
 import '../data/models/auth_token.dart';
@@ -75,7 +76,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true; // Sukces rejestracji
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: "Błąd rejestracji.");
+      state = state.copyWith(isLoading: false, error: "Błąd rejestracji. ${ApiErrorHandler.getErrorMessage(e)}");
       return false;
     }
   }

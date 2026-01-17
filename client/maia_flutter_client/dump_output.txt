@@ -5,6 +5,7 @@ Zawartość pliku:
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
 import 'core/navigation_provider.dart';
 import 'core/widgets/main_drawer.dart';
 import 'features/home/home_page.dart';
@@ -27,6 +28,7 @@ class MainShell extends ConsumerWidget {
     DictionaryPage(),
     WordsPage(),
     SentencesPage(),
+    RegisterPage(),
     TestPage(),
     ServicesHealthPage(),
     CaptchaPage(),
@@ -37,6 +39,7 @@ class MainShell extends ConsumerWidget {
     AppBar(title: const Text("Dictionary"), elevation: 2,),
     AppBar(title: const Text("Words"), elevation: 2,),
     const SentencesAppBar(),
+    AppBar(title: const Text("Register page"), elevation: 2,),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
     AppBar(title: const Text("Captcha Demo"), elevation: 2,),
@@ -353,6 +356,399 @@ class TestBackend with ChangeNotifier {
       // 2. TO JEST KLUCZ! To mówi do UI: "Hej, zmieniłem się, przerysujcie się!"
       notifyListeners(); 
     });
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/register_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../captcha/presentation/widgets/captcha_box.dart';
+import '../../captcha/presentation/captcha_controller.dart';
+import 'auth_controller.dart';
+
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  // Kontroler do captchy przekazujemy do Twojego widgetu
+  final _captchaInputCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    _captchaInputCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // 1. Pobieramy ID captchy z Twojego istniejącego kontrolera captchy
+    final captchaState = ref.read(captchaControllerProvider);
+    if (captchaState.captcha == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Błąd Captchy')));
+      return;
+    }
+
+    // 2. Wywołujemy rejestrację
+    final success = await ref.read(authControllerProvider.notifier).register(
+      email: _emailCtrl.text,
+      username: _userCtrl.text,
+      password: _passCtrl.text,
+      captchaId: captchaState.captcha!.id, // UUID z serwera
+      captchaAnswer: _captchaInputCtrl.text, // Tekst wpisany przez usera
+    );
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Konto założone! Zaloguj się.')));
+      Navigator.pop(context); // Wróć do logowania
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    
+    return Scaffold(
+      appBar: AppBar(title: const Text("Rejestracja")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _emailCtrl,
+                decoration: const InputDecoration(labelText: "Email"),
+                validator: (v) => v!.contains('@') ? null : 'Błędny email',
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _userCtrl,
+                decoration: const InputDecoration(labelText: "Username"),
+                validator: (v) => v!.length < 3 ? 'Za krótkie' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passCtrl,
+                decoration: const InputDecoration(labelText: "Hasło"),
+                obscureText: true,
+                validator: (v) => v!.length < 6 ? 'Za krótkie hasło' : null,
+              ),
+              const SizedBox(height: 24),
+              
+              // --- TWOJA CAPTCHA ---
+              // Reużywamy Twój widget! To jest siła modułowości.
+              CaptchaBox(
+                answerController: _captchaInputCtrl,
+              ),
+              // ---------------------
+
+              const SizedBox(height: 24),
+              if (authState.error != null)
+                 Text(authState.error!, style: const TextStyle(color: Colors.red)),
+
+              SizedBox(width: double.infinity, child: FilledButton(
+                onPressed: authState.isLoading ? null : _submit,
+                child: authState.isLoading ? const CircularProgressIndicator() : const Text("ZAREJESTRUJ SIĘ"),
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/auth_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/core/network/api_error_handler.dart';
+import '../data/auth_repository.dart';
+import '../data/token_storage.dart';
+import '../data/models/auth_token.dart';
+
+// Stan autentykacji
+class AuthState {
+  final bool isAuthenticated;
+  final bool isLoading;
+  final String? error;
+
+  const AuthState({
+    this.isAuthenticated = false, 
+    this.isLoading = true, // Domyślnie true, bo przy starcie sprawdzamy storage
+    this.error
+  });
+  
+  AuthState copyWith({bool? isAuthenticated, bool? isLoading, String? error}) {
+    return AuthState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+}
+
+class AuthController extends StateNotifier<AuthState> {
+  final AuthRepository _repository;
+  final TokenStorage _storage;
+
+  AuthController(this._repository, this._storage) : super(const AuthState()) {
+    checkAuthStatus();
+  }
+
+  // Sprawdza przy starcie apki, czy mamy token
+  Future<void> checkAuthStatus() async {
+    final token = await _storage.getToken();
+    if (token != null) {
+      // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
+      state = const AuthState(isAuthenticated: true, isLoading: false);
+    } else {
+      state = const AuthState(isAuthenticated: false, isLoading: false);
+    }
+  }
+
+  Future<bool> login(String username, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final token = await _repository.login(username: username, password: password);
+      await _storage.saveToken(token);
+      state = const AuthState(isAuthenticated: true, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: "Błąd logowania. Sprawdź dane.");
+      return false;
+    }
+  }
+
+  Future<bool> register({
+    required String email,
+    required String username,
+    required String password,
+    required String captchaId,
+    required String captchaAnswer,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _repository.register(
+        email: email,
+        username: username,
+        password: password,
+        captchaId: captchaId,
+        captchaAnswer: captchaAnswer,
+      );
+      state = state.copyWith(isLoading: false);
+      return true; // Sukces rejestracji
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: "Błąd rejestracji. ${ApiErrorHandler.getErrorMessage(e)}");
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    final token = await _storage.getToken();
+    if (token != null) {
+       try {
+         await _repository.logout(token.refreshToken);
+       } catch (_) {
+         // Ignorujemy błędy sieciowe przy wylogowaniu
+       }
+    }
+    await _storage.clearToken();
+    state = const AuthState(isAuthenticated: false, isLoading: false);
+  }
+}
+
+// Globalny provider stanu autentykacji
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
+  return AuthController(
+    ref.watch(authRepositoryProvider),
+    ref.watch(tokenStorageProvider),
+  );
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/data/auth_repository.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/dio_provider.dart';
+import 'models/auth_token.dart';
+
+final authRepositoryProvider = Provider((ref) {
+  final dio = ref.watch(dioProvider); // Używamy Twojego głównego Dio
+  return AuthRepository(dio);
+});
+
+class AuthRepository {
+  final Dio _dio;
+
+  AuthRepository(this._dio);
+
+  // Logowanie: x-www-form-urlencoded
+  Future<AuthToken> login({required String username, required String password}) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/auth/login',
+        data: {
+          'username': username,
+          'password': password,
+          'grant_type': 'password', // Wymagane przez OAuth2PasswordBearer
+        },
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType, // WAŻNE!
+        ),
+      );
+      return AuthToken.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Rejestracja: application/json
+  Future<void> register({
+    required String email,
+    required String username,
+    required String password,
+    required String captchaId,
+    required String captchaAnswer,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/auth/register',
+        data: {
+          'email': email,
+          'username': username,
+          'password': password,
+          'captcha_id': captchaId,
+          'captcha_answer': captchaAnswer,
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Wylogowanie
+  Future<void> logout(String refreshToken) async {
+      // API wymaga wysłania refresh tokena przy wylogowaniu
+      await _dio.post('/api/v1/auth/logout', data: {'refresh_token': refreshToken});
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/data/token_storage.dart
+
+Zawartość pliku:
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'models/auth_token.dart';
+
+final tokenStorageProvider = Provider((ref) => TokenStorage());
+
+class TokenStorage {
+  // POPRAWKA: Usuwamy parametr encryptedSharedPreferences.
+  // Dodajemy resetOnError: true -> to "Best Practice" w developmentzie.
+  // Jeśli klucze szyfrowania ulegną uszkodzeniu (np. przy reinstalacji apki w devie),
+  // magazyn zostanie zresetowany zamiast crashować aplikację.
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      resetOnError: true, 
+    ),
+  );
+
+  static const _keyAccess = 'access_token';
+  static const _keyRefresh = 'refresh_token';
+
+  Future<void> saveToken(AuthToken token) async {
+    await _storage.write(key: _keyAccess, value: token.accessToken);
+    await _storage.write(key: _keyRefresh, value: token.refreshToken);
+  }
+
+  Future<AuthToken?> getToken() async {
+    // Odczyt może rzucić wyjątek jeśli klucze systemowe się zmienią, 
+    // dlatego warto otoczyć to try-catch w produkcyjnym kodzie, 
+    // ale resetOnError w opcjach wyżej załatwia większość problemów.
+    final access = await _storage.read(key: _keyAccess);
+    final refresh = await _storage.read(key: _keyRefresh);
+    
+    if (access != null && refresh != null) {
+      return AuthToken(accessToken: access, refreshToken: refresh);
+    }
+    return null;
+  }
+
+  Future<void> clearToken() async {
+    await _storage.delete(key: _keyAccess);
+    await _storage.delete(key: _keyRefresh);
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/data/models/auth_token.dart
+
+Zawartość pliku:
+
+class AuthToken {
+  final String accessToken;
+  final String refreshToken;
+
+  AuthToken({required this.accessToken, required this.refreshToken});
+
+  factory AuthToken.fromJson(Map<String, dynamic> json) {
+    return AuthToken(
+      accessToken: json['access_token'] as String,
+      refreshToken: json['refresh_token'] as String,
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/data/models/user_model.dart
+
+Zawartość pliku:
+
+class User {
+  final String id;
+  final String username;
+  final String email;
+  final String role;
+
+  User({required this.id, required this.username, required this.email, required this.role});
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      username: json['username'],
+      email: json['email'],
+      role: json['account_role'],
+    );
   }
 }
 
@@ -2459,22 +2855,28 @@ class MainDrawer extends ConsumerWidget {
             isSelected: selectedIndex == 3,
           ),
           _DrawerTile(
-            title: 'Test',
-            icon: Icons.quiz,
+            title: 'Rejestracja',
+            icon: Icons.chat,
             index: 4,
             isSelected: selectedIndex == 4,
           ),
           _DrawerTile(
+            title: 'Test',
+            icon: Icons.quiz,
+            index: 5,
+            isSelected: selectedIndex == 5,
+          ),
+          _DrawerTile(
             title: 'Health Check',
             icon: Icons.dns,
-            index: 5,
-            isSelected: selectedIndex == 5
+            index: 6,
+            isSelected: selectedIndex == 6
           ),
           _DrawerTile(
             title: 'Captcha Test', 
             icon: Icons.security, 
-            index: 6,
-            isSelected: selectedIndex == 6
+            index: 7,
+            isSelected: selectedIndex == 7
           ),
         ],
       ),
@@ -2518,20 +2920,44 @@ class _DrawerTile extends ConsumerWidget {
 
 Zawartość pliku:
 
+// lib/core/network/dio_provider.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/auth/data/token_storage.dart'; // Import storage
 
-// Provider zwracający skonfigurowaną instancję Dio.
-// Zmień baseUrl na adres swojego lokalnego serwera (dla emulatora Androida to zazwyczaj 10.0.2.2)
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
-    //baseUrl: 'https://maia-sentences.rafal-kruszyna.org', // Jeśli API stoi lokalnie na porcie 8003
-    //baseUrl: 'http://localhost:8003', // Jeśli API stoi lokalnie na porcie 8003
-    //baseUrl: 'http://10.139.19.47:8003',
-    baseUrl: 'https://dev-sentences.rafal-kruszyna.org',
+    baseUrl: 'https://dev-sentences.rafal-kruszyna.org', // lub gateway URL
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));
+
+  // Dodajemy interceptor
+  final storage = ref.watch(tokenStorageProvider);
+  
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      // Przed każdym zapytaniem pobierz token z bezpiecznego magazynu
+      final token = await storage.getToken();
+      
+      // Jeśli mamy token, dodaj nagłówek
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer ${token.accessToken}';
+      }
+      
+      return handler.next(options);
+    },
+    onError: (DioException error, handler) async {
+      // Obsługa 401 (Token wygasł)
+      if (error.response?.statusCode == 401) {
+        // TU w przyszłości dodasz logikę "Refresh Token"
+        // Na razie proste wylogowanie w UI jeśli token wygasł
+      }
+      return handler.next(error);
+    }
+  ));
+
   return dio;
 });
 
@@ -2555,7 +2981,7 @@ class ApiErrorHandler {
         
         case DioExceptionType.badResponse:
           final statusCode = error.response?.statusCode;
-          if (statusCode == 404) return "Nie znaleziono zasobu (404).";
+          if (statusCode == 404) return "Nie znaleziono zasobu na serwerze (404).";
           if (statusCode == 500) return "Błąd wewnętrzny serwera (500).";
           return "Błąd serwera: $statusCode";
 
