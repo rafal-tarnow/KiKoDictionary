@@ -76,7 +76,11 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true; // Sukces rejestracji
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: "Błąd rejestracji. ${ApiErrorHandler.getErrorMessage(e)}");
+      // ZMIANA: Usuwamy prefiks "Błąd rejestracji. ", bo ErrorHandler zwróci nam już konkretny opis.
+      // Dzięki temu user zobaczy: "Użytkownik o tym adresie email już istnieje."
+      // zamiast: "Błąd rejestracji. Użytkownik o tym adresie email już istnieje."
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }

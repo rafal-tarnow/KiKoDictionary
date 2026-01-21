@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maia_flutter_client/core/config/api_config.dart';
 import 'widgets/server_monitor_tile.dart';
 import '../../core/widgets/main_drawer.dart';
 
@@ -20,17 +21,15 @@ class ServicesHealthPage extends StatelessWidget {
             _buildSectionHeader("Dev servers"),
             const ServerMonitorTile(
               serviceName: "captcha-microservice",
-              //serverUrl: "http://127.0.0.1:8001",
-              serverUrl: "https://dev-captcha.rafal-kruszyna.org",
+              serverUrl: ApiConfig.captchaBaseUrl,
             ),
             const ServerMonitorTile(
-              serviceName: "users-microservice",
-              serverUrl: "http://127.0.0.1:8002",
+              serviceName: "auth-microservice",
+              serverUrl: ApiConfig.authBaseUrl,
             ),
             const ServerMonitorTile(
               serviceName: "sentences-microservice",
-              //serverUrl: "http://10.139.19.47:8003",
-              serverUrl: "https://dev-sentences.rafal-kruszyna.org",
+              serverUrl: ApiConfig.sentencesBaseUrl,
             ),
 
             const SizedBox(height: 24),
@@ -43,8 +42,8 @@ class ServicesHealthPage extends StatelessWidget {
                   "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
             ),
             const ServerMonitorTile(
-              serviceName: "users-microservice",
-              serverUrl: "https://maia-users.rafal-kruszyna.org",
+              serviceName: "auth-microservice",
+              serverUrl: "https://maia-auth.rafal-kruszyna.org",
             ),
             const ServerMonitorTile(
               serviceName: "sentences-microservice",
