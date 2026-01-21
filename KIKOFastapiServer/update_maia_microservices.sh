@@ -3,7 +3,7 @@
 # 1. Zatrzymaj serwisy
 sudo systemctl stop maia-captcha.service
 sudo systemctl stop maia-sentences.service
-sudo systemctl stop maia-users.service
+sudo systemctl stop maia-auth.service
 
 # 2. Pobierz zmiany
 cd ~/Documents/GITHUB_MOJE/KiKoDictionary
@@ -23,11 +23,11 @@ pip install -r requirements.txt
 deactivate
 
 # --- Serwis 3 (POETRY) ---
-cd ~/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/users-microservice
+cd ~/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/auth-microservice
 # Poetry samo ogarnie środowisko, jeśli naprawiłeś uprawnienia komendą chown
 poetry install --only main --no-root --sync
 
 # 3. Wystartuj serwisy
 sudo systemctl start maia-captcha.service
-sudo systemctl start maia-users.service
+sudo systemctl start maia-auth.service
 sudo systemctl start maia-sentences.service

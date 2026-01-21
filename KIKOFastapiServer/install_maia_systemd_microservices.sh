@@ -9,7 +9,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 git pull origin main
 
 sudo systemctl stop maia-sentences.service
-sudo systemctl stop maia-users.service
+sudo systemctl stop maia-auth.service
 sudo systemctl stop maia-captcha.service
 
 
@@ -33,7 +33,7 @@ python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
 
-cd "$BASE_DIR/users-microservice/systemd_files"
+cd "$BASE_DIR/auth-microservice/systemd_files"
 chmod +x install_systemd_service.sh
 sudo ./install_systemd_service.sh
 cd "$BASE_DIR/users-microservice"
@@ -51,10 +51,10 @@ sudo systemctl daemon-reload
 
 sudo systemctl enable maia-captcha.service
 sudo systemctl enable maia-sentences.service
-sudo systemctl enable maia-users.service
+sudo systemctl enable maia-auth.service
 
 sudo systemctl restart maia-captcha.service
 sudo systemctl restart maia-sentences.service
-sudo systemctl restart maia-users.service
+sudo systemctl restart maia-auth.service
 
 echo "Gotowe!"

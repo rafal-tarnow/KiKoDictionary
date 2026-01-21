@@ -10,7 +10,7 @@ blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
 
 # Ścieżka startowa (można zmienić na inny katalog)
-start_path = '.'
+start_path = './src/'
 
 # Plik wynikowy
 output_file = 'dump_output.txt'
@@ -34,7 +34,7 @@ with open(output_file, 'w', encoding='utf-8') as out_file:
                 continue
 
             file_path = os.path.join(root, file)
-            rel_path = os.path.relpath(file_path, start=start_path)
+            # Usunięto linię z os.path.relpath, aby zachować pełną ścieżkę (wraz z ./lib)
 
             # Sprawdzanie rozszerzenia
             _, ext = os.path.splitext(file)
@@ -43,9 +43,13 @@ with open(output_file, 'w', encoding='utf-8') as out_file:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
 
-                    out_file.write(f'{rel_path}\n\n\n{content}\n\n\n')
+                    # Zmiana formatowania zapisu
+                    out_file.write(f'===============================\n')
+                    out_file.write(f'Ścieżka do pliku: {file_path}\n\n')
+                    out_file.write('Zawartość pliku:\n\n')
+                    out_file.write(f'{content}\n\n\n')
 
                 except Exception as e:
-                    print(f'Błąd przy odczycie pliku {rel_path}: {e}')
+                    print(f'Błąd przy odczycie pliku {file_path}: {e}')
 
 print('Dump zakończony.')

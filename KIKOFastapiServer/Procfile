@@ -25,11 +25,13 @@
 # ==============================================================================
 
 # --- Serwis 1: Captcha (venv) ---
-captcha: cd captcha-microservice && .venv/bin/uvicorn main:app --reload --port 8001
+captcha: cd captcha-microservice && .venv/bin/uvicorn src.main:app --reload --port 8001
 
-# --- Serwis 2: Sentences (venv) ---
-sentences: cd sentences-microservice && .venv/bin/uvicorn main:app --reload --port 8002
-
-# --- Serwis 3: Users (Poetry) ---
+# --- Serwis 2: Auth (Poetry) ---
 # Tutaj używamy 'poetry run', aby wykorzystać środowisko zarządzane przez Poetry
-users: cd users-microservice && poetry run uvicorn main:app --reload --port 8003
+auth: cd auth-microservice && poetry run uvicorn src.main:app --reload --port 8002
+
+# --- Serwis 3: Sentences (venv) ---
+sentences: cd sentences-microservice && .venv/bin/uvicorn main:app --reload --port 8003
+
+
