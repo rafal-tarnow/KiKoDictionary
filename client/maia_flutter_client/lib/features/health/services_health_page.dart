@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maia_flutter_client/core/config/api_config.dart';
 import 'widgets/server_monitor_tile.dart';
-import '../../core/widgets/main_drawer.dart';
 
 class ServicesHealthPage extends StatelessWidget {
   const ServicesHealthPage({super.key});

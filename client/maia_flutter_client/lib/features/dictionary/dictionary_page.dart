@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/main_drawer.dart';
 
 class DictionaryPage extends StatelessWidget{
   const DictionaryPage({super.key});

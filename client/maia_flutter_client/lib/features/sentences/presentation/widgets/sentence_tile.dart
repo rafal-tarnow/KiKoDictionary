@@ -112,7 +112,7 @@ class SentenceTile extends ConsumerWidget {
                 icon: const Icon(Icons.edit, color: Colors.blue),
                 onPressed: () {
                    // TODO: Tu logika edycji
-                   print("Kliknięto edycję id: ${sentence.id}");
+                   debugPrint("Kliknięto edycję id: ${sentence.id}");
                    showDialog(
                      context: context,
                      builder: (context) => EditSentenceDialog(sentence: sentence),

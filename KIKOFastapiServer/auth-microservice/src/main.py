@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError
 
 from src.api.v1.routers import auth
 from src.api.v1.routers import test
@@ -29,6 +30,34 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
     )
+
+
+@app.exception_handler(OperationalError)
+async def db_connection_handler(request: Request, exc: OperationalError):
+    # Log dla Ciebie w konsoli
+    print(f"LOG: Database OperationalError caught: {exc}")
+
+    # Przypadek 1: Baza zablokowana (SQLite Lock)
+    if "database is locked" in str(exc):
+        return JSONResponse(
+            status_code=503, 
+            content={
+                # Tutaj dodajemy jasną informację, że to wina bazy
+                "detail": "Database error: Resource is locked. Service temporarily unavailable.",
+                "error_code": "DB_LOCKED"
+            }
+        )
+    
+    # Przypadek 2: Inne błędy (np. zerwane połączenie, błąd składni SQL, brak serwera)
+    return JSONResponse(
+        status_code=500,
+        content={
+            # Tutaj też jasne info o bazie
+            "detail": "Database error: Internal operation failed.",
+            "error_code": "DB_ERROR"
+        }
+    )
+
 
 # <--- 2. Konfiguracja Middleware
 # W środowisku deweloperskim (Wasm lokalnie) najlepiej zezwolić na wszystko ("*")

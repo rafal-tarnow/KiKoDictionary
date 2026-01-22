@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/features/test/backend/backend_provider.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import '../../core/widgets/main_drawer.dart';
 
 class TestPage extends ConsumerWidget {
   const TestPage({super.key});

@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/network/api_error_handler.dart';
 import '../data/auth_repository.dart';
 import '../data/token_storage.dart';
-import '../data/models/auth_token.dart';
 
 // Stan autentykacji
 class AuthState {

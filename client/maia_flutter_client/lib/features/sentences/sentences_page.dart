@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/add_sentence_dialog.dart';
 import 'presentation/widgets/sentence_tile.dart';
-import '../../core/widgets/main_drawer.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -34,9 +33,9 @@ class SentencesPage extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Theme.of(
               context,
-            ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             border: Border(
-              top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+              top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
             ),
           ),
           child: Row(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/main_drawer.dart';
 
 class WordsPage extends StatelessWidget {
   const WordsPage({super.key});

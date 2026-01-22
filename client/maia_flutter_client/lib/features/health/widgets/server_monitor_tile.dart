@@ -76,7 +76,7 @@ class ServerMonitorTile extends ConsumerWidget {
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       // Gdy wystąpi błąd w samym Streamie (rzadkie przy try-catch w serwisie)
-      error: (_, __) => const Icon(Icons.error_outline, color: Colors.grey),
+      error: (_, _) => const Icon(Icons.error_outline, color: Colors.grey),
     );
   }
 }

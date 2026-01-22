@@ -70,8 +70,9 @@ class ApiErrorHandler {
         return "Zbyt wiele zapytań. Zwolnij chwilę.";
       case 500:
       case 502:
-      case 503:
         return "Błąd serwera ($statusCode). Spróbuj później.";
+      case 503:
+        return "Serwer jest niedostępny (Trwają prace techniczne lub przeciążenie).";
       default:
         return "Wystąpił błąd ($statusCode).";
     }
@@ -117,6 +118,14 @@ class ApiErrorHandler {
     }
     if (msg.contains("String should have at least")) {
       return "Wartość jest za krótka (wymagane min. 6 znaków).";
+    }
+    //auth service error
+    if(msg.contains("Database error: Resource is locked. Service temporarily unavailable.")){
+      return "Serwis jest chwilowo zajęty (baza danych zablokowana). Spróbuj ponownie za chwilę.";
+    }
+    //auth service error
+    if(msg.contains("Database error: Internal operation failed.")){
+      return "Wystąpił wewnętrzny błąd bazy danych. Spróbuj ponownie.";
     }
 
     // Jeśli nie mamy tłumaczenia, zwracamy oryginał (np. "Password is too short")

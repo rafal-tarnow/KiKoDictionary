@@ -67,7 +67,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context); // Wróć do logowania
+
+      _emailCtrl.clear();
+      _userCtrl.clear();
+      _passCtrl.clear();
+      _captchaInputCtrl.clear();
+      ref.read(captchaControllerProvider.notifier).fetchCaptcha();
     } else {
       // PORAŻKA (np. błąd 409 - zajęty email, błąd 422 - zła captcha):
       // W tym momencie serwer już przetworzył token captchy i oznaczył go jako zużyty (lub był błędny).
