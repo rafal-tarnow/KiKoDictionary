@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/features/auth/presentation/login_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
 import 'core/navigation_provider.dart';
 import 'core/widgets/main_drawer.dart';
@@ -24,6 +25,7 @@ class MainShell extends ConsumerWidget {
     WordsPage(),
     SentencesPage(),
     RegisterPage(),
+    LoginPage(),
     TestPage(),
     ServicesHealthPage(),
     CaptchaPage(),
@@ -34,7 +36,8 @@ class MainShell extends ConsumerWidget {
     AppBar(title: const Text("Dictionary"), elevation: 2,),
     AppBar(title: const Text("Words"), elevation: 2,),
     const SentencesAppBar(),
-    AppBar(title: const Text("Register page"), elevation: 2,),
+    AppBar(title: const Text("Rejestracja"), elevation: 2,),
+    AppBar(title: const Text("Logowanie"), elevation: 2,),
     const TestAppBar(),
     AppBar(title: const Text("Health Check"), elevation: 2,),
     AppBar(title: const Text("Captcha Demo"), elevation: 2,),
@@ -88,7 +91,11 @@ class MainShell extends ConsumerWidget {
                 //   elevation: 2,
                 // ),
                 drawer: const MainDrawer(),
-                body: _pages[selectedIndex],
+                //body: _pages[selectedIndex],
+                body: IndexedStack(
+                  index: selectedIndex,
+                  children: _pages,
+                )
               ),
             ),
           ),

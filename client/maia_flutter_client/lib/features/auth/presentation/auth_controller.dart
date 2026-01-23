@@ -43,15 +43,26 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+Future<bool> login(String username, String password) async {
+    // Resetujemy błąd i włączamy loading
     state = state.copyWith(isLoading: true, error: null);
+    
     try {
       final token = await _repository.login(username: username, password: password);
       await _storage.saveToken(token);
+      
+      // SUKCES
       state = const AuthState(isAuthenticated: true, isLoading: false);
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: "Błąd logowania. Sprawdź dane.");
+      // BŁĄD: Używamy Twojego ApiErrorHandler, który już obsługuje 400, 401, 422 itd.
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      
+      state = state.copyWith(
+        isLoading: false, 
+        error: msg, 
+        isAuthenticated: false
+      );
       return false;
     }
   }
