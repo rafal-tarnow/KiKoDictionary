@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/features/auth/presentation/login_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 import 'core/navigation_provider.dart';
 import 'core/widgets/main_drawer.dart';
 import 'features/home/home_page.dart';
@@ -33,14 +34,38 @@ class MainShell extends ConsumerWidget {
 
   static final List<PreferredSizeWidget> _appBars = [
     const HomeAppBar(),
-    AppBar(title: const Text("Dictionary"), elevation: 2,),
-    AppBar(title: const Text("Words"), elevation: 2,),
+    AppBar(
+      title: const Text("Dictionary"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Words"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
     const SentencesAppBar(),
-    AppBar(title: const Text("Rejestracja"), elevation: 2,),
-    AppBar(title: const Text("Logowanie"), elevation: 2,),
+    AppBar(
+      title: const Text("Rejestracja"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Logowanie"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
     const TestAppBar(),
-    AppBar(title: const Text("Health Check"), elevation: 2,),
-    AppBar(title: const Text("Captcha Demo"), elevation: 2,),
+    AppBar(
+      title: const Text("Health Check"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Captcha Demo"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
   ];
 
   // static const List<String> _titles = [
@@ -92,10 +117,7 @@ class MainShell extends ConsumerWidget {
                 // ),
                 drawer: const MainDrawer(),
                 //body: _pages[selectedIndex],
-                body: IndexedStack(
-                  index: selectedIndex,
-                  children: _pages,
-                )
+                body: IndexedStack(index: selectedIndex, children: _pages),
               ),
             ),
           ),

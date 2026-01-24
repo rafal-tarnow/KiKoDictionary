@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const HomeAppBar({super.key});
@@ -14,6 +15,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.notifications),
           onPressed: () {},
         ),
+        const UserAvatarButton(),
       ],
     );
   }

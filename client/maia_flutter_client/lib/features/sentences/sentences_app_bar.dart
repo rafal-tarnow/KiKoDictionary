@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 import './presentation/sentences_provider.dart';
 
 class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -35,6 +36,7 @@ class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ),
         // Opcjonalnie inne przyciski, np. sortowanie
         // IconButton(icon: Icon(Icons.filter_list), onPressed: () {}),
+        const UserAvatarButton(),
       ],
     );
   }
