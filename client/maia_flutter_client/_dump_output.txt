@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/features/auth/presentation/login_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 import 'core/navigation_provider.dart';
 import 'core/widgets/main_drawer.dart';
 import 'features/home/home_page.dart';
@@ -38,14 +39,38 @@ class MainShell extends ConsumerWidget {
 
   static final List<PreferredSizeWidget> _appBars = [
     const HomeAppBar(),
-    AppBar(title: const Text("Dictionary"), elevation: 2,),
-    AppBar(title: const Text("Words"), elevation: 2,),
+    AppBar(
+      title: const Text("Dictionary"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Words"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
     const SentencesAppBar(),
-    AppBar(title: const Text("Rejestracja"), elevation: 2,),
-    AppBar(title: const Text("Logowanie"), elevation: 2,),
+    AppBar(
+      title: const Text("Rejestracja"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Logowanie"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
     const TestAppBar(),
-    AppBar(title: const Text("Health Check"), elevation: 2,),
-    AppBar(title: const Text("Captcha Demo"), elevation: 2,),
+    AppBar(
+      title: const Text("Health Check"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Captcha Demo"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
   ];
 
   // static const List<String> _titles = [
@@ -97,10 +122,7 @@ class MainShell extends ConsumerWidget {
                 // ),
                 drawer: const MainDrawer(),
                 //body: _pages[selectedIndex],
-                body: IndexedStack(
-                  index: selectedIndex,
-                  children: _pages,
-                )
+                body: IndexedStack(index: selectedIndex, children: _pages),
               ),
             ),
           ),
@@ -169,6 +191,7 @@ class HomePage extends StatelessWidget {
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const HomeAppBar({super.key});
@@ -184,6 +207,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.notifications),
           onPressed: () {},
         ),
+        const UserAvatarButton(),
       ],
     );
   }
@@ -736,6 +760,112 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     ref.watch(tokenStorageProvider),
   );
 });
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/widgets/user_avatar_button.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/navigation_provider.dart';
+import '../auth_controller.dart';
+
+class UserAvatarButton extends ConsumerWidget {
+  const UserAvatarButton({super.key});
+
+  static const int _loginPageIndex = 5;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
+    final bool isLoggedIn = authState.isAuthenticated;
+
+    // --- STAN: ZALOGOWANY (Menu Popup) ---
+    if (isLoggedIn) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: PopupMenuButton<String>(
+          offset: const Offset(0, 50),
+          tooltip: 'Menu użytkownika',
+          // Zaokrąglenie samego okienka menu
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          
+          // KLUCZOWA ZMIANA:
+          // Używamy parametru 'icon' zamiast 'child'.
+          // Dzięki temu Flutter traktuje to jako standardową ikonę na pasku
+          // i automatycznie dodaje okrągły efekt "ink splash" przy kliknięciu/najechaniu.
+          icon: CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.deepPurple.shade100,
+            child: const Icon(Icons.person, color: Colors.deepPurple, size: 20),
+          ),
+          
+          onSelected: (value) {
+            if (value == 'logout') {
+              _handleLogout(context, ref);
+            }
+          },
+          
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              enabled: false,
+              child: Text(
+                "Moje Konto", 
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<String>(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red, size: 20),
+                  SizedBox(width: 12),
+                  Text('Wyloguj się', style: TextStyle(color: Colors.black87)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // --- STAN: NIEZALOGOWANY (Przycisk Logowania) ---
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: IconButton(
+        tooltip: "Zaloguj się",
+        // Tutaj też używamy standardowego IconButton, który ma okrągły splash
+        icon: CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.grey.shade200,
+          child: Icon(Icons.login, color: Colors.grey.shade700, size: 20),
+        ),
+        onPressed: () {
+          ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    await ref.read(authControllerProvider.notifier).logout();
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Wylogowano pomyślnie"),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    
+    ref.read(navigationIndexProvider.notifier).state = 0;
+  }
+}
 
 
 ===============================
@@ -1437,6 +1567,267 @@ class CaptchaVerifyResponse {
   factory CaptchaVerifyResponse.fromJson(Map<String, dynamic> json) {
     return CaptchaVerifyResponse(
       isValid: json['is_valid'] as bool,
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/services_health_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:maia_flutter_client/core/config/api_config.dart';
+import 'widgets/server_monitor_tile.dart';
+
+class ServicesHealthPage extends StatelessWidget {
+  const ServicesHealthPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      //backgroundColor: const Color(0xFFFFFFFF),
+
+      body: SingleChildScrollView(
+        // Odpowiednik ScrollablePage
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- DEV SERVERS ---
+            _buildSectionHeader("Dev servers"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: ApiConfig.captchaBaseUrl,
+            ),
+            const ServerMonitorTile(
+              serviceName: "auth-microservice",
+              serverUrl: ApiConfig.authBaseUrl,
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: ApiConfig.sentencesBaseUrl,
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION ---
+            _buildSectionHeader("Production"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl:
+                  "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
+            ),
+            const ServerMonitorTile(
+              serviceName: "auth-microservice",
+              serverUrl: "https://maia-auth.rafal-kruszyna.org",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "https://maia-sentences.rafal-kruszyna.org",
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- PRODUCTION LOCAL ---
+            _buildSectionHeader("Production local"),
+            const ServerMonitorTile(
+              serviceName: "captcha-microservice",
+              serverUrl: "http://192.168.0.102:8001",
+            ),
+            const ServerMonitorTile(
+              serviceName: "users-microservice",
+              serverUrl: "http://192.168.0.102:8002",
+            ),
+            const ServerMonitorTile(
+              serviceName: "sentences-microservice",
+              serverUrl: "http://192.168.0.102:8003",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18, // pointSize 15 w QML to mniej więcej 18-20 w Flutter
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/server_health_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import './services/health_check_service.dart';
+
+final healthCheckServiceProvider = Provider((ref) => HealthCheckService());
+
+// StreamProvider automatycznie obsługuje stan Loading/Error/Data
+// .family pozwala przekazać URL
+final serverHealthProvider = StreamProvider.autoDispose.family<bool, String>((ref, url) async* {
+  final service = ref.watch(healthCheckServiceProvider);
+
+  // 1. Sprawdź natychmiast przy starcie
+  yield await service.checkHost(url);
+
+  // 2. Uruchom pętlę (Timer) - co 5 sekund (jak w C++ interval)
+  // Stream.periodic działa jak QTimer
+  final stream = Stream.periodic(const Duration(seconds: 5), (_) {
+    return service.checkHost(url);
+  });
+
+  // 3. Emituj wyniki z pętli
+  await for (final isAlive in stream) {
+    yield await isAlive; // await tutaj, bo checkHost zwraca Future
+  }
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/services/health_check_service.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+
+class HealthCheckService {
+  final Dio _dio;
+
+  HealthCheckService()
+      : _dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+          contentType: 'application/json',
+          validateStatus: (status) => status == 200, // Tylko 200 nas interesuje
+        ));
+
+  /// Sprawdza konkretny endpoint wymagany przez C++ logic
+  Future<bool> checkHost(String baseUrl) async {
+    // Usuń slash na końcu jeśli jest
+    final cleanUrl = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    
+    // Konkretny endpoint z Twojego kodu C++
+    final targetUrl = '$cleanUrl/health/live';
+
+    try {
+      // Cache breaker, żeby nie pobierać starego wyniku
+      final response = await _dio.get(
+        targetUrl, 
+        queryParameters: {'t': DateTime.now().millisecondsSinceEpoch},
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        // Sprawdzenie logiki biznesowej: {"status": "ok"}
+        return response.data['status'] == 'ok';
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/health/widgets/server_monitor_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../server_health_provider.dart';
+
+class ServerMonitorTile extends ConsumerWidget {
+  final String serverUrl;
+  final String serviceName;
+
+  const ServerMonitorTile({
+    super.key,
+    required this.serverUrl,
+    required this.serviceName,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy StreamProvidera
+    final AsyncValue<bool> healthState = ref.watch(serverHealthProvider(serverUrl));
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // Ikona statusu z obsługą ładowania
+            _buildStatusIndicator(healthState),
+            
+            const SizedBox(width: 16),
+            
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    serviceName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    serverUrl,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(AsyncValue<bool> state) {
+    return state.when(
+      // Gdy mamy dane (true/false)
+      data: (isAlive) {
+        return Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isAlive ? Colors.green : Colors.red,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isAlive ? Icons.check : Icons.close,
+            color: Colors.white,
+            size: 16,
+          ),
+        );
+      },
+      // Gdy się ładuje (pierwsze zapytanie)
+      loading: () => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      // Gdy wystąpi błąd w samym Streamie (rzadkie przy try-catch w serwisie)
+      error: (_, _) => const Icon(Icons.error_outline, color: Colors.grey),
     );
   }
 }

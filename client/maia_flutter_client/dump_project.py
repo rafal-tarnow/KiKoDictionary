@@ -6,7 +6,7 @@ allowed_extensions = ['.dart']
 # Lista zablokowanych katalogów
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health' , 'home' , 'sentences' , 'test' , 'words']
-blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health'  , 'sentences' , 'test']
+blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary'  , 'sentences' , 'test']
 
 # Lista zablokowanych plików (pełne nazwy plików)
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
@@ -15,7 +15,7 @@ blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.in
 start_path = './lib/'
 
 # Plik wynikowy
-output_file = 'dump_output.txt'
+output_file = '_dump_output.txt'
 
 def is_blocked(path):
     for blocked in blocked_dirs:
