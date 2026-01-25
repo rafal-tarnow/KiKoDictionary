@@ -101,7 +101,7 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()):
 
     repo = UserRepository(db)
-    user = await repo.get_by_email(email=form_data.username)
+    user = await repo.get_by_email_or_username(identifier=form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

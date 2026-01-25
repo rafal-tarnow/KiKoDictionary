@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import or_ 
 from src.db.models.user import User
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
@@ -19,6 +20,21 @@ class UserRepository:
     
     async def get_by_id(self, user_id: str) -> Optional[User]:
         result = await self.db.execute(select(User).filter(User.id == user_id))
+        return result.scalars().first()
+    
+    async def get_by_email_or_username(self, identifier: str) -> Optional[User]:
+        """
+        Wyszukuje użytkownika sprawdzając czy podany identyfikator pasuje
+        do adresu email LUB do nazwy użytkownika.
+        """
+        result = await self.db.execute(
+            select(User).filter(
+                or_(
+                    User.email == identifier,
+                    User.username == identifier
+                )
+            )
+        )
         return result.scalars().first()
     
     async def create(self, user_data: UserCreate) -> User:
