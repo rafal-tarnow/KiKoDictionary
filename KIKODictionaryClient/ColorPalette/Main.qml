@@ -54,6 +54,10 @@ Window {
 
     ListModel {
         id: pagesModel
+        ListElement{
+            title: "Ogłoszenia parafialne"
+        }
+
         ListElement {
             title: "Server selection"
         }
@@ -104,6 +108,7 @@ Window {
                 anchors.fill: parent
 
                 RoundButton {
+                    Layout.leftMargin: 8
                     action: navigateBackAction
                     visible: true
                     icon.width: 18
@@ -275,14 +280,39 @@ Window {
 
     Drawer{
         id: drawer
-        width: 200
+        width: 304
         height: parent.height
 
         edge: Qt.LeftEdge
 
+        // background: Rectangle{
+        //     color: "#faf0fa"
+        //     topRightRadius: 15
+        //     bottomRightRadius: 15
+        // }
+        // background: null
+
+        // contentItem: Rectangle{
+        //     color: "#faf0fa"
+        //     topRightRadius: 15
+        //     bottomRightRadius: 15
+
+        //     Rectangle {
+        //         anchors.left: parent.left
+        //         anchors.right: parent.right
+        //         anchors.top: parent.top
+        //         topRightRadius: 15
+        //         height: 160
+        //         color: "#7c00b6"
+        //     }
+        // }
+
+
+
         ListView {
             id: listView
             anchors.fill: parent
+            visible: false
             model: pagesModel
             delegate: ItemDelegate{
                 id: delegateItem

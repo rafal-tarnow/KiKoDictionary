@@ -111,8 +111,11 @@ int main(int argc, char *argv[])
     app.setOrganizationName("rafal_kruszyna_org");
     app.setApplicationName("Maia Lang");
 
-    QQuickStyle::setStyle("Basic");
-    QQuickStyle::setFallbackStyle("Basic");
+    // QQuickStyle::setStyle("Basic");
+    // QQuickStyle::setFallbackStyle("Basic");
+
+    QQuickStyle::setStyle("QtExampleStyle");
+    QQuickStyle::setFallbackStyle("QtExampleStyle");
 
     // // Przykład użycia funkcji
     // QString certPath = "/home/rafal/fastapi_ssl/server.crt"; // Podaj ścieżkę do certyfikatu

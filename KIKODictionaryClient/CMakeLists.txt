@@ -86,6 +86,8 @@ qt_add_qml_module(dudu
         QML_FILES common/CaptchaImage.qml
         QML_FILES common/CaptchaComponent.qml
         QML_FILES login_page/LoginRegisterDialog.qml
+        QML_FILES ColorPalette/features/health/ServicesHealthPage.qml
+        QML_FILES ColorPalette/features/home/HomePage.qml
 )
 
 # add SSL support for android

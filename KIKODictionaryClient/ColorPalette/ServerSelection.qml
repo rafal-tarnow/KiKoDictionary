@@ -23,6 +23,10 @@ Rectangle {
     property url usersUrl: (serverListView.currentItem  as ServerListDelegate).url_users
     property url sentencesUrl: (serverListView.currentItem  as ServerListDelegate).url_sentences
 
+    Button{
+        anchors.top: parent.top
+        anchors.left: parent.left
+    }
 
     Connections {
         target: root.colorUsers

@@ -324,7 +324,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   TextFormField(
                     controller: _usernameCtrl,
                     decoration: const InputDecoration(
-                      labelText: "Nazwa użytkownika",
+                      labelText: "Nazwa użytkownika lub email",
                       prefixIcon: Icon(Icons.person_outline),
                       border: OutlineInputBorder(),
                     ),
@@ -332,7 +332,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     enabled: !authState.isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Wpisz nazwę użytkownika';
+                        return 'Wpisz login lub email';
                       }
                       return null;
                     },

@@ -22,6 +22,7 @@ qt_add_qml_module(qtexamplestyle
         Popup.qml
         UIStyle.qml
         TextField.qml
+        QML_FILES Drawer.qml
 )
 
 target_link_libraries(qtexamplestyle PUBLIC

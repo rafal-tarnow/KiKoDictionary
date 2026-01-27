@@ -1,6 +1,7 @@
 module QtExampleStyle
 prefer :/qt/qml/QtExampleStyle/
 Button 1.0 Button.qml
+Drawer 1.0 Drawer.qml
 Popup 1.0 Popup.qml
 TextField 1.0 TextField.qml
 singleton UIStyle 1.0 UIStyle.qml
