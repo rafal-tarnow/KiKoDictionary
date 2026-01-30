@@ -3,20 +3,61 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
-import re  # <--- WAŻNE: Dodaj ten import
+import re
+
+# Lista słów, których nie można użyć jako nazwy użytkownika
+RESERVED_USERNAMES = {
+    "admin", "administrator", "root", "system", "support", "help", 
+    "moderator", "superuser", "guest", "api", "auth", "login", 
+    "logout", "register", "dashboard", "settings", "profile"
+}
+
+# Regex: Startuje od litery, potem litery, cyfry, _ lub -. 
+# Nie pozwala na _ lub - na końcu lub na początku (opcjonalnie).
+# Tutaj prosta wersja: a-z, 0-9, _, -
+USERNAME_REGEX = r"^[a-zA-Z0-9_-]+$"
 
 class UserBase(BaseModel):
     email: EmailStr
-    username: str
+    # ZMIANA: Usunięto min_length i max_length z Field(), aby uniknąć generycznych błędów Pydantic.
+    # Walidacja długości odbywa się teraz w validate_username_security.
+    username: str = Field(
+        ..., 
+        description="Username must be 3-30 characters, strictly alphanumeric, underscores or hyphens."
+    )
 
     @field_validator("username")
     @classmethod
-    def validate_username(cls, value: str) -> str:
-        if not value or value.isspace():
-            raise ValueError("The username cannot be empty or consist only of whitespace.")
-        if value != value.strip():
-            raise ValueError("The username cannot contain spaces at the beginning or end.")
+    def validate_username_security(cls, value: str) -> str:
+        # --- WAŻNE: NIE USUWAĆ PONIŻSZEGO BLOKU ---
+        # Sprawdzamy długość ręcznie tutaj, zamiast w Field(), aby zwrócić
+        # precyzyjny komunikat błędu dla Frontendu, zamiast generycznego
+        # "String should have at least X characters" z Pydantic.
+        if len(value) < 3:
+            raise ValueError("Username must be at least 3 characters long.")
+        
+        if len(value) > 30:
+            raise ValueError("Username cannot be longer than 30 characters.")
+        # ------------------------------------------
+
+        # 1. Sprawdzenie znaków (Regex)
+        if not re.match(USERNAME_REGEX, value):
+            raise ValueError("Username can only contain letters, numbers, underscores (_), and hyphens (-).")
+
+        # 2. Sprawdzenie słów zastrzeżonych
+        if value.lower() in RESERVED_USERNAMES:
+            raise ValueError("This username is reserved and cannot be used.")
+            
+        # 3. Sprawdzenie czy nie wygląda jak email (żeby ludzie nie wpisywali tu maila)
+        if "@" in value:
+             raise ValueError("Username cannot contain '@' symbol.")
+
+        # 4. Podwójne kropki/podkreślenia (opcjonalne - estetyka)
+        if "__" in value or "--" in value:
+            raise ValueError("Username cannot contain consecutive underscores or hyphens.")
+
         return value
+    
 
 class UserCreate(UserBase):
     # ZMIANA: Usuwamy 'min_length=6' stąd, żeby uniknąć błędu "String should have..."

@@ -43,7 +43,7 @@ class UserRepository:
             username=user_data.username,
             email=user_data.email,
             hashed_password=hashed_password,
-            )
+        )
         self.db.add(db_user)
         await self.db.commit()
         await self.db.refresh(db_user)

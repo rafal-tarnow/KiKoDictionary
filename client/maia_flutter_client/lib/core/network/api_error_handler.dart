@@ -80,6 +80,28 @@ class ApiErrorHandler {
 
   static String _translateMessage(String msg) {
     // Prosty słownik tłumaczeń najczęstszych błędów z backendu
+
+    // --- NOWE TŁUMACZENIA DLA USERNAME (Auth Service) ---
+    if (msg.contains("Username must be at least 3 characters long")) {
+      return "Nazwa użytkownika musi mieć co najmniej 3 znaki.";
+    }
+    if (msg.contains("Username cannot be longer than 30 characters")) {
+      return "Nazwa użytkownika nie może mieć więcej niż 30 znaków.";
+    }
+    if (msg.contains("Username can only contain letters, numbers")) {
+      return "Nazwa użytkownika może zawierać tylko litery, cyfry, podkreślenia (_) i myślniki (-).";
+    }
+    if (msg.contains("This username is reserved")) {
+      return "Ta nazwa użytkownika jest zastrzeżona i nie może zostać użyta.";
+    }
+    if (msg.contains("Username cannot contain '@' symbol")) {
+      return "Nazwa użytkownika nie może zawierać znaku '@'.";
+    }
+    if (msg.contains("consecutive underscores or hyphens")) {
+      return "Nazwa użytkownika nie może zawierać podwójnych podkreśleń lub myślników.";
+    }
+    // ----------------------------------------------------
+
     if (msg.contains("User with this email already exists")) {
       return "Użytkownik o tym adresie email już istnieje.";
     }
@@ -116,7 +138,7 @@ class ApiErrorHandler {
     if (msg.contains("Password must contain at least one letter")) {
       return "Hasło musi zawierać co najmniej jedną literę.";
     }
-    if (msg.contains("String should have at least")) {
+    if (msg.contains("String should have at least 6 characters")) {
       return "Wartość jest za krótka (wymagane min. 6 znaków).";
     }
     //auth service error
