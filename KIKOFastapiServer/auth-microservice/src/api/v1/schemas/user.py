@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
 import re
+from typing import Any
 
 # Lista słów, których nie można użyć jako nazwy użytkownika
 RESERVED_USERNAMES = {
@@ -25,6 +26,17 @@ class UserBase(BaseModel):
         ..., 
         description="Username must be 3-30 characters, strictly alphanumeric, underscores or hyphens."
     )
+
+    # Używamy mode='before', żeby naprawić dane zanim Pydantic zacznie marudzić
+    @field_validator("email", mode="before")
+    @classmethod
+    def case_insensitive_email(cls, v: Any) -> Any:
+        # Sprawdzamy czy to string, żeby nie wysadzić serwera
+        # gdyby ktoś złośliwie przysłał int albo tablicę w polu email.
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
     @field_validator("username")
     @classmethod

@@ -505,20 +505,73 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
-import re  # <--- WAŻNE: Dodaj ten import
+import re
+from typing import Any
+
+# Lista słów, których nie można użyć jako nazwy użytkownika
+RESERVED_USERNAMES = {
+    "admin", "administrator", "root", "system", "support", "help", 
+    "moderator", "superuser", "guest", "api", "auth", "login", 
+    "logout", "register", "dashboard", "settings", "profile"
+}
+
+# Regex: Startuje od litery, potem litery, cyfry, _ lub -. 
+# Nie pozwala na _ lub - na końcu lub na początku (opcjonalnie).
+# Tutaj prosta wersja: a-z, 0-9, _, -
+USERNAME_REGEX = r"^[a-zA-Z0-9_-]+$"
 
 class UserBase(BaseModel):
     email: EmailStr
-    username: str
+    # ZMIANA: Usunięto min_length i max_length z Field(), aby uniknąć generycznych błędów Pydantic.
+    # Walidacja długości odbywa się teraz w validate_username_security.
+    username: str = Field(
+        ..., 
+        description="Username must be 3-30 characters, strictly alphanumeric, underscores or hyphens."
+    )
+
+    # Używamy mode='before', żeby naprawić dane zanim Pydantic zacznie marudzić
+    @field_validator("email", mode="before")
+    @classmethod
+    def case_insensitive_email(cls, v: Any) -> Any:
+        # Sprawdzamy czy to string, żeby nie wysadzić serwera
+        # gdyby ktoś złośliwie przysłał int albo tablicę w polu email.
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
     @field_validator("username")
     @classmethod
-    def validate_username(cls, value: str) -> str:
-        if not value or value.isspace():
-            raise ValueError("The username cannot be empty or consist only of whitespace.")
-        if value != value.strip():
-            raise ValueError("The username cannot contain spaces at the beginning or end.")
+    def validate_username_security(cls, value: str) -> str:
+        # --- WAŻNE: NIE USUWAĆ PONIŻSZEGO BLOKU ---
+        # Sprawdzamy długość ręcznie tutaj, zamiast w Field(), aby zwrócić
+        # precyzyjny komunikat błędu dla Frontendu, zamiast generycznego
+        # "String should have at least X characters" z Pydantic.
+        if len(value) < 3:
+            raise ValueError("Username must be at least 3 characters long.")
+        
+        if len(value) > 30:
+            raise ValueError("Username cannot be longer than 30 characters.")
+        # ------------------------------------------
+
+        # 1. Sprawdzenie znaków (Regex)
+        if not re.match(USERNAME_REGEX, value):
+            raise ValueError("Username can only contain letters, numbers, underscores (_), and hyphens (-).")
+
+        # 2. Sprawdzenie słów zastrzeżonych
+        if value.lower() in RESERVED_USERNAMES:
+            raise ValueError("This username is reserved and cannot be used.")
+            
+        # 3. Sprawdzenie czy nie wygląda jak email (żeby ludzie nie wpisywali tu maila)
+        if "@" in value:
+             raise ValueError("Username cannot contain '@' symbol.")
+
+        # 4. Podwójne kropki/podkreślenia (opcjonalne - estetyka)
+        if "__" in value or "--" in value:
+            raise ValueError("Username cannot contain consecutive underscores or hyphens.")
+
         return value
+    
 
 class UserCreate(UserBase):
     # ZMIANA: Usuwamy 'min_length=6' stąd, żeby uniknąć błędu "String should have..."
@@ -725,7 +778,11 @@ class UserRepository:
         self.db = db_session
 
     async def get_by_email(self, email: str) -> Optional[User]:
-        result = await self.db.execute(select(User).filter(User.email == email))
+        # ZMIANA: .lower()
+        # Nawet jeśli walidator Pydantic pominie coś (np. wywołanie wewnętrzne),
+        # tutaj zabezpieczamy się przy odczycie.
+        email_lower = email.lower()
+        result = await self.db.execute(select(User).filter(User.email == email_lower))
         return result.scalars().first()
     
     async def get_by_username(self, username: str) -> Optional[User]:
@@ -739,25 +796,38 @@ class UserRepository:
     async def get_by_email_or_username(self, identifier: str) -> Optional[User]:
         """
         Wyszukuje użytkownika sprawdzając czy podany identyfikator pasuje
-        do adresu email LUB do nazwy użytkownika.
+        do adresu email (case-insensitive) LUB do nazwy użytkownika.
         """
+        # ZMIANA: Logika obsługi logowania.
+        # Skoro email w bazie jest ZAWSZE małą literą (dzięki Pydantic),
+        # to szukając po emailu, musimy przekonwertować input na małe litery.
+        
+        identifier_lower = identifier.lower()
+
+        # UWAGA: Tutaj jest niuans.
+        # Jeśli 'identifier' to username, a username jest Case-Sensitive (na razie),
+        # to nie powinniśmy go zmniejszać dla warunku username.
+        # Ale dla warunku email - musimy.
+        
         result = await self.db.execute(
             select(User).filter(
                 or_(
-                    User.email == identifier,
-                    User.username == identifier
+                    User.email == identifier_lower,  # Szukamy jako email (małe litery)
+                    User.username == identifier      # Szukamy jako username (oryginał)
                 )
             )
         )
         return result.scalars().first()
     
     async def create(self, user_data: UserCreate) -> User:
+        # Tutaj user_data.email jest już małą literą dzięki Pydanticowi,
+        # więc nie musimy robić .lower() ponownie, ale dla pewności nie zaszkodzi.
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
             username=user_data.username,
-            email=user_data.email,
+            email=user_data.email.lower(), # Double-check, dobra praktyka defensywna
             hashed_password=hashed_password,
-            )
+        )
         self.db.add(db_user)
         await self.db.commit()
         await self.db.refresh(db_user)
