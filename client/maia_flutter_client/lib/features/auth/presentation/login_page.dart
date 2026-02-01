@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'auth_controller.dart';
@@ -13,8 +14,9 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   
-  // Kontrolery tekstu (odpowiednik property string w QML)
-  final _usernameCtrl = TextEditingController();
+  // W UI nazywamy to _emailCtrl, żeby wiedzieć co wpisuje user,
+  // ale do controllera przekażemy to jako "username" (zgodnie ze standardem OAuth2).
+  final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
   // Lokalny stan widoku (dla ukrywania hasła)
@@ -22,7 +24,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   void dispose() {
-    _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
@@ -34,10 +36,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // Ukryj klawiaturę (UX)
     FocusScope.of(context).unfocus();
 
+    // Zapisz stan autofill (dla password managerów)
+    TextInput.finishAutofillContext();
+
     // 2. Wywołanie logiki biznesowej
     // Używamy read, bo wykonujemy akcję jednorazową
     final success = await ref.read(authControllerProvider.notifier).login(
-      _usernameCtrl.text,
+      _emailCtrl.text.trim(),
       _passCtrl.text,
     );
 
@@ -96,22 +101,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // --- Username Field ---
+                  // --- Email Field ---
                   TextFormField(
-                    controller: _usernameCtrl,
+                    controller: _emailCtrl,
+                      // Logika UI wymusza email
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
-                      labelText: "Nazwa użytkownika lub email",
-                      prefixIcon: Icon(Icons.person_outline),
+                      labelText: "Adres email",
+                      prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
+                      hintText: "np. tom@example.com",
                     ),
                     textInputAction: TextInputAction.next, // Przycisk "Dalej"
                     enabled: !authState.isLoading,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Wpisz login lub email';
-                      }
-                      return null;
-                    },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Wpisz adres email';
+                        }
+                        // Walidacja formatu
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return 'Niepoprawny format email';
+                        }
+                        return null;
+                      },
                   ),
                   const SizedBox(height: 16),
 
