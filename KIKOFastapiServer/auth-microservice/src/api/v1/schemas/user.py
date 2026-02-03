@@ -1,10 +1,10 @@
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict, Field
-from typing import Optional
+from typing import Optional, Any
 from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
 import re
-from typing import Any
+
 
 # Lista słów, których nie można użyć jako nazwy użytkownika
 RESERVED_USERNAMES = {
@@ -47,7 +47,6 @@ class UserBase(BaseModel):
         # "String should have at least X characters" z Pydantic.
         if len(value) < 3:
             raise ValueError("Username must be at least 3 characters long.")
-        
         if len(value) > 30:
             raise ValueError("Username cannot be longer than 30 characters.")
         # ------------------------------------------

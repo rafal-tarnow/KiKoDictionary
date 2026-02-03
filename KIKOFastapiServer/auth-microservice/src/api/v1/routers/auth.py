@@ -88,7 +88,14 @@ async def register_user(
     # Sprawdzenie czy username istnieje
     db_user = await repo.get_by_username(username=user_create_data.username)
     if db_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+        suggested_username = await repo.suggest_available_username(user_create_data.username)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail={
+                "message": "Username already taken",
+                "suggestion": suggested_username
+            }
+        )
     
     # Utworzenie użytkownika
     user = await repo.create(user_data=user_create_data)

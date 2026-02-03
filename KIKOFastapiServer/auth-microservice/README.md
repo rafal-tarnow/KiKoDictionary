@@ -30,3 +30,14 @@ poetry run alembic revision --autogenerate -m "Update User model"
 poetry run alembic upgrade head
 akualizacja bazy sie nie udała bo w sqlite nie ma komendy alter, trzeba było wyedytowac plik migracji
 poetry run alembic upgrade head
+
+## Migracja bazy danych
+migracja, dodanie indeksu funkcyjnego na kolumne username w tabeli users, w celu rozwiania problemu ze Tom == tom (username case insensitive)
+
+poetry run alembic revision --autogenerate -m "add case insensitive username index"
+
+potem na prod i dev 
+usunac dublujace sie indexy
+a nastepnie:
+
+poetry run alembic upgrade head

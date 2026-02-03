@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ZMIANA: Importujemy provider dedykowany dla auth
 import 'auth_dio_provider.dart'; 
 import 'models/auth_token.dart';
+import "../domain/exceptions/auth_exceptions.dart";
 
 final authRepositoryProvider = Provider((ref) {
   // ZMIANA: Watchujemy authDioProvider zamiast głównego dioProvider
@@ -36,7 +37,7 @@ class AuthRepository {
   }
 
   // Rejestracja: application/json
-  Future<void> register({
+Future<void> register({
     required String email,
     required String username,
     required String password,
@@ -54,6 +55,24 @@ class AuthRepository {
           'captcha_answer': captchaAnswer,
         },
       );
+    } on DioException catch (e) {
+      // Sprawdzamy, czy to konflikt (409) i czy backend przysłał sugestię
+      if (e.response?.statusCode == 409) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is Map) {
+          final suggestion = data['detail']['suggestion'];
+          
+          if (suggestion != null) {
+            // Rzucamy nasz specjalny wyjątek z sugestią
+            throw UsernameTakenException(
+              message: "Nazwa użytkownika jest zajęta.",
+              suggestion: suggestion.toString(),
+            );
+          }
+        }
+      }
+      // Jeśli to nie to, rzucamy błąd dalej (trafi do ApiErrorHandler)
+      rethrow;
     } catch (e) {
       rethrow;
     }

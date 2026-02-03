@@ -2350,8 +2350,8 @@ class ApiErrorHandler {
     if (msg.contains("Username already taken")) {
       return "Ta nazwa użytkownika jest już zajęta.";
     }
-    if (msg.contains("Incorrect username or password")) {
-      return "Niepoprawna nazwa użytkownika lub hasło.";
+    if (msg.contains("Incorrect email or password")) {
+      return "Niepoprawny email lub hasło.";
     }
     if (msg.contains("Inactive user")) {
       return "Konto jest nieaktywne.";

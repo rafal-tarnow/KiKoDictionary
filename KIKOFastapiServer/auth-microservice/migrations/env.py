@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 from src.db.models.user import Base  # Importuj klasę Base z modeli
 from src.core.config import settings  # Importuj ustawienia z DATABASE_URL
+from src.db.models.refresh_token import RefreshToken
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -38,7 +39,8 @@ async def run_migrations_online() -> None:
         await connection.run_sync(
             lambda sync_conn: context.configure(
                 connection=sync_conn,
-                target_metadata=target_metadata
+                target_metadata=target_metadata,
+                render_as_batch=True
             )
         )
 

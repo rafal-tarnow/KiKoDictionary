@@ -25,6 +25,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
+    _userCtrl.addListener(() {
+      final authState = ref.read(authControllerProvider);
+      if (authState.usernameSuggestion != null || authState.error != null) {
+         // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
+         // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
+         ref.read(authControllerProvider.notifier).clearSuggestion();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _emailCtrl.dispose();
     _userCtrl.dispose();
@@ -162,6 +176,40 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       return null;
                     },
                   ),
+                  //------------------ USERNAME SUGGESTION ---------
+                  if (authState.usernameSuggestion != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: InkWell(
+                        onTap: () {
+                          // Wpisujemy sugestię do pola
+                          _userCtrl.text = authState.usernameSuggestion!;
+                          // Czyścimy błąd w kontrolerze
+                          ref.read(authControllerProvider.notifier).clearSuggestion();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: Colors.blue),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Login zajęty. Kliknij, aby użyć: ${authState.usernameSuggestion}",
+                                  style: TextStyle(color: Colors.blue.shade900),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  //------------------------------------------------
                   const SizedBox(height: 16),
 
                   // --- HASŁO (z okiem) ---
@@ -214,7 +262,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 24),
 
                   // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if (authState.error != null)
+                  if(authState.error != null && authState.usernameSuggestion == null)
+                  //if (authState.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(

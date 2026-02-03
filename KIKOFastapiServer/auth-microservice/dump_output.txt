@@ -330,7 +330,7 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()):
 
     repo = UserRepository(db)
-    user = await repo.get_by_email(identifier=form_data.username)
+    user = await repo.get_by_email(email=form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -501,12 +501,12 @@ class RefreshTokenRequest(BaseModel):
 Zawartość pliku:
 
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict, Field
-from typing import Optional
+from typing import Optional, Any
 from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
 import re
-from typing import Any
+
 
 # Lista słów, których nie można użyć jako nazwy użytkownika
 RESERVED_USERNAMES = {
@@ -549,7 +549,6 @@ class UserBase(BaseModel):
         # "String should have at least X characters" z Pydantic.
         if len(value) < 3:
             raise ValueError("Username must be at least 3 characters long.")
-        
         if len(value) > 30:
             raise ValueError("Username cannot be longer than 30 characters.")
         # ------------------------------------------
@@ -686,7 +685,7 @@ Zawartość pliku:
 
 import uuid
 import enum
-from sqlalchemy import Column, String, DateTime, func, Enum
+from sqlalchemy import Column, String, DateTime, func, Enum, Index
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -704,7 +703,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    username = Column(String, unique=True, index=True, nullable=False)
+    # Usuwamy index=True stąd, bo dodajemy niestandardowy index poniżej
+    username = Column(String, unique=False, nullable=False) 
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     
@@ -715,6 +715,17 @@ class User(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # --- PROFESJONALNE ZABEZPIECZENIE ---
+    __table_args__ = (
+        # 1. Unikalny index na małych literach username.
+        # To gwarantuje, że 'Tom' i 'tom' nie mogą istnieć obok siebie w bazie.
+        # Jest to najwydajniejszy sposób na case-insensitive uniqueness.
+        Index('ix_users_username_lower', func.lower(username), unique=True),
+        
+        # 2. Zwykły index dla username (opcjonalny, jeśli często szukamy case-sensitive, ale rzadko to robimy)
+        # W tym modelu index funkcyjny wyżej załatwia większość spraw.
+    )
 
 
 ===============================
@@ -768,7 +779,7 @@ Zawartość pliku:
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import or_ 
+from sqlalchemy import or_, func
 from src.db.models.user import User
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
@@ -778,15 +789,21 @@ class UserRepository:
         self.db = db_session
 
     async def get_by_email(self, email: str) -> Optional[User]:
-        # ZMIANA: .lower()
-        # Nawet jeśli walidator Pydantic pominie coś (np. wywołanie wewnętrzne),
-        # tutaj zabezpieczamy się przy odczycie.
+        # Email jest zawsze lowercase (wymuszone w schemas), ale dla bezpieczeństwa:
         email_lower = email.lower()
         result = await self.db.execute(select(User).filter(User.email == email_lower))
         return result.scalars().first()
     
     async def get_by_username(self, username: str) -> Optional[User]:
-        result = await self.db.execute(select(User).filter(User.username == username))
+        """
+        Wyszukuje użytkownika ignorując wielkość liter.
+        Dla wejścia 'tom' znajdzie użytkownika 'Tom'.
+        """
+        username_lower = username.lower()
+        # Porównujemy lower(db_column) == lower(input)
+        result = await self.db.execute(
+            select(User).filter(func.lower(User.username) == username_lower)
+        )
         return result.scalars().first()
     
     async def get_by_id(self, user_id: str) -> Optional[User]:
@@ -795,37 +812,33 @@ class UserRepository:
     
     async def get_by_email_or_username(self, identifier: str) -> Optional[User]:
         """
-        Wyszukuje użytkownika sprawdzając czy podany identyfikator pasuje
-        do adresu email (case-insensitive) LUB do nazwy użytkownika.
+        Logowanie: Sprawdza czy identyfikator pasuje do emaila lub username
+        (w obu przypadkach case-insensitive).
         """
-        # ZMIANA: Logika obsługi logowania.
-        # Skoro email w bazie jest ZAWSZE małą literą (dzięki Pydantic),
-        # to szukając po emailu, musimy przekonwertować input na małe litery.
-        
         identifier_lower = identifier.lower()
 
-        # UWAGA: Tutaj jest niuans.
-        # Jeśli 'identifier' to username, a username jest Case-Sensitive (na razie),
-        # to nie powinniśmy go zmniejszać dla warunku username.
-        # Ale dla warunku email - musimy.
-        
+        # Szukamy po emailu LUB po username (ignorując wielkość liter w obu przypadkach)
         result = await self.db.execute(
             select(User).filter(
                 or_(
-                    User.email == identifier_lower,  # Szukamy jako email (małe litery)
-                    User.username == identifier      # Szukamy jako username (oryginał)
+                    User.email == identifier_lower,
+                    func.lower(User.username) == identifier_lower
                 )
             )
         )
         return result.scalars().first()
     
     async def create(self, user_data: UserCreate) -> User:
-        # Tutaj user_data.email jest już małą literą dzięki Pydanticowi,
-        # więc nie musimy robić .lower() ponownie, ale dla pewności nie zaszkodzi.
         hashed_password = get_password_hash(user_data.password)
+        
+        # WAŻNE: Zapisujemy user_data.username W ORYGINALE (np. "RafalDev").
+        # Unikalność ("rafaldev" vs "RafalDev") jest pilnowana przez:
+        # 1. get_by_username() użyte w routerze przed zapisem (Application Layer check)
+        # 2. Index unique na func.lower(username) w bazie (Database Layer check)
+        
         db_user = User(
-            username=user_data.username,
-            email=user_data.email.lower(), # Double-check, dobra praktyka defensywna
+            username=user_data.username, # Zachowujemy casing dla ładnego wyświetlania
+            email=user_data.email.lower(),
             hashed_password=hashed_password,
         )
         self.db.add(db_user)
