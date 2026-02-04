@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
-import 'auth_controller.dart';
+import 'controllers/login_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +13,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // W UI nazywamy to _emailCtrl, żeby wiedzieć co wpisuje user,
   // ale do controllera przekażemy to jako "username" (zgodnie ze standardem OAuth2).
   final _emailCtrl = TextEditingController();
@@ -41,10 +41,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     // 2. Wywołanie logiki biznesowej
     // Używamy read, bo wykonujemy akcję jednorazową
-    final success = await ref.read(authControllerProvider.notifier).login(
-      _emailCtrl.text.trim(),
-      _passCtrl.text,
-    );
+    final success = await ref
+        .read(loginControllerProvider.notifier)
+        .login(_emailCtrl.text.trim(), _passCtrl.text);
 
     // 3. Obsługa wyniku (tylko nawigacja/sukces, błędy są w stanie authState)
     if (success && mounted) {
@@ -63,8 +62,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Obserwujemy stan autentykacji (np. czy trwa ładowanie, czy jest błąd)
-    final authState = ref.watch(authControllerProvider);
+    // ZMIANA: Obserwujemy tylko stan logowania (nie globalny auth)
+    final loginState = ref.watch(loginControllerProvider);
 
     return Scaffold(
       // AppBar opcjonalny, zależy czy strona jest w Drawerze czy osobno
@@ -81,22 +80,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // --- Nagłówek ---
-                  const Icon(Icons.lock_person_outlined, size: 80, color: Colors.deepPurple),
+                  const Icon(
+                    Icons.lock_person_outlined,
+                    size: 80,
+                    color: Colors.deepPurple,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     "Witaj ponownie!",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Zaloguj się, aby kontynuować naukę.",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -104,9 +107,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   // --- Email Field ---
                   TextFormField(
                     controller: _emailCtrl,
-                      // Logika UI wymusza email
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
+                    // Logika UI wymusza email
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
                       labelText: "Adres email",
                       prefixIcon: Icon(Icons.email_outlined),
@@ -114,17 +117,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       hintText: "np. tom@example.com",
                     ),
                     textInputAction: TextInputAction.next, // Przycisk "Dalej"
-                    enabled: !authState.isLoading,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Wpisz adres email';
-                        }
-                        // Walidacja formatu
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Niepoprawny format email';
-                        }
-                        return null;
-                      },
+                    enabled: !loginState.isLoading,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Wpisz adres email';
+                      }
+                      // Walidacja formatu
+                      if (!value.contains('@') || !value.contains('.')) {
+                        return 'Niepoprawny format email';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -138,7 +141,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -149,7 +154,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     textInputAction: TextInputAction.done, // Przycisk "Gotowe"
                     onFieldSubmitted: (_) => _submit(), // Enter zatwierdza
-                    enabled: !authState.isLoading,
+                    enabled: !loginState.isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Wpisz hasło';
@@ -161,7 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // --- Error Message Display ---
                   // Wyświetlamy błąd globalny z Controllera (np. 401 Unauthorized)
-                  if (authState.error != null)
+                  if (loginState.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(
@@ -177,7 +182,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                authState.error!,
+                                loginState.error!,
                                 style: TextStyle(color: Colors.red.shade900),
                               ),
                             ),
@@ -188,12 +193,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // --- Submit Button ---
                   FilledButton(
-                    onPressed: authState.isLoading ? null : _submit,
+                    onPressed: loginState.isLoading ? null : _submit,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-                    child: authState.isLoading
+                    child: loginState.isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -204,20 +209,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           )
                         : const Text("ZALOGUJ SIĘ"),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // --- Link do rejestracji ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text("Nie masz konta?"),
                       TextButton(
-                        onPressed: authState.isLoading 
-                            ? null 
+                        onPressed: loginState.isLoading
+                            ? null
                             : () {
                                 // Nawigacja do rejestracji (Index 4 w AppShell)
-                                ref.read(navigationIndexProvider.notifier).state = 4; 
+                                ref
+                                        .read(navigationIndexProvider.notifier)
+                                        .state =
+                                    4;
                               },
                         child: const Text("Zarejestruj się"),
                       ),

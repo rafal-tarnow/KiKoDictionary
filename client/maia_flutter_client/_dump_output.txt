@@ -226,7 +226,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
-import 'auth_controller.dart';
+import 'controllers/login_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -237,7 +237,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // W UI nazywamy to _emailCtrl, żeby wiedzieć co wpisuje user,
   // ale do controllera przekażemy to jako "username" (zgodnie ze standardem OAuth2).
   final _emailCtrl = TextEditingController();
@@ -265,10 +265,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     // 2. Wywołanie logiki biznesowej
     // Używamy read, bo wykonujemy akcję jednorazową
-    final success = await ref.read(authControllerProvider.notifier).login(
-      _emailCtrl.text.trim(),
-      _passCtrl.text,
-    );
+    final success = await ref
+        .read(loginControllerProvider.notifier)
+        .login(_emailCtrl.text.trim(), _passCtrl.text);
 
     // 3. Obsługa wyniku (tylko nawigacja/sukces, błędy są w stanie authState)
     if (success && mounted) {
@@ -287,8 +286,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Obserwujemy stan autentykacji (np. czy trwa ładowanie, czy jest błąd)
-    final authState = ref.watch(authControllerProvider);
+    // ZMIANA: Obserwujemy tylko stan logowania (nie globalny auth)
+    final loginState = ref.watch(loginControllerProvider);
 
     return Scaffold(
       // AppBar opcjonalny, zależy czy strona jest w Drawerze czy osobno
@@ -305,22 +304,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // --- Nagłówek ---
-                  const Icon(Icons.lock_person_outlined, size: 80, color: Colors.deepPurple),
+                  const Icon(
+                    Icons.lock_person_outlined,
+                    size: 80,
+                    color: Colors.deepPurple,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     "Witaj ponownie!",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Zaloguj się, aby kontynuować naukę.",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -328,9 +331,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   // --- Email Field ---
                   TextFormField(
                     controller: _emailCtrl,
-                      // Logika UI wymusza email
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
+                    // Logika UI wymusza email
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
                       labelText: "Adres email",
                       prefixIcon: Icon(Icons.email_outlined),
@@ -338,17 +341,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       hintText: "np. tom@example.com",
                     ),
                     textInputAction: TextInputAction.next, // Przycisk "Dalej"
-                    enabled: !authState.isLoading,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Wpisz adres email';
-                        }
-                        // Walidacja formatu
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Niepoprawny format email';
-                        }
-                        return null;
-                      },
+                    enabled: !loginState.isLoading,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Wpisz adres email';
+                      }
+                      // Walidacja formatu
+                      if (!value.contains('@') || !value.contains('.')) {
+                        return 'Niepoprawny format email';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -362,7 +365,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -373,7 +378,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     textInputAction: TextInputAction.done, // Przycisk "Gotowe"
                     onFieldSubmitted: (_) => _submit(), // Enter zatwierdza
-                    enabled: !authState.isLoading,
+                    enabled: !loginState.isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Wpisz hasło';
@@ -385,7 +390,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // --- Error Message Display ---
                   // Wyświetlamy błąd globalny z Controllera (np. 401 Unauthorized)
-                  if (authState.error != null)
+                  if (loginState.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(
@@ -401,7 +406,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                authState.error!,
+                                loginState.error!,
                                 style: TextStyle(color: Colors.red.shade900),
                               ),
                             ),
@@ -412,12 +417,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   // --- Submit Button ---
                   FilledButton(
-                    onPressed: authState.isLoading ? null : _submit,
+                    onPressed: loginState.isLoading ? null : _submit,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-                    child: authState.isLoading
+                    child: loginState.isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -428,20 +433,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           )
                         : const Text("ZALOGUJ SIĘ"),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // --- Link do rejestracji ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text("Nie masz konta?"),
                       TextButton(
-                        onPressed: authState.isLoading 
-                            ? null 
+                        onPressed: loginState.isLoading
+                            ? null
                             : () {
                                 // Nawigacja do rejestracji (Index 4 w AppShell)
-                                ref.read(navigationIndexProvider.notifier).state = 4; 
+                                ref
+                                        .read(navigationIndexProvider.notifier)
+                                        .state =
+                                    4;
                               },
                         child: const Text("Zarejestruj się"),
                       ),
@@ -458,6 +466,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 }
 
 
+
 ===============================
 Ścieżka do pliku: ./lib/features/auth/presentation/register_page.dart
 
@@ -468,7 +477,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../captcha/presentation/widgets/captcha_box.dart';
 import '../../captcha/presentation/captcha_controller.dart';
-import 'auth_controller.dart';
+import 'controllers/register_controller.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -479,7 +488,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Kontrolery
   final _emailCtrl = TextEditingController();
   final _userCtrl = TextEditingController();
@@ -488,6 +497,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   // Lokalny stan widoku
   bool _isPasswordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
+    _userCtrl.addListener(() {
+      final regState = ref.read(registerControllerProvider);
+      // Sprawdzamy stan rejestracji
+      if (regState.usernameSuggestion != null || regState.error != null) {
+        // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
+        // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
+        ref.read(registerControllerProvider.notifier).clearSuggestion();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -515,13 +539,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     FocusScope.of(context).unfocus();
 
     // 3. Strzał do API
-    final success = await ref.read(authControllerProvider.notifier).register(
-      email: _emailCtrl.text,
-      username: _userCtrl.text,
-      password: _passCtrl.text,
-      captchaId: captchaState.captcha!.id,
-      captchaAnswer: _captchaInputCtrl.text,
-    );
+    final success = await ref
+        .read(registerControllerProvider.notifier)
+        .register(
+          email: _emailCtrl.text,
+          username: _userCtrl.text,
+          password: _passCtrl.text,
+          captchaId: captchaState.captcha!.id,
+          captchaAnswer: _captchaInputCtrl.text,
+        );
 
     // 4. Obsługa wyniku
     if (success && mounted) {
@@ -538,10 +564,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _userCtrl.clear();
       _passCtrl.clear();
       _captchaInputCtrl.clear();
-      
+
       // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationIndexProvider.notifier).state = 5; 
-      
+      ref.read(navigationIndexProvider.notifier).state = 5;
+
       // Pobranie nowej captchy "na zaś"
       ref.read(captchaControllerProvider.notifier).fetchCaptcha();
     } else {
@@ -556,7 +582,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
+    // ZMIANA: Watchujemy stan rejestracji
+    final regState = ref.watch(registerControllerProvider);
 
     return Scaffold(
       // Body jest centrowane i scrollowalne - identycznie jak w LoginPage
@@ -572,22 +599,26 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // --- NAGŁÓWEK ---
-                  const Icon(Icons.person_add_alt_1_outlined, size: 80, color: Colors.deepPurple),
+                  const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    size: 80,
+                    color: Colors.deepPurple,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     "Utwórz konto",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Dołącz do nas i zacznij naukę.",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -602,7 +633,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Wpisz email';
                       if (!v.contains('@')) return 'Niepoprawny format email';
@@ -620,13 +651,53 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       border: OutlineInputBorder(),
                     ),
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz nazwę użytkownika';
+                      if (v == null || v.isEmpty)
+                        return 'Wpisz nazwę użytkownika';
                       if (v.length < 3) return 'Minimum 3 znaki';
                       return null;
                     },
                   ),
+                  //------------------ USERNAME SUGGESTION ---------
+                  if (regState.usernameSuggestion != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: InkWell(
+                        onTap: () {
+                          // Wpisujemy sugestię do pola
+                          _userCtrl.text = regState.usernameSuggestion!;
+                          // Czyścimy błąd w kontrolerze
+                          ref
+                              .read(authControllerProvider.notifier)
+                              .clearSuggestion();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Login zajęty. Kliknij, aby użyć: ${regState.usernameSuggestion}",
+                                  style: TextStyle(color: Colors.blue.shade900),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  //------------------------------------------------
                   const SizedBox(height: 16),
 
                   // --- HASŁO (z okiem) ---
@@ -640,7 +711,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // Ikona oka
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -650,7 +723,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       ),
                     ),
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Wpisz hasło';
 
@@ -660,7 +733,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(v);
 
                       // Jeśli którykolwiek warunek nie jest spełniony, zwracamy pełną instrukcję
-                      // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał 
+                      // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
                       // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
                       if (!hasMinLength || !hasDigit || !hasLetter) {
                         return 'Hasło musi mieć min. 6 znaków, literę i cyfrę';
@@ -672,14 +745,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 24),
 
                   // --- CAPTCHA ---
-                  const Text("Weryfikacja bezpieczeństwa", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Weryfikacja bezpieczeństwa",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   CaptchaBox(answerController: _captchaInputCtrl),
-                  
+
                   const SizedBox(height: 24),
 
                   // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if (authState.error != null)
+                  if (regState.error != null &&
+                      regState.usernameSuggestion == null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(
@@ -695,7 +772,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                authState.error!,
+                                regState.error!,
                                 style: TextStyle(color: Colors.red.shade900),
                               ),
                             ),
@@ -706,12 +783,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   // --- PRZYCISK REJESTRACJI ---
                   FilledButton(
-                    onPressed: authState.isLoading ? null : _submit,
+                    onPressed: regState.isLoading ? null : _submit,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-                    child: authState.isLoading
+                    child: regState.isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -731,11 +808,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     children: [
                       const Text("Masz już konto?"),
                       TextButton(
-                        onPressed: authState.isLoading 
-                            ? null 
+                        onPressed: regState.isLoading
+                            ? null
                             : () {
                                 // Nawigacja do logowania (Index 5 w AppShell)
-                                ref.read(navigationIndexProvider.notifier).state = 5; 
+                                ref
+                                        .read(navigationIndexProvider.notifier)
+                                        .state =
+                                    5;
                               },
                         child: const Text("Zaloguj się"),
                       ),
@@ -752,35 +832,186 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 }
 
 
+
 ===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/auth_controller.dart
+Ścieżka do pliku: ./lib/features/auth/presentation/controllers/register_controller.dart
 
 Zawartość pliku:
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/network/api_error_handler.dart';
-import '../data/auth_repository.dart';
-import '../data/token_storage.dart';
+import '../../../../core/network/api_error_handler.dart';
+import '../../data/auth_repository.dart';
+import '../../domain/exceptions/auth_exceptions.dart';
 
-// Stan autentykacji
-class AuthState {
-  final bool isAuthenticated;
+class RegisterState {
+  final bool isLoading;
+  final String? error;
+  final String? usernameSuggestion;
+
+  const RegisterState({
+    this.isLoading = false, 
+    this.error, 
+    this.usernameSuggestion
+  });
+
+  RegisterState copyWith({bool? isLoading, String? error, String? usernameSuggestion}) {
+    return RegisterState(
+      isLoading: isLoading ?? this.isLoading,
+      error: error, 
+      usernameSuggestion: usernameSuggestion,
+    );
+  }
+  
+  // Helper do czyszczenia sugestii
+  RegisterState clearSuggestion() {
+    return RegisterState(isLoading: isLoading, error: null, usernameSuggestion: null);
+  }
+}
+
+class RegisterController extends StateNotifier<RegisterState> {
+  final AuthRepository _authRepository;
+
+  RegisterController(this._authRepository) : super(const RegisterState());
+
+  void clearSuggestion() {
+    if (state.usernameSuggestion != null || state.error != null) {
+      state = state.clearSuggestion();
+    }
+  }
+
+  Future<bool> register({
+    required String email,
+    required String username,
+    required String password,
+    required String captchaId,
+    required String captchaAnswer,
+  }) async {
+    state = const RegisterState(isLoading: true); // Reset stanu przy starcie
+
+    try {
+      await _authRepository.register(
+        email: email,
+        username: username,
+        password: password,
+        captchaId: captchaId,
+        captchaAnswer: captchaAnswer,
+      );
+      state = state.copyWith(isLoading: false);
+      // Rejestracja zazwyczaj nie loguje z automatu (chyba że API tak działa),
+      // więc nie ustawiamy tutaj authController.setAuthenticated(true).
+      // Zwracamy true, żeby UI wiedział o sukcesie.
+      return true;
+    } on UsernameTakenException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        usernameSuggestion: e.suggestion,
+      );
+      return false;
+    } catch (e) {
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+}
+
+final registerControllerProvider = StateNotifierProvider.autoDispose<RegisterController, RegisterState>((ref) {
+  return RegisterController(ref.watch(authRepositoryProvider));
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/controllers/login_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_error_handler.dart';
+import '../../data/auth_repository.dart';
+import '../../data/token_storage.dart';
+import 'auth_controller.dart';
+
+// Stan formularza logowania
+class LoginState {
   final bool isLoading;
   final String? error;
 
-  const AuthState({
-    this.isAuthenticated = false, 
-    this.isLoading = true, // Domyślnie true, bo przy starcie sprawdzamy storage
-    this.error
-  });
-  
-  AuthState copyWith({bool? isAuthenticated, bool? isLoading, String? error}) {
-    return AuthState(
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+  const LoginState({this.isLoading = false, this.error});
+
+  LoginState copyWith({bool? isLoading, String? error}) {
+    // Uwaga: error: error (bez nulla) pozwala wyczyścić błąd przekazując null
+    return LoginState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error, 
     );
   }
+}
+
+class LoginController extends StateNotifier<LoginState> {
+  final AuthRepository _authRepository;
+  final TokenStorage _tokenStorage;
+  // Potrzebujemy dostępu do AuthController, żeby zmienić stan globalny po sukcesie
+  final AuthController _authController;
+
+  LoginController(this._authRepository, this._tokenStorage, this._authController)
+      : super(const LoginState());
+
+  Future<bool> login(String username, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final token = await _authRepository.login(
+        username: username, 
+        password: password
+      );
+      
+      await _tokenStorage.saveToken(token);
+      
+      // Sukces lokalny
+      state = state.copyWith(isLoading: false);
+      
+      // Aktualizacja stanu globalnego aplikacji
+      _authController.setAuthenticated(true);
+      
+      return true;
+    } catch (e) {
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+}
+
+// Używamy autoDispose, aby stan czyścił się, gdy kontroler nie jest obserwowany 
+// (choć przy IndexedStack on "żyje", ale to dobra praktyka dla formularzy)
+final loginControllerProvider = StateNotifierProvider.autoDispose<LoginController, LoginState>((ref) {
+  return LoginController(
+    ref.watch(authRepositoryProvider),
+    ref.watch(tokenStorageProvider),
+    ref.read(authControllerProvider.notifier), // read, bo potrzebujemy metody, nie stanu
+  );
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/controllers/auth_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/auth_repository.dart';
+import '../../data/token_storage.dart';
+
+// Stan sesji: Interesuje nas tylko czy user jest zalogowany
+class AuthState {
+  final bool isAuthenticated;
+  final bool isAppLoading; // Do splash screena przy starcie
+
+  const AuthState({
+    this.isAuthenticated = false,
+    this.isAppLoading = true, // Domyślnie true, bo przy starcie sprawdzamy storage
+  });
 }
 
 class AuthController extends StateNotifier<AuthState> {
@@ -796,85 +1027,41 @@ class AuthController extends StateNotifier<AuthState> {
     final token = await _storage.getToken();
     if (token != null) {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
-      state = const AuthState(isAuthenticated: true, isLoading: false);
+      state = const AuthState(isAuthenticated: true, isAppLoading: false);
     } else {
-      state = const AuthState(isAuthenticated: false, isLoading: false);
+      state = const AuthState(isAuthenticated: false, isAppLoading: false);
     }
   }
 
-Future<bool> login(String username, String password) async {
-    // Resetujemy błąd i włączamy loading
-    state = state.copyWith(isLoading: true, error: null);
-    
-    try {
-      final token = await _repository.login(username: username, password: password);
-      await _storage.saveToken(token);
-      
-      // SUKCES
-      state = const AuthState(isAuthenticated: true, isLoading: false);
-      return true;
-    } catch (e) {
-      // BŁĄD: Używamy Twojego ApiErrorHandler, który już obsługuje 400, 401, 422 itd.
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      
-      state = state.copyWith(
-        isLoading: false, 
-        error: msg, 
-        isAuthenticated: false
-      );
-      return false;
-    }
-  }
-
-  Future<bool> register({
-    required String email,
-    required String username,
-    required String password,
-    required String captchaId,
-    required String captchaAnswer,
-  }) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      await _repository.register(
-        email: email,
-        username: username,
-        password: password,
-        captchaId: captchaId,
-        captchaAnswer: captchaAnswer,
-      );
-      state = state.copyWith(isLoading: false);
-      return true; // Sukces rejestracji
-    } catch (e) {
-      // ZMIANA: Usuwamy prefiks "Błąd rejestracji. ", bo ErrorHandler zwróci nam już konkretny opis.
-      // Dzięki temu user zobaczy: "Użytkownik o tym adresie email już istnieje."
-      // zamiast: "Błąd rejestracji. Użytkownik o tym adresie email już istnieje."
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      state = state.copyWith(isLoading: false, error: msg);
-      return false;
-    }
+  // Metoda wywoływana przez LoginController/RegisterController po sukcesie
+  void setAuthenticated(bool isAuthenticated) {
+    state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
   }
 
   Future<void> logout() async {
     final token = await _storage.getToken();
     if (token != null) {
-       try {
-         await _repository.logout(token.refreshToken);
-       } catch (_) {
-         // Ignorujemy błędy sieciowe przy wylogowaniu
-       }
+      try {
+        await _repository.logout(token.refreshToken);
+      } catch (_) {
+        // Ignorujemy błędy sieciowe przy wylogowaniu
+      }
     }
     await _storage.clearToken();
-    state = const AuthState(isAuthenticated: false, isLoading: false);
+    state = const AuthState(isAuthenticated: false, isAppLoading: false);
   }
 }
 
 // Globalny provider stanu autentykacji
-final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(
-    ref.watch(authRepositoryProvider),
-    ref.watch(tokenStorageProvider),
-  );
-});
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      ref.watch(authRepositoryProvider),
+      ref.watch(tokenStorageProvider),
+    );
+  },
+);
+
 
 
 ===============================
@@ -984,6 +1171,25 @@ class UserAvatarButton extends ConsumerWidget {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/auth/domain/exceptions/auth_exceptions.dart
+
+Zawartość pliku:
+
+class UsernameTakenException implements Exception {
+  final String message;
+  final String suggestion;
+
+  UsernameTakenException({
+    required this.message, 
+    required this.suggestion
+  });
+
+  @override
+  String toString() => message;
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/auth/data/auth_repository.dart
 
 Zawartość pliku:
@@ -993,6 +1199,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ZMIANA: Importujemy provider dedykowany dla auth
 import 'auth_dio_provider.dart'; 
 import 'models/auth_token.dart';
+import "../domain/exceptions/auth_exceptions.dart";
 
 final authRepositoryProvider = Provider((ref) {
   // ZMIANA: Watchujemy authDioProvider zamiast głównego dioProvider
@@ -1026,7 +1233,7 @@ class AuthRepository {
   }
 
   // Rejestracja: application/json
-  Future<void> register({
+Future<void> register({
     required String email,
     required String username,
     required String password,
@@ -1044,6 +1251,24 @@ class AuthRepository {
           'captcha_answer': captchaAnswer,
         },
       );
+    } on DioException catch (e) {
+      // Sprawdzamy, czy to konflikt (409) i czy backend przysłał sugestię
+      if (e.response?.statusCode == 409) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is Map) {
+          final suggestion = data['detail']['suggestion'];
+          
+          if (suggestion != null) {
+            // Rzucamy nasz specjalny wyjątek z sugestią
+            throw UsernameTakenException(
+              message: "Nazwa użytkownika jest zajęta.",
+              suggestion: suggestion.toString(),
+            );
+          }
+        }
+      }
+      // Jeśli to nie to, rzucamy błąd dalej (trafi do ApiErrorHandler)
+      rethrow;
     } catch (e) {
       rethrow;
     }

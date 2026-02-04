@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import "../../features/auth/presentation/auth_controller.dart";
+import "../../features/auth/presentation/controllers/auth_controller.dart";
 import '../navigation_provider.dart';
 
 class MainDrawer extends ConsumerWidget {

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../captcha/presentation/widgets/captcha_box.dart';
 import '../../captcha/presentation/captcha_controller.dart';
-import 'auth_controller.dart';
+import 'controllers/register_controller.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -14,7 +14,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Kontrolery
   final _emailCtrl = TextEditingController();
   final _userCtrl = TextEditingController();
@@ -29,11 +29,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.initState();
     // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
     _userCtrl.addListener(() {
-      final authState = ref.read(authControllerProvider);
-      if (authState.usernameSuggestion != null || authState.error != null) {
-         // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
-         // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
-         ref.read(authControllerProvider.notifier).clearSuggestion();
+      final regState = ref.read(registerControllerProvider);
+      // Sprawdzamy stan rejestracji
+      if (regState.usernameSuggestion != null || regState.error != null) {
+        // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
+        // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
+        ref.read(registerControllerProvider.notifier).clearSuggestion();
       }
     });
   }
@@ -64,13 +65,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     FocusScope.of(context).unfocus();
 
     // 3. Strzał do API
-    final success = await ref.read(authControllerProvider.notifier).register(
-      email: _emailCtrl.text,
-      username: _userCtrl.text,
-      password: _passCtrl.text,
-      captchaId: captchaState.captcha!.id,
-      captchaAnswer: _captchaInputCtrl.text,
-    );
+    final success = await ref
+        .read(registerControllerProvider.notifier)
+        .register(
+          email: _emailCtrl.text,
+          username: _userCtrl.text,
+          password: _passCtrl.text,
+          captchaId: captchaState.captcha!.id,
+          captchaAnswer: _captchaInputCtrl.text,
+        );
 
     // 4. Obsługa wyniku
     if (success && mounted) {
@@ -87,10 +90,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _userCtrl.clear();
       _passCtrl.clear();
       _captchaInputCtrl.clear();
-      
+
       // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationIndexProvider.notifier).state = 5; 
-      
+      ref.read(navigationIndexProvider.notifier).state = 5;
+
       // Pobranie nowej captchy "na zaś"
       ref.read(captchaControllerProvider.notifier).fetchCaptcha();
     } else {
@@ -105,7 +108,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
+    // ZMIANA: Watchujemy stan rejestracji
+    final regState = ref.watch(registerControllerProvider);
 
     return Scaffold(
       // Body jest centrowane i scrollowalne - identycznie jak w LoginPage
@@ -121,22 +125,26 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // --- NAGŁÓWEK ---
-                  const Icon(Icons.person_add_alt_1_outlined, size: 80, color: Colors.deepPurple),
+                  const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    size: 80,
+                    color: Colors.deepPurple,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     "Utwórz konto",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Dołącz do nas i zacznij naukę.",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -151,7 +159,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Wpisz email';
                       if (!v.contains('@')) return 'Niepoprawny format email';
@@ -169,23 +177,26 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       border: OutlineInputBorder(),
                     ),
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz nazwę użytkownika';
+                      if (v == null || v.isEmpty)
+                        return 'Wpisz nazwę użytkownika';
                       if (v.length < 3) return 'Minimum 3 znaki';
                       return null;
                     },
                   ),
                   //------------------ USERNAME SUGGESTION ---------
-                  if (authState.usernameSuggestion != null)
+                  if (regState.usernameSuggestion != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: InkWell(
                         onTap: () {
                           // Wpisujemy sugestię do pola
-                          _userCtrl.text = authState.usernameSuggestion!;
+                          _userCtrl.text = regState.usernameSuggestion!;
                           // Czyścimy błąd w kontrolerze
-                          ref.read(authControllerProvider.notifier).clearSuggestion();
+                          ref
+                              .read(registerControllerProvider.notifier)
+                              .clearSuggestion();
                         },
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -196,11 +207,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: Colors.blue),
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.blue,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  "Login zajęty. Kliknij, aby użyć: ${authState.usernameSuggestion}",
+                                  "Login zajęty. Kliknij, aby użyć: ${regState.usernameSuggestion}",
                                   style: TextStyle(color: Colors.blue.shade900),
                                 ),
                               ),
@@ -223,7 +237,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // Ikona oka
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -233,7 +249,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       ),
                     ),
                     textInputAction: TextInputAction.next,
-                    enabled: !authState.isLoading,
+                    enabled: !regState.isLoading,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Wpisz hasło';
 
@@ -243,7 +259,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(v);
 
                       // Jeśli którykolwiek warunek nie jest spełniony, zwracamy pełną instrukcję
-                      // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał 
+                      // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
                       // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
                       if (!hasMinLength || !hasDigit || !hasLetter) {
                         return 'Hasło musi mieć min. 6 znaków, literę i cyfrę';
@@ -255,15 +271,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 24),
 
                   // --- CAPTCHA ---
-                  const Text("Weryfikacja bezpieczeństwa", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Weryfikacja bezpieczeństwa",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   CaptchaBox(answerController: _captchaInputCtrl),
-                  
+
                   const SizedBox(height: 24),
 
                   // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if(authState.error != null && authState.usernameSuggestion == null)
-                  //if (authState.error != null)
+                  if (regState.error != null &&
+                      regState.usernameSuggestion == null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(
@@ -279,7 +298,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                authState.error!,
+                                regState.error!,
                                 style: TextStyle(color: Colors.red.shade900),
                               ),
                             ),
@@ -290,12 +309,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   // --- PRZYCISK REJESTRACJI ---
                   FilledButton(
-                    onPressed: authState.isLoading ? null : _submit,
+                    onPressed: regState.isLoading ? null : _submit,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-                    child: authState.isLoading
+                    child: regState.isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -315,11 +334,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     children: [
                       const Text("Masz już konto?"),
                       TextButton(
-                        onPressed: authState.isLoading 
-                            ? null 
+                        onPressed: regState.isLoading
+                            ? null
                             : () {
                                 // Nawigacja do logowania (Index 5 w AppShell)
-                                ref.read(navigationIndexProvider.notifier).state = 5; 
+                                ref
+                                        .read(navigationIndexProvider.notifier)
+                                        .state =
+                                    5;
                               },
                         child: const Text("Zaloguj się"),
                       ),

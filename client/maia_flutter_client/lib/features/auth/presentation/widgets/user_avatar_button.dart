@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation_provider.dart';
-import '../auth_controller.dart';
+import '../controllers/auth_controller.dart';
 
 class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
