@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
 from fastapi import HTTPException
@@ -16,7 +17,18 @@ def create_sentence(db: Session, sentence: SentenceCreate):
 
 def get_sentences(db: Session, page: int, per_page: int):
     offset = (page - 1) * per_page
-    return db.query(Sentence).offset(offset).limit(per_page).all(), db.query(Sentence).count()
+    
+    # 2. DODAJEMY SORTOWANIE (ORDER BY created_at DESC)
+    # Sortujemy po dacie utworzenia malejąco (najnowsze na górze)
+    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    
+    # Pobieramy dane z uwzględnieniem paginacji
+    sentences = query.offset(offset).limit(per_page).all()
+    
+    # Liczymy całkowitą ilość (dla paginacji na frontendzie)
+    total = db.query(Sentence).count()
+    
+    return sentences, total
 
 def get_sentence(db: Session, sentence_id: int):
     sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()

@@ -1,0 +1,429 @@
+===============================
+Ścieżka do pliku: ./database.py
+
+Zawartość pliku:
+
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# URL bazy danych (SQLite dla prostoty, można zmienić na PostgreSQL)
+DATABASE_URL = "sqlite:///./sentences.db"
+# Przykład dla PostgreSQL:
+# DATABASE_URL = "postgresql://user:password@localhost:5432/dbname"
+
+# Tworzenie silnika SQLAlchemy
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False}  # Tylko dla SQLite
+)
+
+# Sesja do interakcji z bazą danych
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Baza dla modeli SQLAlchemy
+Base = declarative_base()
+
+# Dependency do uzyskania sesji bazy danych
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+===============================
+Ścieżka do pliku: ./main.py
+
+Zawartość pliku:
+
+# zapytania KIKODictionaryServer
+
+# USERS
+# curl "http://192.168.0.129:49425/api/users" --verbose
+# curl "http://192.168.0.129:49425/api/users?page=2" --verbose
+
+# curl "http://192.168.0.129:49425/api/unknown" --verbose
+# curl "http://192.168.0.129:49425/api/unknown?page=2" --verbose
+# curl "http://192.168.0.129:49425/api/unknown?page=2&per_page=4" --verbose
+
+from fastapi import FastAPI, Query
+from fastapi.staticfiles import StaticFiles
+from typing import List, Dict
+import random
+import json
+from pathlib import Path
+from math import ceil
+from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
+
+
+from routers import sentence
+from database import engine
+from models.sentence import Base
+
+from src.api.endpoints.health import health_router
+
+# Tworzenie tabel w bazie danych
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Sentence Learning API")
+
+# Zamontuj katalog assets/img pod ścieżką /img
+app.mount("/img/faces", StaticFiles(directory="assets/img"), name="img")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+async def root():
+    return {'example': 'This is an example', 'data': 999}
+
+@app.get('/random')
+async def get_random():
+    rn: int = random.randint(0, 100)
+    return {'number': rn, 'limit': 100}
+
+@app.get('/json')
+async def get_json_file():
+    json_path = Path(__file__).parent / "data.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data
+
+def load_users_data() -> List[Dict]:
+    json_path = Path(__file__).parent / "users.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def load_colors_data() -> List[Dict]:
+    json_path = Path(__file__).parent / "colors.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_sentences_data() -> List[Dict]:
+    json_path = Path(__file__).parent / "sentences.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.get("/api/unknown")
+async def get_colors(
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(10, ge=1, le=100, description="Items per page")
+) -> Dict:
+    all_colors = load_colors_data()
+    total_items = len(all_colors)
+    total_pages = ceil(total_items / per_page)
+
+    if page > total_pages:
+        page = total_pages if total_pages > 0 else 1
+
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+
+    paginated_colors = all_colors[start_idx:end_idx]
+
+    return {
+        "data": paginated_colors,
+        "page": page,
+        "per_page": per_page,
+        "total": total_items,
+        "total_pages": total_pages
+    }
+
+
+@app.get("/api/users")
+async def get_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(6, ge=1, le=100, description="Items per page")
+) -> Dict:
+    all_users = load_users_data()
+    total_items = len(all_users)
+    total_pages = ceil(total_items / per_page)
+
+    if page > total_pages:
+        page = total_pages if total_pages > 0 else 1
+
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+
+    current_time = datetime.utcnow().isoformat() + "Z"
+    paginated_users = []
+    for idx, user in enumerate(all_users[start_idx:end_idx], start=start_idx + 1):
+        paginated_users.append({
+            "id": idx,
+            "email": user["email"],
+            "first_name": user["first_name"],
+            "last_name": user["last_name"],
+            "avatar": f"http://127.0.0.1:8003{user['avatar']}",
+            "createdAt": current_time,
+            "updatedAt": current_time
+        })
+
+    return {
+        "data": paginated_users,
+        "page": page,
+        "per_page": per_page,
+        "total": total_items,
+        "total_pages": total_pages
+    }
+
+
+
+
+
+# Rejestracja routerów
+app.include_router(sentence.router)
+app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8003)
+
+
+
+===============================
+Ścieżka do pliku: ./models/sentence.py
+
+Zawartość pliku:
+
+from sqlalchemy import Column, Integer, String, DateTime
+from database import Base
+from datetime import datetime
+
+class Sentence(Base):
+    __tablename__ = "sentences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    sentence = Column(String, index=True)
+    language = Column(String, index=True)
+    translation = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+===============================
+Ścieżka do pliku: ./routers/sentence.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder  # Dodaj ten import
+from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate
+from crud.sentence import create_sentence, get_sentences, get_sentence, update_sentence, delete_sentence
+from database import get_db
+import math
+
+router = APIRouter(prefix="/api/sentences", tags=["sentences"])
+
+@router.post("/", response_model=Sentence)
+def create_sentence_endpoint(sentence: SentenceCreate, db: Session = Depends(get_db)):
+    return create_sentence(db, sentence)
+
+@router.get("/", response_model=List[Sentence])
+def read_sentences_endpoint(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    sentences, total = get_sentences(db, page, per_page)
+    total_pages = math.ceil(total / per_page)
+    
+    # Użyj jsonable_encoder do konwersji listy obiektów Sentence
+    items = [Sentence.from_orm(s) for s in sentences]
+    encoded_items = jsonable_encoder(items)
+    
+    return JSONResponse(
+        content={
+            "data": encoded_items,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages
+        }
+    )
+
+@router.get("/{sentence_id}", response_model=Sentence)
+def read_sentence_endpoint(sentence_id: int, db: Session = Depends(get_db)):
+    return get_sentence(db, sentence_id)
+
+@router.put("/{sentence_id}", response_model=Sentence)
+def update_sentence_endpoint(sentence_id: int, sentence_update: SentenceUpdate, db: Session = Depends(get_db)):
+    return update_sentence(db, sentence_id, sentence_update)
+
+@router.delete("/{sentence_id}")
+def delete_sentence_endpoint(sentence_id: int, db: Session = Depends(get_db)):
+    return delete_sentence(db, sentence_id)
+
+
+===============================
+Ścieżka do pliku: ./crud/sentence.py
+
+Zawartość pliku:
+
+from sqlalchemy.orm import Session
+from models.sentence import Sentence
+from schemas.sentence import SentenceCreate, SentenceUpdate
+from fastapi import HTTPException
+
+def create_sentence(db: Session, sentence: SentenceCreate):
+    db_sentence = Sentence(
+        sentence=sentence.sentence,
+        language=sentence.language,
+        translation=sentence.translation
+    )
+    db.add(db_sentence)
+    db.commit()
+    db.refresh(db_sentence)
+    return db_sentence
+
+def get_sentences(db: Session, page: int, per_page: int):
+    offset = (page - 1) * per_page
+    return db.query(Sentence).offset(offset).limit(per_page).all(), db.query(Sentence).count()
+
+def get_sentence(db: Session, sentence_id: int):
+    sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+    if sentence is None:
+        raise HTTPException(status_code=404, detail="Sentence not found")
+    return sentence
+
+def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+    if db_sentence is None:
+        raise HTTPException(status_code=404, detail="Sentence not found")
+    
+    if sentence_update.sentence is not None:
+        db_sentence.sentence = sentence_update.sentence
+    if sentence_update.language is not None:
+        db_sentence.language = sentence_update.language
+    if sentence_update.translation is not None:
+        db_sentence.translation = sentence_update.translation
+    
+    db.commit()
+    db.refresh(db_sentence)
+    return db_sentence
+
+def delete_sentence(db: Session, sentence_id: int):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+    if db_sentence is None:
+        raise HTTPException(status_code=404, detail="Sentence not found")
+    db.delete(db_sentence)
+    db.commit()
+    return {"message": "Sentence deleted successfully"}
+
+
+===============================
+Ścieżka do pliku: ./schemas/sentence.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+
+class SentenceCreate(BaseModel):
+    sentence: str
+    language: str
+    translation: str
+
+class SentenceUpdate(BaseModel):
+    sentence: Optional[str] = None
+    language: Optional[str] = None
+    translation: Optional[str] = None
+
+class Sentence(BaseModel):
+    id: int
+    sentence: str
+    language: str
+    translation: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+===============================
+Ścieżka do pliku: ./src/core/config.py
+
+Zawartość pliku:
+
+from pydantic_settings import BaseSettings
+from typing import List
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Maia Sentences Microservice"
+    VERSION: str = "1.0.0"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = True
+
+settings = Settings()
+
+
+===============================
+Ścieżka do pliku: ./src/api/endpoints/health.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, status
+from src.api.endpoints.schemas.health import HealthCheckResponse
+from src.core.config import settings
+
+health_router = APIRouter()
+
+@health_router.get(
+    "/live",
+    response_model=HealthCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Liveness Probe",
+    description="Sprawdza czy aplikacja jest uruchomiona. Nie sprawdza zależności."
+)
+async def liveness_probe():
+    """
+    Szybki check dla Kubernetesa. Jeśli to nie działa, K8s restartuje poda.
+    """
+    return HealthCheckResponse(
+        status="ok",
+        version=settings.VERSION
+    )
+
+
+===============================
+Ścieżka do pliku: ./src/api/endpoints/schemas/health.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel
+from typing import Dict, Optional
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    version: str
+    uptime: Optional[float] = None
+    components: Optional[Dict[str, str]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "ok",
+                "version": "1.0.0",
+                "components": {
+                    "database": "operational",
+                    "redis": "down"
+                }
+            }
+        }
+
+
