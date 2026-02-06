@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/features/auth/presentation/forgot_password_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/login_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
@@ -27,9 +28,12 @@ class MainShell extends ConsumerWidget {
     SentencesPage(),
     RegisterPage(),
     LoginPage(),
+    //Dev Tools Pages
     TestPage(),
     ServicesHealthPage(),
     CaptchaPage(),
+    //Pages not shown in the Drawer
+    ForgotPasswordPage(),
   ];
 
   static final List<PreferredSizeWidget> _appBars = [
@@ -63,6 +67,11 @@ class MainShell extends ConsumerWidget {
     ),
     AppBar(
       title: const Text("Captcha Demo"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Reset hasła"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),

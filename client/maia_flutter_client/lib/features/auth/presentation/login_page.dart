@@ -102,6 +102,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
+
                   const SizedBox(height: 32),
 
                   // --- Email Field ---
@@ -162,6 +163,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       return null;
                     },
                   ),
+
+                  // ================= NOWY FRAGMENT START =================
+                  // Mały odstęp od pola hasła
+                  const SizedBox(height: 8),
+
+                  // Link "Zapomniałeś hasła?" wyrównany do prawej
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: loginState.isLoading
+                          ? null
+                          : () {
+                              ref.read(navigationIndexProvider.notifier).state = 9; // Index nowej strony
+                            },
+                      style: TextButton.styleFrom(
+                        // Zmniejszamy minimalny rozmiar i padding, żeby tekst
+                        // ładnie licował się z prawą krawędzią pola tekstowego
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor:
+                            Colors.deepPurple, // Spójność z motywem
+                      ),
+                      child: const Text(
+                        "Zapomniałeś hasła?",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  // ================= NOWY FRAGMENT END =================
                   const SizedBox(height: 24),
 
                   // --- Error Message Display ---

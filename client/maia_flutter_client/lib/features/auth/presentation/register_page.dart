@@ -179,9 +179,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty){
                         return 'Wpisz nazwę użytkownika';
-                      if (v.length < 3) return 'Minimum 3 znaki';
+                      }
+                      if (v.length < 3){
+                        return 'Minimum 3 znaki';
+                      }
                       return null;
                     },
                   ),

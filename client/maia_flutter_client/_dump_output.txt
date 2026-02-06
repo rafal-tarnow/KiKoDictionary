@@ -167,57 +167,6 @@ class MyApp extends StatelessWidget {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/home/home_page.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(child: Text('Strona Główna - Nauka Angielskiego')),
-    );
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/home/home_app_bar.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
-
-class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const HomeAppBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      title: const Text("Ogłoszenia parafialne"),
-      elevation: 2,
-      // Nie musisz dodawać leading/hamburgera - Flutter doda go sam!
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications),
-          onPressed: () {},
-        ),
-        const UserAvatarButton(),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-}
-
-
-===============================
 Ścieżka do pliku: ./lib/features/auth/presentation/login_page.dart
 
 Zawartość pliku:
@@ -326,6 +275,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
+
                   const SizedBox(height: 32),
 
                   // --- Email Field ---
@@ -653,9 +603,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty){
                         return 'Wpisz nazwę użytkownika';
-                      if (v.length < 3) return 'Minimum 3 znaki';
+                      }
+                      if (v.length < 3){
+                        return 'Minimum 3 znaki';
+                      }
                       return null;
                     },
                   ),
@@ -669,7 +622,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           _userCtrl.text = regState.usernameSuggestion!;
                           // Czyścimy błąd w kontrolerze
                           ref
-                              .read(authControllerProvider.notifier)
+                              .read(registerControllerProvider.notifier)
                               .clearSuggestion();
                         },
                         child: Container(
@@ -1072,7 +1025,7 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation_provider.dart';
-import '../auth_controller.dart';
+import '../controllers/auth_controller.dart';
 
 class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
@@ -1913,287 +1866,6 @@ class CaptchaVerifyResponse {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/health/services_health_page.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-import 'package:maia_flutter_client/core/config/api_config.dart';
-import 'widgets/server_monitor_tile.dart';
-
-class ServicesHealthPage extends StatelessWidget {
-  const ServicesHealthPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      //backgroundColor: const Color(0xFFFFFFFF),
-
-      body: SingleChildScrollView(
-        // Odpowiednik ScrollablePage
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- DEV SERVERS ---
-            _buildSectionHeader("Dev servers"),
-            const ServerMonitorTile(
-              serviceName: "captcha-microservice",
-              serverUrl: ApiConfig.captchaBaseUrl,
-            ),
-            const ServerMonitorTile(
-              serviceName: "auth-microservice",
-              serverUrl: ApiConfig.authBaseUrl,
-            ),
-            const ServerMonitorTile(
-              serviceName: "sentences-microservice",
-              serverUrl: ApiConfig.sentencesBaseUrl,
-            ),
-
-            const SizedBox(height: 24),
-
-            // --- PRODUCTION ---
-            _buildSectionHeader("Production"),
-            const ServerMonitorTile(
-              serviceName: "captcha-microservice",
-              serverUrl:
-                  "https://maia-captcha.rafal-kruszyna.org", // port 443 jest domyślny dla https
-            ),
-            const ServerMonitorTile(
-              serviceName: "auth-microservice",
-              serverUrl: "https://maia-auth.rafal-kruszyna.org",
-            ),
-            const ServerMonitorTile(
-              serviceName: "sentences-microservice",
-              serverUrl: "https://maia-sentences.rafal-kruszyna.org",
-            ),
-
-            const SizedBox(height: 24),
-
-            // --- PRODUCTION LOCAL ---
-            _buildSectionHeader("Production local"),
-            const ServerMonitorTile(
-              serviceName: "captcha-microservice",
-              serverUrl: "http://192.168.0.102:8001",
-            ),
-            const ServerMonitorTile(
-              serviceName: "users-microservice",
-              serverUrl: "http://192.168.0.102:8002",
-            ),
-            const ServerMonitorTile(
-              serviceName: "sentences-microservice",
-              serverUrl: "http://192.168.0.102:8003",
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18, // pointSize 15 w QML to mniej więcej 18-20 w Flutter
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-
-
-===============================
-Ścieżka do pliku: ./lib/features/health/server_health_provider.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import './services/health_check_service.dart';
-
-final healthCheckServiceProvider = Provider((ref) => HealthCheckService());
-
-// StreamProvider automatycznie obsługuje stan Loading/Error/Data
-// .family pozwala przekazać URL
-final serverHealthProvider = StreamProvider.autoDispose.family<bool, String>((ref, url) async* {
-  final service = ref.watch(healthCheckServiceProvider);
-
-  // 1. Sprawdź natychmiast przy starcie
-  yield await service.checkHost(url);
-
-  // 2. Uruchom pętlę (Timer) - co 5 sekund (jak w C++ interval)
-  // Stream.periodic działa jak QTimer
-  final stream = Stream.periodic(const Duration(seconds: 5), (_) {
-    return service.checkHost(url);
-  });
-
-  // 3. Emituj wyniki z pętli
-  await for (final isAlive in stream) {
-    yield await isAlive; // await tutaj, bo checkHost zwraca Future
-  }
-});
-
-
-===============================
-Ścieżka do pliku: ./lib/features/health/services/health_check_service.dart
-
-Zawartość pliku:
-
-import 'package:dio/dio.dart';
-
-class HealthCheckService {
-  final Dio _dio;
-
-  HealthCheckService()
-      : _dio = Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 3),
-          receiveTimeout: const Duration(seconds: 3),
-          contentType: 'application/json',
-          validateStatus: (status) => status == 200, // Tylko 200 nas interesuje
-        ));
-
-  /// Sprawdza konkretny endpoint wymagany przez C++ logic
-  Future<bool> checkHost(String baseUrl) async {
-    // Usuń slash na końcu jeśli jest
-    final cleanUrl = baseUrl.endsWith('/')
-        ? baseUrl.substring(0, baseUrl.length - 1)
-        : baseUrl;
-    
-    // Konkretny endpoint z Twojego kodu C++
-    final targetUrl = '$cleanUrl/health/live';
-
-    try {
-      // Cache breaker, żeby nie pobierać starego wyniku
-      final response = await _dio.get(
-        targetUrl, 
-        queryParameters: {'t': DateTime.now().millisecondsSinceEpoch},
-      );
-
-      if (response.statusCode == 200 && response.data is Map) {
-        // Sprawdzenie logiki biznesowej: {"status": "ok"}
-        return response.data['status'] == 'ok';
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/health/widgets/server_monitor_tile.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../server_health_provider.dart';
-
-class ServerMonitorTile extends ConsumerWidget {
-  final String serverUrl;
-  final String serviceName;
-
-  const ServerMonitorTile({
-    super.key,
-    required this.serverUrl,
-    required this.serviceName,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Obserwujemy StreamProvidera
-    final AsyncValue<bool> healthState = ref.watch(serverHealthProvider(serverUrl));
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            // Ikona statusu z obsługą ładowania
-            _buildStatusIndicator(healthState),
-            
-            const SizedBox(width: 16),
-            
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    serviceName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    serverUrl,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIndicator(AsyncValue<bool> state) {
-    return state.when(
-      // Gdy mamy dane (true/false)
-      data: (isAlive) {
-        return Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isAlive ? Colors.green : Colors.red,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isAlive ? Icons.check : Icons.close,
-            color: Colors.white,
-            size: 16,
-          ),
-        );
-      },
-      // Gdy się ładuje (pierwsze zapytanie)
-      loading: () => const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-      // Gdy wystąpi błąd w samym Streamie (rzadkie przy try-catch w serwisie)
-      error: (_, _) => const Icon(Icons.error_outline, color: Colors.grey),
-    );
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/words/words_page.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-
-class WordsPage extends StatelessWidget {
-  const WordsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return  Scaffold(
-      body: Center(child: Text('Nauka slowek - niebawem')),
-    );
-  }
-}
-
-
-
-===============================
 Ścieżka do pliku: ./lib/core/app_sizes.dart
 
 Zawartość pliku:
@@ -2241,7 +1913,7 @@ Zawartość pliku:
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import "../../features/auth/presentation/auth_controller.dart";
+import "../../features/auth/presentation/controllers/auth_controller.dart";
 import '../navigation_provider.dart';
 
 class MainDrawer extends ConsumerWidget {
