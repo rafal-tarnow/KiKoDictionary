@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -34,3 +35,16 @@ class RefreshTokenRepository:
         if db_token:
             await self.db.delete(db_token)
             await self.db.commit()
+
+    # Dodaj to na końcu klasy RefreshTokenRepository
+    async def delete_all_for_user(self, user_id: str) -> None:
+        """
+        Usuwa wszystkie tokeny odświeżające danego użytkownika.
+        Używane przy zmianie hasła, aby wylogować użytkownika ze wszystkich urządzeń.
+        """
+        # Importujemy delete wewnątrz metody lub na górze pliku
+        from sqlalchemy import delete 
+        
+        stmt = delete(RefreshToken).where(RefreshToken.user_id == user_id)
+        await self.db.execute(stmt)
+        await self.db.commit()

@@ -14,6 +14,25 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
 
     # Database Settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")                                        
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")
 
+    # Password Reset
+    RESET_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", 15))
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Email Settings (przykładowe pod Gmail lub SMTP)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
+    SMTP_USER: str = os.getenv("SMTP_USER", "twoj-email@gmail.com")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "twoje-haslo-aplikacji")
+    # Adres e-mail, z którego system "technicznie" wysyła wiadomości.
+    # To na ten adres użytkownik spróbuje odpisać, jeśli kliknie "Odpowiedz".
+    # os.getenv(...) sprawdza czy w pliku .env jest klucz EMAILS_FROM_EMAIL.
+    # Jeśli nie ma, używa wartości domyślnej "info@myapp.com".
+    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "info@myapp.com")
+    # Nazwa wyświetlana (Friendly Name), którą użytkownik widzi na liście wiadomości
+    # zamiast surowego adresu e-mail. Buduje to zaufanie i profesjonalny wizerunek.
+    # Np. zamiast widzieć "info@myapp.com", użytkownik zobaczy "My Users Service".
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "English Learner")
+    
 settings = Settings()

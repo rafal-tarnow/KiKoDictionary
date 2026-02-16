@@ -1,20 +1,32 @@
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+import secrets
+from uuid import uuid4
+from jose import JWTError, jwt
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
-from uuid import uuid4
+
+from src.core.config import settings
+from src.core.security import get_password_hash
 
 from src.db.session import get_db
 from src.db.repository.user_repository import UserRepository
+from src.db.repository.refresh_token_repository import RefreshTokenRepository
+from src.db.repository.password_reset_repository import PasswordResetRepository
+from src.db.models.password_reset import PasswordResetToken
+
 from src.core.security import verify_password, create_access_token, create_refresh_token
+
 from src.api.v1.schemas import user as user_schema
 from src.api.v1.schemas.user import UserRegister, UserCreate 
 from src.api.v1.schemas import token as token_schema
+from src.api.v1.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest
 
-from src.db.repository.refresh_token_repository import RefreshTokenRepository
-from src.core.config import settings
-from jose import JWTError, jwt
+from src.services.email.service import email_service
+
+
+
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -121,7 +133,7 @@ async def login_for_access_token(
 
     # save RefreshToken
     refresh_token_repo = RefreshTokenRepository(db)
-    expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     await refresh_token_repo.create(
         user_id=user.id,
         token=refresh_token,
@@ -159,7 +171,7 @@ async def refresh_access_token(
     db_refresh_token = await refresh_token_repo.get_by_token(token=token_request.refresh_token)
 
     # 2. Sprawdź, czy token istnieje i czy nie wygasł
-    if not db_refresh_token or db_refresh_token.expires_at < datetime.utcnow():
+    if not db_refresh_token or db_refresh_token.expires_at < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
@@ -167,7 +179,7 @@ async def refresh_access_token(
         )
     
     # 3. Jeśli token istnieje, ALE WYGASŁ, usuń go i odrzuć
-    if db_refresh_token.expires_at < datetime.utcnow():
+    if db_refresh_token.expires_at < datetime.now(timezone.utc):
         await refresh_token_repo.delete(token_id=db_refresh_token.id) # <-- DODANA LINIA
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -191,7 +203,7 @@ async def refresh_access_token(
     # (Token Rotation): unieważnij stary i wydaj nowy refresh token
     await refresh_token_repo.delete(token_id=db_refresh_token.id)
     new_refresh_token = create_refresh_token(data={"sub": str(db_refresh_token.user_id)})
-    expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     await refresh_token_repo.create(
         user_id=db_refresh_token.user_id,
         token=new_refresh_token,
@@ -203,3 +215,89 @@ async def refresh_access_token(
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks, # <--- Wstrzykiwanie zadań w tle
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Inicjuje proces resetowania hasła.
+    Zwraca 202 Accepted niezależnie od tego, czy email istnieje (Security).
+    """
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_email(request.email)
+
+    if user:
+        # 1. Generujemy bezpieczny token (URL-safe string)
+        token = secrets.token_urlsafe(32)
+        
+        # 2. Zapisujemy token w bazie
+        reset_repo = PasswordResetRepository(db)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES)
+        
+        await reset_repo.create(
+            user_id=user.id,
+            token=token,
+            expires_at=expires_at
+        )
+
+        # 3. Wysyłamy email w tle (nie blokujemy odpowiedzi API)
+        background_tasks.add_task(
+            email_service.send_reset_password_email,
+            email_to=user.email,
+            token=token
+        )
+
+    # ZAWSZE zwracamy ten sam komunikat dla bezpieczeństwa
+    return {"message": "If the email exists, a reset link has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Ustawia nowe hasło na podstawie ważnego tokena.
+    """
+    reset_repo = PasswordResetRepository(db)
+    user_repo = UserRepository(db)
+
+    # 1. Sprawdź czy token jest poprawny i ważny
+    db_token = await reset_repo.get_valid_token(request.token)
+    if not db_token:
+        # Tutaj możemy rzucić 400, bo user już wszedł w link i oczekuje efektu
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+
+    # 2. Znajdź użytkownika
+    user = await user_repo.get_by_id(db_token.user_id)
+    if not user:
+         raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # 3. Zhashuj nowe hasło i zaktualizuj usera
+    new_hashed_password = get_password_hash(request.new_password)
+    
+    # Robimy to elegancko:
+    user.hashed_password = new_hashed_password # Zmieniamy pole na obiekcie
+    # Zlecamy zapis repozytorium
+    await user_repo.update(user)
+
+    # 4. Oznacz token jako zużyty
+    await reset_repo.mark_as_used(db_token.id)
+    
+    # 5. WYLOGUJ ZE WSZYSTKICH URZĄDZEŃ (Bezpieczeństwo)
+    refresh_token_repo = RefreshTokenRepository(db)
+    await refresh_token_repo.delete_all_for_user(user.id) 
+
+    # await db.commit() <--- TO MOŻESZ USUNĄĆ, bo metody repozytoriów (mark_as_used, delete_all...) 
+    # robią commit wewnątrz siebie. Nadmiarowy commit nie szkodzi, ale nie jest potrzebny.
+
+    return {"message": "Password has been reset successfully"}

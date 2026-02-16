@@ -83,4 +83,17 @@ Future<void> register({
       // API wymaga wysłania refresh tokena przy wylogowaniu
       await _dio.post('/api/v1/auth/logout', data: {'refresh_token': refreshToken});
   }
+
+  Future<void> forgotPassword(String email) async {
+    try {
+      // Endpoint zwraca 202 Accepted (nawet jeśli email nie istnieje - security practice)
+      // lub 422 jeśli format emaila jest błędny.
+      await _dio.post(
+        '/api/v1/auth/forgot-password',
+        data: {'email': email},
+      );
+    } catch (e) {
+      rethrow; // Błędy sieciowe/walidacyjne zostaną obsłużone w kontrolerze przez ApiErrorHandler
+    }
+  }
 }

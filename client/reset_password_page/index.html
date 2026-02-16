@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password | English Learner</title>
+    <!-- Czcionka Roboto (standard Fluttera) -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Ikony Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+    <style>
+
+
+
+
+    </style>
+
+    </head>
+    <body>
+    <div class="container">
+        <div class="card">
+            
+            <!-- Widok Formularza -->
+            <div id="form-view">
+                <span class="material-symbols-outlined icon-header">lock_reset</span>
+                <h1>Set new password</h1>
+                <p class="subtitle">Enter a new, secure password for your account.</p>
+
+                <div id="global-error" class="error-box">
+                    <span class="material-symbols-outlined">error</span>
+                    <span id="error-text">An error occurred.</span>
+                </div>
+
+                <form id="reset-form">
+                    <!-- Pole: Nowe Hasło -->
+                    <div class="input-group">
+                        <input type="password" id="password" class="input-field" placeholder=" " required minlength="6">
+                        <label for="password" class="input-label">New password</label>
+                        <span class="material-symbols-outlined toggle-password" onclick="toggleVisibility('password', this)">visibility_off</span>
+                    </div>
+
+                    <!-- Pole: Potwierdź Hasło (Walidacja Frontendowa) -->
+                    <div class="input-group">
+                        <input type="password" id="confirm-password" class="input-field" placeholder=" " required>
+                        <label for="confirm-password" class="input-label">Confirm password</label>
+                        <span class="material-symbols-outlined toggle-password" onclick="toggleVisibility('confirm-password', this)">visibility_off</span>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="btn-submit">
+                        <span id="btn-text">RESET PASSWORD</span>
+                        <div id="btn-loader" class="loader hidden"></div>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Widok Sukcesu -->
+            <div id="success-view" class="success-view">
+                <span class="material-symbols-outlined success-icon">check_circle</span>
+                <h1>Password changed!</h1>
+                <p class="subtitle">Your password has been successfully updated. You can now return to the app and log in.</p>
+                <!-- Opcjonalnie: Link do otwarcia apki (Deep Link) jeśli w przyszłości będziesz chciał -->
+                <!-- <a href="myapp://" class="btn-submit" style="text-decoration: none;">OPEN APP</a> -->
+            </div>
+
+            <!-- Widok Błędu Tokena -->
+            <div id="invalid-token-view" class="success-view hidden">
+                <span class="material-symbols-outlined success-icon" style="color: var(--error-color)">broken_image</span>
+                <h1>Link expired</h1>
+                <p class="subtitle">This reset link is invalid or has expired. Please request a password reset again in the app.</p>
+            </div>
+
+        </div>
+        
+        <p style="margin-top: 24px; text-align: center; color: #757575; font-size: 12px;">
+            &copy; 2026 English Learner. All rights reserved.
+        </p>
+    </div>
+
+    <script>
+
+        // --- KONFIGURACJA ---
+        // Ponieważ ten plik będzie serwowany z tego samego backendu, używamy ścieżki relatywnej.
+        // Jeśli plik jest hostowany gdzie indziej (np. S3), wpisz pełny URL: 'https://api.twojadomena.com'
+        const API_BASE_URL = 'https://dev-auth.rafal-kruszyna.org'; 
+
+        // --- POBIERANIE TOKENA Z URL ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        // --- ELEMENTY DOM ---
+        const formView = document.getElementById('form-view');
+        const successView = document.getElementById('success-view');
+        const invalidTokenView = document.getElementById('invalid-token-view');
+        const resetForm = document.getElementById('reset-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnLoader = document.getElementById('btn-loader');
+        const globalError = document.getElementById('global-error');
+        const errorText = document.getElementById('error-text');
+
+        // Sprawdzenie czy token istnieje przy załadowaniu
+        if (!token) {
+            formView.style.display = 'none';
+            invalidTokenView.style.display = 'flex';
+            invalidTokenView.classList.remove('hidden');
+        }
+
+        // --- LOGIKA FORMULARZA ---
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // 1. Walidacja zgodności haseł
+            if (password !== confirmPassword) {
+                showError("Passwords do not match.");
+                return;
+            }
+
+            // 2. Walidacja siły hasła (Taka sama jak w backendzie/flutterze)
+            const hasMinLength = password.length >= 6;
+            const hasDigit = /\d/.test(password);
+            const hasLetter = /[a-zA-Z]/.test(password);
+
+            if (!hasMinLength || !hasDigit || !hasLetter) {
+                showError("Password must be at least 6 characters long, contain a letter and a digit.");
+                return;
+            }
+
+            // 3. Wysłanie żądania
+            setLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        new_password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Sukces
+                    formView.style.display = 'none';
+                    successView.style.display = 'flex';
+                } else {
+                    // Błąd z API
+                    let msg = "Server error occurred.";
+                    if (data.detail) {
+                        // Obsługa Twoich formatów błędów
+                         if (typeof data.detail === 'string') {
+                            msg = translateError(data.detail);
+                         } else if (Array.isArray(data.detail)) {
+                             // Pydantic validation error
+                             msg = translateError(data.detail[0].msg);
+                         }
+                    }
+                    // Specjalna obsługa wygasłego tokena
+                    if (response.status === 400 && msg.includes("expired")) {
+                        formView.style.display = 'none';
+                        invalidTokenView.style.display = 'flex';
+                        invalidTokenView.classList.remove('hidden');
+                    } else {
+                        showError(msg);
+                    }
+                }
+            } catch (err) {
+                showError("Failed to connect to the server. Check your internet connection.");
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // --- FUNKCJE POMOCNICZE ---
+
+        function toggleVisibility(inputId, iconElement) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                iconElement.textContent = "visibility";
+            } else {
+                input.type = "password";
+                iconElement.textContent = "visibility_off";
+            }
+        }
+
+        function setLoading(isLoading) {
+            submitBtn.disabled = isLoading;
+            if (isLoading) {
+                btnText.style.display = 'none';
+                btnLoader.classList.remove('hidden');
+            } else {
+                btnText.style.display = 'block';
+                btnLoader.classList.add('hidden');
+            }
+        }
+
+        function showError(msg) {
+            errorText.textContent = msg;
+            globalError.style.display = 'flex';
+            // Animacja potrząśnięcia (opcjonalna)
+            globalError.animate([
+                { transform: 'translateX(0)' },
+                { transform: 'translateX(-5px)' },
+                { transform: 'translateX(5px)' },
+                { transform: 'translateX(0)' }
+            ], { duration: 300 });
+        }
+
+        function hideError() {
+            globalError.style.display = 'none';
+        }
+
+// Tłumaczenie komunikatów backendu
+        function translateError(msg) {
+            // 1. Obsługa błędów tokena (Priorytet)
+            if (msg.includes("Invalid or expired reset token")) {
+                return "The reset link is invalid or expired.";
+            }
+
+            // 2. Obsługa błędów hasła - GRUPOWANIE
+            // Niezależnie od tego, czy brakuje cyfry, litery czy długości,
+            // wyświetlamy pełną instrukcję, żeby użytkownik nie musiał zgadywać.
+            if (msg.includes("Password must be at least") || 
+                msg.includes("digit") || 
+                msg.includes("letter") ||
+                msg.includes("characters")) {
+                
+                return "Password must be at least 6 characters long, and contain both a letter and a digit.";
+            }
+
+            // 3. Inne błędy
+            return msg;
+        }
+
+    </script>
+
+    </body>
+</html>

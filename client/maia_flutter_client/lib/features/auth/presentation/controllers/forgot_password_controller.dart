@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_error_handler.dart';
+import '../../data/auth_repository.dart';
 
 // Stan widoku
 class ForgotPasswordState {
@@ -14,7 +16,7 @@ class ForgotPasswordState {
 
   ForgotPasswordState copyWith({
     bool? isLoading,
-    String? error, // null nie czyści błędu automatycznie w tym patternie, ale tu uprościmy
+    String? error, 
     bool? isSuccess,
   }) {
     return ForgotPasswordState(
@@ -26,25 +28,23 @@ class ForgotPasswordState {
 }
 
 class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
-  // Tutaj w przyszłości wstrzykniesz AuthRepository
-  ForgotPasswordController() : super(const ForgotPasswordState());
+  final AuthRepository _authRepository;
+
+  ForgotPasswordController(this._authRepository) : super(const ForgotPasswordState());
 
   Future<bool> sendResetLink(String email) async {
-    // Reset stanu przed akcją
-    state = const ForgotPasswordState(isLoading: true);
+    // Reset stanu przed akcją (czyścimy też error z poprzedniej próby)
+    state = const ForgotPasswordState(isLoading: true, error: null);
 
     try {
-      // --- SYMULACJA ZAPYTANIA DO API ---
-      await Future.delayed(const Duration(seconds: 2));
+      await _authRepository.forgotPassword(email);
       
-      // Tu w przyszłości: await _authRepository.forgotPassword(email);
-      
-      // Sukces
+      // Sukces (Status 202 Accepted)
       state = state.copyWith(isLoading: false, isSuccess: true);
       return true;
     } catch (e) {
-      // Błąd
-      state = state.copyWith(isLoading: false, error: "Wystąpił błąd. Spróbuj ponownie.");
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -54,8 +54,8 @@ class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
   }
 }
 
-// Provider (autoDispose czyści stan po wyjściu z ekranu)
+// Provider
 final forgotPasswordControllerProvider = 
     StateNotifierProvider.autoDispose<ForgotPasswordController, ForgotPasswordState>((ref) {
-  return ForgotPasswordController();
+  return ForgotPasswordController(ref.watch(authRepositoryProvider));
 });

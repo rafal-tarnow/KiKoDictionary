@@ -1,13 +1,13 @@
 import os
 
 # Lista dozwolonych rozszerzeń
-allowed_extensions = ['.ini', '.py']
+allowed_extensions = ['.ini', '.py', '.sh', '.html']
 
 # Lista zablokowanych katalogów
-blocked_dirs = ['venv', '__pycache__', '.git', 'migrations']
+blocked_dirs = ['venv', '.venv', '__pycache__', '.git', 'migrations']
 
 # Lista zablokowanych plików (pełne nazwy plików)
-blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py']
+blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini']
 
 # Ścieżka startowa (można zmienić na inny katalog)
 start_path = './src/'

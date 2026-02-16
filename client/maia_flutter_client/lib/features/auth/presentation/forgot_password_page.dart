@@ -35,6 +35,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         .sendResetLink(_emailCtrl.text.trim());
 
     if (success && mounted) {
+      // Opcjonalnie: czyścimy pole po sukcesie
+      _emailCtrl.clear();
+      
+      // SnackBar jako dodatkowe potwierdzenie
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Link został wysłany! Sprawdź skrzynkę e-mail.'),
@@ -44,9 +48,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       );
       // Opcjonalnie: Powrót do logowania po sukcesie
       // ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
-      
-      // Lub czyszczenie pola
-      _emailCtrl.clear();
     }
   }
 
@@ -91,17 +92,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   const SizedBox(height: 32),
 
                   // --- 2. Ikona (Email) ---
-                  const Icon(
-                    Icons.mark_email_unread_outlined, // Ikona sugerująca wysyłanie
+                  Icon(
+                    state.isSuccess ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
                     size: 80,
-                    color: Colors.deepPurple,
+                    color: state.isSuccess ? Colors.green : Colors.deepPurple,
                   ),
                   
                   const SizedBox(height: 24),
 
                   // --- 3. Nagłówek ---
                   Text(
-                    "Przypomnij hasło",
+                    state.isSuccess ? "Sprawdź skrzynkę" : "Przypomnij hasło",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -113,10 +114,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
                   // --- 4. Podtytuł (Instrukcja) ---
                   Text(
-                    "Podaj adres email, na który wyślemy link do\nresetowania hasła.",
+                    state.isSuccess 
+                      ? "Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do resetowania hasła."
+                      : "Podaj adres email, na który wyślemy link do\nresetowania hasła.",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
-                      height: 1.5, // Lepsza czytelność tekstu wieloliniowego
+                      height: 1.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -124,28 +127,30 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   const SizedBox(height: 32),
 
                   // --- 5. Pole Email ---
-                  TextFormField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    enabled: !state.isLoading && !state.isSuccess,
-                    decoration: const InputDecoration(
-                      labelText: "Adres email",
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                      hintText: "np. tom@example.com",
+                  // Ukrywamy pole lub blokujemy po sukcesie, żeby użytkownik skupił się na komunikacie
+                  if (!state.isSuccess)
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
+                      enabled: !state.isLoading,
+                      decoration: const InputDecoration(
+                        labelText: "Adres email",
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                        hintText: "np. tom@example.com",
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Wpisz adres email';
+                        }
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return 'Niepoprawny format email';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Wpisz adres email';
-                      }
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return 'Niepoprawny format email';
-                      }
-                      return null;
-                    },
-                  ),
 
                   const SizedBox(height: 24),
 
@@ -176,36 +181,35 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     ),
 
                   // --- 6. Przycisk Akcji ---
-                  FilledButton(
-                    onPressed: (state.isLoading || state.isSuccess) ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16),
-                    ),
-                    child: state.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text("WYŚLIJ LINK RESETUJĄCY"),
-                  ),
-                  
-                  // Opcjonalnie: Wiadomość sukcesu zamiast formularza lub pod przyciskiem
-                  if (state.isSuccess)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: TextButton.icon(
-                        onPressed: _navigateToLogin,
-                        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
-                        label: const Text(
-                          "Wysłano! Kliknij tutaj, aby się zalogować.",
-                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                        ),
+                  if (!state.isSuccess)
+                    FilledButton(
+                      onPressed: state.isLoading ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(fontSize: 16),
                       ),
+                      child: state.isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text("WYŚLIJ LINK RESETUJĄCY"),
+                    )
+                  else
+                    // Przycisk powrotu do logowania po sukcesie
+                    FilledButton.icon(
+                      onPressed: _navigateToLogin,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.green,
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                      icon: const Icon(Icons.login),
+                      label: const Text("WRÓĆ DO LOGOWANIA"),
                     ),
                 ],
               ),

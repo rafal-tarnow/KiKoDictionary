@@ -73,6 +73,16 @@ class UserRepository:
         return db_user
     
 
+    async def update(self, user: User) -> User:
+        """
+        Zapisuje zmiany dokonane na obiekcie użytkownika.
+        """
+        self.db.add(user) # Oznaczamy obiekt jako "do zapisania"
+        await self.db.commit() # Fizyczny zapis w bazie
+        await self.db.refresh(user) # Odświeżenie danych (np. updated_at)
+        return user
+
+
     async def suggest_available_username(self, username: str) -> str:
         """
         Generuje unikalną nazwę użytkownika, dodając liczbę na końcu.
