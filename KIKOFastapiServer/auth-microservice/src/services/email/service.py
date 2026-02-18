@@ -33,31 +33,30 @@ class EmailService:
         Wysyła prawdziwy email z użyciem szablonu HTML.
         """
         # 1. Przygotowanie danych do szablonu (Context)
-        reset_link = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
+        # ZMIANA: Używamy metody z settings do poprawnego zbudowania linku
+        reset_link = settings.get_reset_password_link(token)
         
         template_body = {
             "app_name": settings.EMAILS_FROM_NAME,
             "link": reset_link,
             "valid_minutes": settings.RESET_TOKEN_EXPIRE_MINUTES,
-            "subject": "Reset Your Password" # Przekazujemy też do base.html
+            "subject": "Reset Your Password"
         }
 
         # 2. Tworzenie wiadomości
         message = MessageSchema(
             subject="Reset Your Password - Action Required",
-            recipients=[email_to], # Lista odbiorców
+            recipients=[email_to],
             template_body=template_body,
-            subtype=MessageType.html # Ważne: wysyłamy HTML
+            subtype=MessageType.html
         )
 
         # 3. Wysyłka
         try:
-            # template_name musi pasować do nazwy pliku w katalogu templates
             await self.fast_mail.send_message(message, template_name="reset_password.html")
-            print(f"LOG: Email sent to {email_to}")
+            print(f"LOG: Email sent to {email_to} with link: {reset_link}")
         except Exception as e:
             print(f"ERROR: Failed to send email to {email_to}. Error: {e}")
-            # W produkcji tutaj dodałbyś logowanie do pliku lub Sentry
-            # Nie rzucamy wyjątku, żeby nie przerywać działania aplikacji (to leci w tle)
+
 
 email_service = EmailService()

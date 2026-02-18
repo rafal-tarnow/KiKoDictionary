@@ -65,6 +65,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
+from src.core.config import settings
 from src.api.v1.routers import auth
 from src.api.v1.routers import test
 from src.db.models.user import Base
@@ -121,22 +122,17 @@ async def db_connection_handler(request: Request, exc: OperationalError):
     )
 
 
-# <--- 2. Konfiguracja Middleware
-# W środowisku deweloperskim (Wasm lokalnie) najlepiej zezwolić na wszystko ("*")
-# W produkcji powinieneś tu wpisać konkretny adres, z którego serwowany jest plik .wasm/.html
-origins = [
-    "*", 
-    # "http://localhost:8000",
-    # "http://127.0.0.1:8000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,      # Zezwól na zapytania z tych źródeł
-    allow_credentials=True,
-    allow_methods=["*"],        # Zezwól na wszystkie metody (GET, POST, OPTIONS itd.)
-    allow_headers=["*"],        # Zezwól na wszystkie nagłówki (w tym Content-Type)
-)
+# <--- 2. Konfiguracja Middleware (PRO)
+# Dodajemy middleware TYLKO JEŚLI zdefiniowano dozwolone domeny.
+# Jeśli lista jest pusta -> CORS nie działa -> Bezpieczeństwo zachowane (blokada wszystkiego z zewnątrz).
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(auth.router)
 app.include_router(test.router)
@@ -168,6 +164,8 @@ async def root():
 Zawartość pliku:
 
 import os
+from typing import List, Union
+from pydantic import field_validator, AnyHttpUrl
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -187,7 +185,16 @@ class Settings(BaseSettings):
 
     # Password Reset
     RESET_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", 15))
+    
+    # --- URL CONFIGURATION ---
+    # Główny adres frontendu (np. strona główna)
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Dedykowany URL do strony resetowania hasła.
+    # Jeśli nie jest podany w .env, domyślnie składa się z FRONTEND_URL + /auth/reset-password
+    # Dzięki temu w .env możesz wpisać PEŁNY, specyficzny link do pliku .html
+    RESET_PASSWORD_URL: str = os.getenv("RESET_PASSWORD_URL", None)
+
     
     # Email Settings (przykładowe pod Gmail lub SMTP)
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
@@ -203,6 +210,37 @@ class Settings(BaseSettings):
     # zamiast surowego adresu e-mail. Buduje to zaufanie i profesjonalny wizerunek.
     # Np. zamiast widzieć "info@myapp.com", użytkownik zobaczy "My Users Service".
     EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "English Learner")
+    # --- CORS CONFIGURATION (PRO) ---
+    # To pole wczyta string z .env i zamieni go na listę dzięki walidatorowi poniżej.
+    # Domyślnie pusta lista (bezpieczeństwo).
+    BACKEND_CORS_ORIGINS: List[str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+        """
+        Parsuje string z .env (np. 'http://a.com,http://b.com') na listę Pythona.
+        """
+        if isinstance(v, str) and not v.startswith("["):
+            # Rozdzielamy po przecinku i usuwamy białe znaki
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            # Jeśli już jest listą (np. z pliku yaml) lub JSON stringiem, zwracamy jak jest
+            return v
+        raise ValueError(v)
+
+    def get_reset_password_link(self, token: str) -> str:
+        """
+        Inteligentnie buduje link. Jeśli w .env zdefiniowano RESET_PASSWORD_URL, używa go.
+        W przeciwnym razie buduje domyślną ścieżkę dla SPA (Single Page App).
+        """
+        base_url = self.RESET_PASSWORD_URL
+        
+        # Fallback: Jeśli nie zdefiniowano specyficznego URL, budujemy standardowy
+        if not base_url:
+            base_url = f"{self.FRONTEND_URL}/auth/reset-password"
+            
+        return f"{base_url}?token={token}"
     
 settings = Settings()
 
@@ -290,32 +328,31 @@ class EmailService:
         Wysyła prawdziwy email z użyciem szablonu HTML.
         """
         # 1. Przygotowanie danych do szablonu (Context)
-        reset_link = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
+        # ZMIANA: Używamy metody z settings do poprawnego zbudowania linku
+        reset_link = settings.get_reset_password_link(token)
         
         template_body = {
             "app_name": settings.EMAILS_FROM_NAME,
             "link": reset_link,
             "valid_minutes": settings.RESET_TOKEN_EXPIRE_MINUTES,
-            "subject": "Reset Your Password" # Przekazujemy też do base.html
+            "subject": "Reset Your Password"
         }
 
         # 2. Tworzenie wiadomości
         message = MessageSchema(
             subject="Reset Your Password - Action Required",
-            recipients=[email_to], # Lista odbiorców
+            recipients=[email_to],
             template_body=template_body,
-            subtype=MessageType.html # Ważne: wysyłamy HTML
+            subtype=MessageType.html
         )
 
         # 3. Wysyłka
         try:
-            # template_name musi pasować do nazwy pliku w katalogu templates
             await self.fast_mail.send_message(message, template_name="reset_password.html")
-            print(f"LOG: Email sent to {email_to}")
+            print(f"LOG: Email sent to {email_to} with link: {reset_link}")
         except Exception as e:
             print(f"ERROR: Failed to send email to {email_to}. Error: {e}")
-            # W produkcji tutaj dodałbyś logowanie do pliku lub Sentry
-            # Nie rzucamy wyjątku, żeby nie przerywać działania aplikacji (to leci w tle)
+
 
 email_service = EmailService()
 

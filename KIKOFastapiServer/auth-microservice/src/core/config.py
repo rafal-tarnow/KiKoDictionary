@@ -1,4 +1,6 @@
 import os
+from typing import List, Union
+from pydantic import field_validator, AnyHttpUrl
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -18,7 +20,16 @@ class Settings(BaseSettings):
 
     # Password Reset
     RESET_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", 15))
+    
+    # --- URL CONFIGURATION ---
+    # Główny adres frontendu (np. strona główna)
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Dedykowany URL do strony resetowania hasła.
+    # Jeśli nie jest podany w .env, domyślnie składa się z FRONTEND_URL + /auth/reset-password
+    # Dzięki temu w .env możesz wpisać PEŁNY, specyficzny link do pliku .html
+    RESET_PASSWORD_URL: str = os.getenv("RESET_PASSWORD_URL", None)
+
     
     # Email Settings (przykładowe pod Gmail lub SMTP)
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
@@ -34,5 +45,35 @@ class Settings(BaseSettings):
     # zamiast surowego adresu e-mail. Buduje to zaufanie i profesjonalny wizerunek.
     # Np. zamiast widzieć "info@myapp.com", użytkownik zobaczy "My Users Service".
     EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "English Learner")
+    # --- CORS CONFIGURATION (PRO) ---
+    # To pole wczyta string z .env i zamieni go na listę dzięki walidatorowi poniżej.
+    # Domyślnie pusta lista (bezpieczeństwo).
+    # ZMIANA TUTAJ:
+    # Zmieniamy List[str] na Union[List[str], str].
+    # Dzięki temu Pydantic nie wymusza JSON-a na starcie, a walidator i tak zamieni to na listę.
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+        # Ta logika jest poprawna i teraz zadziała, bo Pydantic dopuścił stringa na wejściu
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
+
+    def get_reset_password_link(self, token: str) -> str:
+        """
+        Inteligentnie buduje link. Jeśli w .env zdefiniowano RESET_PASSWORD_URL, używa go.
+        W przeciwnym razie buduje domyślną ścieżkę dla SPA (Single Page App).
+        """
+        base_url = self.RESET_PASSWORD_URL
+        
+        # Fallback: Jeśli nie zdefiniowano specyficznego URL, budujemy standardowy
+        if not base_url:
+            base_url = f"{self.FRONTEND_URL}/auth/reset-password"
+            
+        return f"{base_url}?token={token}"
     
 settings = Settings()

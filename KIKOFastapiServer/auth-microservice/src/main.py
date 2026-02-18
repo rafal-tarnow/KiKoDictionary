@@ -4,6 +4,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
+from src.core.config import settings
 from src.api.v1.routers import auth
 from src.api.v1.routers import test
 from src.db.models.user import Base
@@ -60,22 +61,17 @@ async def db_connection_handler(request: Request, exc: OperationalError):
     )
 
 
-# <--- 2. Konfiguracja Middleware
-# W środowisku deweloperskim (Wasm lokalnie) najlepiej zezwolić na wszystko ("*")
-# W produkcji powinieneś tu wpisać konkretny adres, z którego serwowany jest plik .wasm/.html
-origins = [
-    "*", 
-    # "http://localhost:8000",
-    # "http://127.0.0.1:8000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,      # Zezwól na zapytania z tych źródeł
-    allow_credentials=True,
-    allow_methods=["*"],        # Zezwól na wszystkie metody (GET, POST, OPTIONS itd.)
-    allow_headers=["*"],        # Zezwól na wszystkie nagłówki (w tym Content-Type)
-)
+# <--- 2. Konfiguracja Middleware (PRO)
+# Dodajemy middleware TYLKO JEŚLI zdefiniowano dozwolone domeny.
+# Jeśli lista jest pusta -> CORS nie działa -> Bezpieczeństwo zachowane (blokada wszystkiego z zewnątrz).
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(auth.router)
 app.include_router(test.router)

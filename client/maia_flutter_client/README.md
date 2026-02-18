@@ -21,4 +21,4 @@ flutter run --release
 
 ## Build web version
 
-flutter build web --base-href "/flutter/"
+flutter build web --base-href "/english_learner/flutter/"
