@@ -4,6 +4,7 @@ from alembic import context
 from src.db.models.user import Base  # Importuj klasę Base z modeli
 from src.core.config import settings  # Importuj ustawienia z DATABASE_URL
 from src.db.models.refresh_token import RefreshToken
+from src.db.models.password_reset import PasswordResetToken
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

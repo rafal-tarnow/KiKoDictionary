@@ -33,8 +33,14 @@ async def get_current_user(
     
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id=token_data.user_id)
-    if user is None:
-        raise credentials_exception
+    
+    # [ZMIANA]: Sprawdzamy czy user istnieje ORAZ czy nie ma zbanowanego/usuniętego konta
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is deactivated or deleted"
+        )
+        
     return user
     
 

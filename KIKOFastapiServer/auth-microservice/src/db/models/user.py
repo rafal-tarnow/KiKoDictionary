@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, DateTime, func, Enum, Index
+from sqlalchemy import Column, String, DateTime, func, Enum, Index, Boolean
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -27,6 +27,11 @@ class User(Base):
 
     account_subscription = Column(Enum(AccountSubscription), default=AccountSubscription.FREE, nullable=False)
     subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # --- [ZMIANA]: SOFT DELETE FIELDS ---
+    is_active = Column(Boolean, default=True, nullable=False) # Określa czy konto działa
+    deleted_at = Column(DateTime(timezone=True), nullable=True) # Data usunięcia konta
+    # ------------------------------------
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

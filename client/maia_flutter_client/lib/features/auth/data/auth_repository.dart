@@ -96,4 +96,17 @@ Future<void> register({
       rethrow; // Błędy sieciowe/walidacyjne zostaną obsłużone w kontrolerze przez ApiErrorHandler
     }
   }
+
+  // ================= ZMIANA: NOWA METODA =================
+  // Zgodnie z dokumentacją: DELETE /api/v1/users/me
+  // Autoryzacja jest wymagana, `_dio` ma już podpięty interceptor z tokenem.
+  Future<void> deleteAccount() async {
+    try {
+      // Endpoint zwraca 204 No Content
+      await _dio.delete('/api/v1/users/me');
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // ================= KONIEC ZMIANY =================
 }

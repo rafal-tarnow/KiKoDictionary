@@ -2,6 +2,9 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, func
+from datetime import datetime, timezone
+import uuid
+
 from src.db.models.user import User
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
@@ -12,9 +15,11 @@ class UserRepository:
         self.db = db_session
 
     async def get_by_email(self, email: str) -> Optional[User]:
-        # Email jest zawsze lowercase (wymuszone w schemas), ale dla bezpieczeństwa:
         email_lower = email.lower()
-        result = await self.db.execute(select(User).filter(User.email == email_lower))
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
+        result = await self.db.execute(
+            select(User).filter(User.email == email_lower, User.is_active == True)
+        )
         return result.scalars().first()
     
 
@@ -24,14 +29,19 @@ class UserRepository:
         Dla wejścia 'tom' znajdzie użytkownika 'Tom'.
         """
         username_lower = username.lower()
-        # Porównujemy lower(db_column) == lower(input)
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
         result = await self.db.execute(
-            select(User).filter(func.lower(User.username) == username_lower)
+            select(User).filter(
+                func.lower(User.username) == username_lower,
+                User.is_active == True
+            )
         )
         return result.scalars().first()
     
     async def get_by_id(self, user_id: str) -> Optional[User]:
         result = await self.db.execute(select(User).filter(User.id == user_id))
+        # [ZMIANA UWAGA]: Celowo nie sprawdzamy tu is_active, 
+        # bo system może potrzebować pobrać usuniętego usera np. żeby wyświetlić "Konto Usunięte" w komentarzach.
         return result.scalars().first()
     
 
@@ -41,14 +51,15 @@ class UserRepository:
         (w obu przypadkach case-insensitive).
         """
         identifier_lower = identifier.lower()
-
         # Szukamy po emailu LUB po username (ignorując wielkość liter w obu przypadkach)
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
         result = await self.db.execute(
             select(User).filter(
                 or_(
                     User.email == identifier_lower,
                     func.lower(User.username) == identifier_lower
-                )
+                ),
+                User.is_active == True
             )
         )
         return result.scalars().first()
@@ -116,3 +127,27 @@ class UserRepository:
             if new_username.lower() not in existing_set:
                 return new_username
             counter += 1
+
+    # --- [ZMIANA]: NOWA METODA - PROFESJONALNE USUWANIE KONTA ---
+    async def soft_delete_user(self, user: User) -> None:
+        """
+        Soft Delete + Anonimizacja danych (Zgodność z RODO/GDPR).
+        Zwalnia email i username dla przyszłych rejestracji innych osób.
+        """
+        random_suffix = uuid.uuid4().hex[:8]
+        
+        # 1. Anonimizacja danych wrażliwych
+        # email musi być unikalny, więc dodajemy UUID, ale wciąż musi mieć format maila wg Pydantic (jeśli gdzieś validujemy baze)
+        user.email = f"deleted_{user.id}@anonymized.local" 
+        # Zmieniamy username, by uwolnić oryginalny nick
+        user.username = f"DeletedUser_{random_suffix}" 
+        # Kasujemy hasło, nikt się już nie zaloguje
+        user.hashed_password = "DELETED_ACCOUNT" 
+        
+        # 2. Ustawienie flag usunięcia
+        user.is_active = False
+        user.deleted_at = datetime.now(timezone.utc)
+
+        # Zapis do bazy
+        self.db.add(user)
+        await self.db.commit()

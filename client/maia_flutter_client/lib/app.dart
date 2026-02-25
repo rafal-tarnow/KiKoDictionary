@@ -16,6 +16,7 @@ import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
 import 'features/health/services_health_page.dart';
+import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
 
 class MainShell extends ConsumerWidget {
@@ -34,6 +35,7 @@ class MainShell extends ConsumerWidget {
     CaptchaPage(),
     //Pages not shown in the Drawer
     ForgotPasswordPage(),
+    SettingsPage(),
   ];
 
   static final List<PreferredSizeWidget> _appBars = [
@@ -72,6 +74,11 @@ class MainShell extends ConsumerWidget {
     ),
     AppBar(
       title: const Text("Reset hasła"),
+      elevation: 2,
+      actions: const [UserAvatarButton()],
+    ),
+    AppBar(
+      title: const Text("Ustawienia"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),

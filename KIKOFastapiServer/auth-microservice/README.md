@@ -41,3 +41,12 @@ usunac dublujace sie indexy
 a nastepnie:
 
 poetry run alembic upgrade head
+
+### Wygenerowanie nowej migracji
+krok 1. jezeli utworzono nowa tabele w modelach to w pliku migrations/env.py dodać linie np.from src.db.models.password_reset import PasswordResetToken
+, w tym pliku dodajemy wszyskie importy z tabelami zeby alembic wiedzial jakie tabele sa potrzebne
+krok 2. alembic revision --autogenerate -m "add_soft_delete_to_user"
+krok 3. przejrzeć plikc migracji cat ./migrations/versions/21befe77be08_add_soft_delete_to_user.py
+
+
+

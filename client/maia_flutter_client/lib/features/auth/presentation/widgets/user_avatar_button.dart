@@ -7,6 +7,7 @@ class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
 
   static const int _loginPageIndex = 5;
+  static const int _settingsPageIndex = 10;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,8 +35,11 @@ class UserAvatarButton extends ConsumerWidget {
           ),
           
           onSelected: (value) {
+            // OBSŁUGA KLIKNIĘCIA
             if (value == 'logout') {
               _handleLogout(context, ref);
+            } else if (value == 'settings') {
+              ref.read(navigationIndexProvider.notifier).state = _settingsPageIndex;
             }
           },
           
@@ -47,6 +51,18 @@ class UserAvatarButton extends ConsumerWidget {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
               ),
             ),
+
+            const PopupMenuItem<String>(
+              value: 'settings', // To musi pasować do warunku w onSelected
+              child: Row(
+                children: [
+                  Icon(Icons.settings, color: Colors.black87, size: 20), // Spójna ikona
+                  SizedBox(width: 12),
+                  Text('Ustawienia', style: TextStyle(color: Colors.black87)),
+                ],
+              ),
+            ),
+            
             const PopupMenuDivider(),
             const PopupMenuItem<String>(
               value: 'logout',

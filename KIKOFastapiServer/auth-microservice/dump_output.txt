@@ -1,4 +1,390 @@
 ===============================
+Ścieżka do pliku: ./alembic.ini
+
+Zawartość pliku:
+
+# A generic, single database configuration.
+
+[alembic]
+# path to migration scripts.
+# this is typically a path given in POSIX (e.g. forward slashes)
+# format, relative to the token %(here)s which refers to the location of this
+# ini file
+script_location = %(here)s/migrations
+
+# template used to generate migration file names; The default value is %%(rev)s_%%(slug)s
+# Uncomment the line below if you want the files to be prepended with date and time
+# see https://alembic.sqlalchemy.org/en/latest/tutorial.html#editing-the-ini-file
+# for all available tokens
+# file_template = %%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s
+
+# sys.path path, will be prepended to sys.path if present.
+# defaults to the current working directory.  for multiple paths, the path separator
+# is defined by "path_separator" below.
+prepend_sys_path = .
+
+
+# timezone to use when rendering the date within the migration file
+# as well as the filename.
+# If specified, requires the python>=3.9 or backports.zoneinfo library and tzdata library.
+# Any required deps can installed by adding `alembic[tz]` to the pip requirements
+# string value is passed to ZoneInfo()
+# leave blank for localtime
+# timezone =
+
+# max length of characters to apply to the "slug" field
+# truncate_slug_length = 40
+
+# set to 'true' to run the environment during
+# the 'revision' command, regardless of autogenerate
+# revision_environment = false
+
+# set to 'true' to allow .pyc and .pyo files without
+# a source .py file to be detected as revisions in the
+# versions/ directory
+# sourceless = false
+
+# version location specification; This defaults
+# to <script_location>/versions.  When using multiple version
+# directories, initial revisions must be specified with --version-path.
+# The path separator used here should be the separator specified by "path_separator"
+# below.
+# version_locations = %(here)s/bar:%(here)s/bat:%(here)s/alembic/versions
+
+# path_separator; This indicates what character is used to split lists of file
+# paths, including version_locations and prepend_sys_path within configparser
+# files such as alembic.ini.
+# The default rendered in new alembic.ini files is "os", which uses os.pathsep
+# to provide os-dependent path splitting.
+#
+# Note that in order to support legacy alembic.ini files, this default does NOT
+# take place if path_separator is not present in alembic.ini.  If this
+# option is omitted entirely, fallback logic is as follows:
+#
+# 1. Parsing of the version_locations option falls back to using the legacy
+#    "version_path_separator" key, which if absent then falls back to the legacy
+#    behavior of splitting on spaces and/or commas.
+# 2. Parsing of the prepend_sys_path option falls back to the legacy
+#    behavior of splitting on spaces, commas, or colons.
+#
+# Valid values for path_separator are:
+#
+# path_separator = :
+# path_separator = ;
+# path_separator = space
+# path_separator = newline
+#
+# Use os.pathsep. Default configuration used for new projects.
+path_separator = os
+
+# set to 'true' to search source files recursively
+# in each "version_locations" directory
+# new in Alembic version 1.10
+# recursive_version_locations = false
+
+# the output encoding used when revision files
+# are written from script.py.mako
+# output_encoding = utf-8
+
+# database URL.  This is consumed by the user-maintained env.py script only.
+# other means of configuring database URLs may be customized within the env.py
+# file.
+sqlalchemy.url = sqlite+aiosqlite:///./users.db
+
+
+[post_write_hooks]
+# post_write_hooks defines scripts or Python functions that are run
+# on newly generated revision scripts.  See the documentation for further
+# detail and examples
+
+# format using "black" - use the console_scripts runner, against the "black" entrypoint
+# hooks = black
+# black.type = console_scripts
+# black.entrypoint = black
+# black.options = -l 79 REVISION_SCRIPT_FILENAME
+
+# lint with attempts to fix using "ruff" - use the exec runner, execute a binary
+# hooks = ruff
+# ruff.type = exec
+# ruff.executable = %(here)s/.venv/bin/ruff
+# ruff.options = check --fix REVISION_SCRIPT_FILENAME
+
+# Logging configuration.  This is also consumed by the user-maintained
+# env.py script only.
+[loggers]
+keys = root,sqlalchemy,alembic
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARNING
+handlers = console
+qualname =
+
+[logger_sqlalchemy]
+level = WARNING
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+datefmt = %H:%M:%S
+
+
+
+===============================
+Ścieżka do pliku: ./pytest.ini
+
+Zawartość pliku:
+
+[pytest]
+asyncio_mode = auto
+filterwarnings =
+    ignore:.*crypt.*deprecated:DeprecationWarning
+
+
+===============================
+Ścieżka do pliku: ./tests/test_main.py
+
+Zawartość pliku:
+
+import pytest
+from src.db.models.user import User
+from src.core.security import pwd_context
+from sqlalchemy.future import select
+from tests.conftest import TestingSessionLocal
+
+@pytest.mark.asyncio
+async def test_not_found(client):
+    response = client.get("/invalid-endpoint")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not Found"}
+
+@pytest.mark.asyncio
+async def test_get_root(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert response.json() == {"status": "ok"}
+
+@pytest.fixture
+def valid_register_data():
+    return {
+        "email": "user2@example.com",
+        "username": "john2_doe",
+        "password": "secure123"
+    }
+
+@pytest.mark.asyncio
+async def test_post_register_user(client, valid_register_data):
+    response = client.post("/api/v1/auth/register", json=valid_register_data)
+    assert response.status_code == 201
+    assert response.headers["content-type"] == "application/json"
+    response_json = response.json()
+    assert "id" in response_json
+    assert response_json["username"] == valid_register_data["username"]
+    assert response_json["email"] == valid_register_data["email"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_email", [
+    "invalid-email",
+    "user@",
+    "@domain.com",
+    "user@domain",
+    "user.domain.com",
+    "user@.com"
+])
+async def test_post_register_user_invalid_email(client, valid_register_data, invalid_email):
+    invalid_data = valid_register_data.copy()
+    invalid_data["email"] = invalid_email
+    response = client.post("/api/v1/auth/register", json=invalid_data)
+    assert response.status_code == 422
+
+    response_json = response.json()
+    assert "detail" in response_json
+    assert response_json["detail"][0]["loc"] == ["body", "email"]
+
+    errors = response_json["detail"]
+    assert any(
+        error["loc"] == ["body", "email"] and error["type"] == "value_error"
+        for error in errors
+    )
+    assert any(
+        error["loc"] == ["body", "email"] and "email address" in error["msg"].lower()
+        for error in errors
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_username, expected_error_msg", [
+    ("", "Value error, The username cannot be empty or consist only of whitespace."),
+    ("   ", "Value error, The username cannot be empty or consist only of whitespace."),
+    ("  john", "Value error, The username cannot contain spaces at the beginning or end."),
+    ("john  ", "Value error, The username cannot contain spaces at the beginning or end."),
+])
+async def test_post_register_user_invalid_username(client, valid_register_data, invalid_username, expected_error_msg):
+    invalid_data = valid_register_data.copy()
+    invalid_data["username"] = invalid_username
+    response = client.post("/api/v1/auth/register", json=invalid_data)
+    assert response.status_code == 422
+    response_json = response.json()
+    assert "detail" in response_json
+    errors = response_json["detail"]
+    assert any(
+        error["loc"] == ["body", "username"] and error["msg"] == expected_error_msg
+        for error in errors
+    ), f"Expected error with loc=['body', 'username'] and msg='{expected_error_msg}', got {errors}"
+
+
+async def test_post_register_user_saves_to_database(client, valid_register_data):
+    response = client.post("/api/v1/auth/register", json=valid_register_data)
+    assert response.status_code == 201
+    response_json = response.json()
+    assert response_json["username"] == valid_register_data["username"]
+    assert response_json["email"] == valid_register_data["email"]
+    assert "id" in response_json
+    assert response_json["account_role"] == "REGULAR"
+    assert response_json["account_subscription"] == "FREE"
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(
+            select(User).filter(User.email == valid_register_data["email"])
+        )
+        db_user = result.scalars().first()
+
+        assert db_user is not None
+        assert db_user.username == valid_register_data["username"]
+        assert db_user.email == valid_register_data["email"]
+        assert db_user.account_role == "REGULAR"
+        assert db_user.account_subscription == "FREE"
+        assert db_user.created_at is not None
+        assert pwd_context.verify(valid_register_data["password"], db_user.hashed_password)
+
+
+@pytest.mark.asyncio
+async def test_post_regitster_user_duplicate_username(client, valid_register_data):
+    response = client.post("/api/v1/auth/register", json=valid_register_data)
+    assert response.status_code == 201
+    assert response.json()["username"] == valid_register_data["username"]
+
+    duplicate_data = valid_register_data.copy()
+    duplicate_data["email"] = "different@example.com"
+    response = client.post("/api/v1/auth/register", json=duplicate_data)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail":"Username already taken"}
+
+
+@pytest.mark.asyncio
+async def test_logout_user(client, valid_register_data):
+    # 1. Zarejestruj i zaloguj użytkownika, aby uzyskać tokeny
+    client.post("/api/v1/auth/register", json=valid_register_data)
+    login_payload = {
+        "username": valid_register_data["email"],
+        "password": valid_register_data["password"]
+    }
+    login_response = client.post("/api/v1/auth/login", data=login_payload)
+    assert login_response.status_code == 200
+    tokens = login_response.json()
+    access_token = tokens["access_token"]
+    refresh_token = tokens["refresh_token"]
+
+    # 2. Sprawdź, czy chroniony endpoint działa
+    headers = {"Authorization": f"Bearer {access_token}"}
+    protected_response = client.get("/api/v1/data/test-data", headers=headers)
+    assert protected_response.status_code == 200
+
+    # 3. Wyloguj użytkownika
+    logout_response = client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert logout_response.status_code == 204
+
+     # 4. Sprawdź, czy odświeżenie tokena teraz zawiedzie
+    refresh_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert refresh_response.status_code == 401
+    assert "Invalid or expired refresh token" in refresh_response.json()["detail"]
+    
+
+
+
+
+
+===============================
+Ścieżka do pliku: ./tests/conftest.py
+
+Zawartość pliku:
+
+# tests/conftest.py
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from src.main import app
+from src.db.session import get_db
+from src.db.models.user import Base
+
+# Create an in-memory SQLite database for tests
+TEST_DATABASE_URL = "sqlite+aiosqlite:///test.db"
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=True)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession
+)
+
+# Override the get_db dependency to use the test database
+async def override_get_db():
+    async with TestingSessionLocal() as session:
+        yield session
+
+app.dependency_overrides[get_db] = override_get_db
+
+# Create a test client fixture
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+# Fixture to set up and tear down the database for each test
+@pytest.fixture(autouse=True, scope="function")
+async def setup_database():
+    # Create tables before each test
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)  # Ensure clean state
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Clean up after each test
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+===============================
+Ścieżka do pliku: ./systemd_files/install_systemd_service.sh
+
+Zawartość pliku:
+
+#!/bin/bash
+sudo apt install python3-poetry
+poetry config virtualenvs.in-project true
+poetry install
+
+sudo cp maia-auth.service /etc/systemd/system/maia-auth.service
+
+
+
+===============================
 Ścieżka do pliku: ./src/__init__.py
 
 Zawartość pliku:
@@ -46,8 +432,14 @@ async def get_current_user(
     
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id=token_data.user_id)
-    if user is None:
-        raise credentials_exception
+    
+    # [ZMIANA]: Sprawdzamy czy user istnieje ORAZ czy nie ma zbanowanego/usuniętego konta
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is deactivated or deleted"
+        )
+        
     return user
     
 
@@ -73,19 +465,16 @@ from src.db.models.refresh_token import RefreshToken
 from src.db.models.password_reset import PasswordResetToken
 from src.db.session import engine
 from src.api.v1.routers.health import health_router
+from src.api.v1.routers import users
 
 import yaml
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic: Create database tables
-    async with engine.begin() as conn:
-        # await conn.run_sync(Base.metadata.drop_all)  # Uncomment to reset DB if needed
-        await conn.run_sync(Base.metadata.create_all)
+    # Skoro mamy Alembica, aplikacja nie powinna sama tworzyć tabel!
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
     yield
-    # Shutdown logic (optional): Add cleanup tasks here if needed
-    # Example: await engine.dispose() to close the database connection
-    pass
 
 app = FastAPI(
     title="My Users Service", 
@@ -137,6 +526,7 @@ if settings.BACKEND_CORS_ORIGINS:
 app.include_router(auth.router)
 app.include_router(test.router)
 app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
+app.include_router(users.router)
 
 
 @app.get("/docs.yaml")
@@ -213,19 +603,18 @@ class Settings(BaseSettings):
     # --- CORS CONFIGURATION (PRO) ---
     # To pole wczyta string z .env i zamieni go na listę dzięki walidatorowi poniżej.
     # Domyślnie pusta lista (bezpieczeństwo).
-    BACKEND_CORS_ORIGINS: List[str] = []
+    # ZMIANA TUTAJ:
+    # Zmieniamy List[str] na Union[List[str], str].
+    # Dzięki temu Pydantic nie wymusza JSON-a na starcie, a walidator i tak zamieni to na listę.
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
-        """
-        Parsuje string z .env (np. 'http://a.com,http://b.com') na listę Pythona.
-        """
+        # Ta logika jest poprawna i teraz zadziała, bo Pydantic dopuścił stringa na wejściu
         if isinstance(v, str) and not v.startswith("["):
-            # Rozdzielamy po przecinku i usuwamy białe znaki
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, (list, str)):
-            # Jeśli już jest listą (np. z pliku yaml) lub JSON stringiem, zwracamy jak jest
             return v
         raise ValueError(v)
 
@@ -736,6 +1125,53 @@ async def reset_password(
 
 
 ===============================
+Ścieżka do pliku: ./src/api/v1/routers/users.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, Depends, status, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.db.session import get_db
+from src.db.models.user import User as UserDb
+from src.dependencies import get_current_user
+from src.db.repository.user_repository import UserRepository
+from src.db.repository.refresh_token_repository import RefreshTokenRepository
+from src.api.v1.schemas import user as user_schema
+
+# Tworzymy oddzielny router do zarządzania profilami użytkowników
+router = APIRouter(prefix="/api/v1/users", tags=["Users"])
+
+@router.get("/me", response_model=user_schema.UserPublic)
+async def read_users_me(current_user: UserDb = Depends(get_current_user)):
+    """
+    Pobiera dane aktualnie zalogowanego użytkownika.
+    """
+    return current_user
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_me(
+    current_user: UserDb = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Trwale usuwa konto aktualnie zalogowanego użytkownika.
+    Operacja wykorzystuje bezpieczne 'Soft Delete' z anonimizacją danych.
+    """
+    user_repo = UserRepository(db)
+    refresh_token_repo = RefreshTokenRepository(db)
+    
+    # 1. Wyloguj użytkownika ze wszystkich urządzeń (usuń Refresh Tokeny)
+    await refresh_token_repo.delete_all_for_user(current_user.id)
+    
+    # 2. Zastosuj anonimizację i Soft Delete na koncie
+    await user_repo.soft_delete_user(current_user)
+    
+    # Zwracamy 204 No Content (Standard HTTP przy udanym usunięciu zasobu)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+===============================
 Ścieżka do pliku: ./src/api/v1/routers/test.py
 
 Zawartość pliku:
@@ -1044,7 +1480,7 @@ Zawartość pliku:
 
 import uuid
 import enum
-from sqlalchemy import Column, String, DateTime, func, Enum, Index
+from sqlalchemy import Column, String, DateTime, func, Enum, Index, Boolean
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -1071,6 +1507,11 @@ class User(Base):
 
     account_subscription = Column(Enum(AccountSubscription), default=AccountSubscription.FREE, nullable=False)
     subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # --- [ZMIANA]: SOFT DELETE FIELDS ---
+    is_active = Column(Boolean, default=True, nullable=False) # Określa czy konto działa
+    deleted_at = Column(DateTime(timezone=True), nullable=True) # Data usunięcia konta
+    # ------------------------------------
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -1200,6 +1641,9 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, func
+from datetime import datetime, timezone
+import uuid
+
 from src.db.models.user import User
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
@@ -1210,9 +1654,11 @@ class UserRepository:
         self.db = db_session
 
     async def get_by_email(self, email: str) -> Optional[User]:
-        # Email jest zawsze lowercase (wymuszone w schemas), ale dla bezpieczeństwa:
         email_lower = email.lower()
-        result = await self.db.execute(select(User).filter(User.email == email_lower))
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
+        result = await self.db.execute(
+            select(User).filter(User.email == email_lower, User.is_active == True)
+        )
         return result.scalars().first()
     
 
@@ -1222,14 +1668,19 @@ class UserRepository:
         Dla wejścia 'tom' znajdzie użytkownika 'Tom'.
         """
         username_lower = username.lower()
-        # Porównujemy lower(db_column) == lower(input)
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
         result = await self.db.execute(
-            select(User).filter(func.lower(User.username) == username_lower)
+            select(User).filter(
+                func.lower(User.username) == username_lower,
+                User.is_active == True
+            )
         )
         return result.scalars().first()
     
     async def get_by_id(self, user_id: str) -> Optional[User]:
         result = await self.db.execute(select(User).filter(User.id == user_id))
+        # [ZMIANA UWAGA]: Celowo nie sprawdzamy tu is_active, 
+        # bo system może potrzebować pobrać usuniętego usera np. żeby wyświetlić "Konto Usunięte" w komentarzach.
         return result.scalars().first()
     
 
@@ -1239,14 +1690,15 @@ class UserRepository:
         (w obu przypadkach case-insensitive).
         """
         identifier_lower = identifier.lower()
-
         # Szukamy po emailu LUB po username (ignorując wielkość liter w obu przypadkach)
+        # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
         result = await self.db.execute(
             select(User).filter(
                 or_(
                     User.email == identifier_lower,
                     func.lower(User.username) == identifier_lower
-                )
+                ),
+                User.is_active == True
             )
         )
         return result.scalars().first()
@@ -1314,5 +1766,278 @@ class UserRepository:
             if new_username.lower() not in existing_set:
                 return new_username
             counter += 1
+
+    # --- [ZMIANA]: NOWA METODA - PROFESJONALNE USUWANIE KONTA ---
+    async def soft_delete_user(self, user: User) -> None:
+        """
+        Soft Delete + Anonimizacja danych (Zgodność z RODO/GDPR).
+        Zwalnia email i username dla przyszłych rejestracji innych osób.
+        """
+        random_suffix = uuid.uuid4().hex[:8]
+        
+        # 1. Anonimizacja danych wrażliwych
+        # email musi być unikalny, więc dodajemy UUID, ale wciąż musi mieć format maila wg Pydantic (jeśli gdzieś validujemy baze)
+        user.email = f"deleted_{user.id}@anonymized.local" 
+        # Zmieniamy username, by uwolnić oryginalny nick
+        user.username = f"DeletedUser_{random_suffix}" 
+        # Kasujemy hasło, nikt się już nie zaloguje
+        user.hashed_password = "DELETED_ACCOUNT" 
+        
+        # 2. Ustawienie flag usunięcia
+        user.is_active = False
+        user.deleted_at = datetime.now(timezone.utc)
+
+        # Zapis do bazy
+        self.db.add(user)
+        await self.db.commit()
+
+
+===============================
+Ścieżka do pliku: ./migrations/env.py
+
+Zawartość pliku:
+
+from logging.config import fileConfig
+from sqlalchemy.ext.asyncio import create_async_engine
+from alembic import context
+from src.db.models.user import Base  # Importuj klasę Base z modeli
+from src.core.config import settings  # Importuj ustawienia z DATABASE_URL
+from src.db.models.refresh_token import RefreshToken
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# add your model's MetaData object here
+# for 'autogenerate' support
+target_metadata = Base.metadata
+
+def run_migrations_offline() -> None:
+    """Run migrations in 'offline' mode."""
+    url = settings.DATABASE_URL
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+async def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
+    connectable = create_async_engine(settings.DATABASE_URL, echo=True)
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(
+            lambda sync_conn: context.configure(
+                connection=sync_conn,
+                target_metadata=target_metadata,
+                render_as_batch=True
+            )
+        )
+
+        async with context.begin_transaction():
+            await connection.run_sync(lambda sync_conn: context.run_migrations())
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    import asyncio
+    asyncio.run(run_migrations_online())
+
+
+===============================
+Ścieżka do pliku: ./migrations/versions/57c457fd2492_add_case_insensitive_username_index.py
+
+Zawartość pliku:
+
+"""add case insensitive username index
+
+Revision ID: 57c457fd2492
+Revises: 82e631a4ad32
+Create Date: 2026-02-02 20:58:58.583350
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = '57c457fd2492'
+down_revision: Union[str, None] = '82e631a4ad32'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    # 1. Modyfikujemy tylko tabelę users
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        # Usuwamy stary, zwykły indeks (case-sensitive)
+        # UWAGA: Upewnij się, że nazwa 'ix_users_username' jest poprawna. 
+        # Jeśli masz wątpliwości, sprawdź w DB Browser for SQLite lub innym narzędziu.
+        batch_op.drop_index('ix_users_username')
+
+        # 2. Tworzymy nowy indeks funkcyjny (case-insensitive)
+        # Ręcznie dodajemy sa.text('lower(username)')
+        batch_op.create_index(
+            'ix_users_username_lower',
+            [sa.text('lower(username)')], 
+            unique=True
+        )
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        # Usuwamy nasz nowy indeks
+        batch_op.drop_index('ix_users_username_lower')
+
+        # Przywracamy stary indeks
+        batch_op.create_index('ix_users_username', ['username'], unique=True)
+
+
+===============================
+Ścieżka do pliku: ./migrations/versions/82e631a4ad32_update_user_model.py
+
+Zawartość pliku:
+
+"""Update User model
+
+Revision ID: 82e631a4ad32
+Revises: 
+Create Date: 2025-06-13 14:44:17.004060
+
+"""
+from typing import Sequence, Union
+from alembic import op
+import sqlalchemy as sa
+import enum
+
+# revision identifiers, used by Alembic.
+revision: str = '82e631a4ad32'
+down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+class AccountRole(enum.Enum):
+    ADMIN = "ADMIN"
+    MODERATOR = "MODERATOR"
+    REGULAR = "REGULAR"
+
+class AccountSubscription(enum.Enum):
+    FREE = "FREE"
+    PRO = "PRO"
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    # Utwórz tymczasową tabelę z nowym schematem
+    op.create_table(
+        'users_temp',
+        sa.Column('id', sa.String(), primary_key=True),
+        sa.Column('username', sa.String(), nullable=False),
+        sa.Column('email', sa.String(), nullable=False),
+        sa.Column('hashed_password', sa.String(), nullable=False),
+        sa.Column('account_role', sa.Enum(AccountRole, name='accountrole'), nullable=False),
+        sa.Column('account_subscription', sa.Enum(AccountSubscription, name='accountsubscription'), nullable=False),
+        sa.Column('subscription_expires_at', sa.DateTime(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    )
+
+    # Skopiuj dane z istniejącej tabeli
+    op.execute(
+        """
+        INSERT INTO users_temp (id, username, email, hashed_password, account_role, account_subscription, subscription_expires_at, created_at, updated_at)
+        SELECT CAST(id AS TEXT), '', '', '', 'REGULAR', 'FREE', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        FROM users
+        """
+    )
+
+    # Usuń starą tabelę
+    op.drop_table('users')
+
+    # Zmień nazwę tymczasowej tabeli
+    op.rename_table('users_temp', 'users')
+
+    # Dodaj indeksy
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    # Utwórz tymczasową tabelę ze starym schematem
+    op.create_table(
+        'users_temp',
+        sa.Column('id', sa.NUMERIC(), primary_key=True),
+    )
+
+    # Skopiuj dane z powrotem
+    op.execute(
+        """
+        INSERT INTO users_temp (id)
+        SELECT CAST(id AS NUMERIC) FROM users
+        """
+    )
+
+    # Usuń nową tabelę
+    op.drop_table('users')
+
+    # Zmień nazwę tymczasowej tabeli
+    op.rename_table('users_temp', 'users')
+
+    # Usuń indeks
+
+
+===============================
+Ścieżka do pliku: ./migrations/versions/21befe77be08_add_soft_delete_to_user.py
+
+Zawartość pliku:
+
+"""add_soft_delete_to_user
+
+Revision ID: 21befe77be08
+Revises: 57c457fd2492
+Create Date: 2026-02-23 20:18:50.186397
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = '21befe77be08'
+down_revision: Union[str, None] = '57c457fd2492'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    # [ZMIANA]: Usunięto kod kasujący tabelę password_reset_tokens!
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        # [ZMIANA]: Dodano server_default='1', aby zapobiec błędowi w SQLite
+        batch_op.add_column(sa.Column('is_active', sa.Boolean(), nullable=False, server_default='1'))
+        batch_op.add_column(sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    # ### commands auto generated by Alembic - please adjust! ###
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        batch_op.drop_column('deleted_at')
+        batch_op.drop_column('is_active')
+
 
 

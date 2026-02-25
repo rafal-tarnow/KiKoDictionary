@@ -12,19 +12,16 @@ from src.db.models.refresh_token import RefreshToken
 from src.db.models.password_reset import PasswordResetToken
 from src.db.session import engine
 from src.api.v1.routers.health import health_router
+from src.api.v1.routers import users
 
 import yaml
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic: Create database tables
-    async with engine.begin() as conn:
-        # await conn.run_sync(Base.metadata.drop_all)  # Uncomment to reset DB if needed
-        await conn.run_sync(Base.metadata.create_all)
+    # Skoro mamy Alembica, aplikacja nie powinna sama tworzyć tabel!
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
     yield
-    # Shutdown logic (optional): Add cleanup tasks here if needed
-    # Example: await engine.dispose() to close the database connection
-    pass
 
 app = FastAPI(
     title="My Users Service", 
@@ -76,6 +73,7 @@ if settings.BACKEND_CORS_ORIGINS:
 app.include_router(auth.router)
 app.include_router(test.router)
 app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
+app.include_router(users.router)
 
 
 @app.get("/docs.yaml")
