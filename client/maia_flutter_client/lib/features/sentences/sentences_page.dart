@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/sentences_provider.dart';
-import 'presentation/add_sentence_dialog.dart';
+import 'presentation/widgets/sentence_form_dialog.dart';
 import 'presentation/widgets/sentence_tile.dart';
 
 class SentencesPage extends ConsumerWidget {
@@ -21,7 +21,7 @@ class SentencesPage extends ConsumerWidget {
         onPressed: () {
           showDialog(
             context: context,
-            builder: (context) => const AddSentenceDialog(),
+            builder: (context) => const SentenceFormDialog(),
           );
         },
         child: const Icon(Icons.add),

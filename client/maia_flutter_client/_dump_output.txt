@@ -960,13 +960,11 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
   
   final _sentenceController = TextEditingController();
   final _translationController = TextEditingController();
-  final _languageController = TextEditingController(text: 'EN');
 
   @override
   void dispose() {
     _sentenceController.dispose();
     _translationController.dispose();
-    _languageController.dispose();
     super.dispose();
   }
 
@@ -975,7 +973,7 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
     if (_formKey.currentState!.validate()) {
       final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
             sentence: _sentenceController.text, // Może być pusty string
-            language: _languageController.text,
+            language: 'en',
             translation: _translationController.text, // Może być pusty string
           );
 
@@ -1037,16 +1035,38 @@ class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _languageController,
-                decoration: const InputDecoration(labelText: 'Język (np. EN)'),
-                enabled: !isLoading,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
-                  return null;
-                },
+              const SizedBox(height: 16),
+              // --- ZMIANA: Skopiowany wygląd z EditSentenceDialog ---
+              // Zastąpiono TextFormField statycznym, ładnym wskaźnikiem języka
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.language, color: Colors.grey, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Język: ',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.light 
+                            ? Colors.grey.shade200 
+                            : Colors.grey.shade700,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'EN', // ZMIANA: Ustawione na sztywno
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              // --- KONIEC ZMIANY ---
             ],
           ),
         ),

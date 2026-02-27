@@ -1,63 +1,78 @@
+// ==========================================
+// NOWY PLIK: sentence_form_dialog.dart
+// ==========================================
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/sentence_model.dart';
-import 'edit_sentence_controller.dart';
-import '../../../core/app_sizes.dart';
+import '../../../../core/app_sizes.dart';
+import '../../data/sentence_model.dart';
+import '../add_sentence_controller.dart';
+import '../edit_sentence_controller.dart';
 
-class EditSentenceDialog extends ConsumerStatefulWidget {
-  final Sentence sentence; // Przyjmujemy obiekt do edycji
+class SentenceFormDialog extends ConsumerStatefulWidget {
+  // Jeśli sentence jest null -> jesteśmy w trybie DODAWANIA
+  // Jeśli sentence nie jest null -> jesteśmy w trybie EDYCJI
+  final Sentence? sentence;
 
-  const EditSentenceDialog({super.key, required this.sentence});
+  const SentenceFormDialog({super.key, this.sentence});
 
   @override
-  ConsumerState<EditSentenceDialog> createState() => _EditSentenceDialogState();
+  ConsumerState<SentenceFormDialog> createState() => _SentenceFormDialogState();
 }
 
-class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
+class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   final _formKey = GlobalKey<FormState>();
   
-  // Kontrolery
   late TextEditingController _sentenceController;
   late TextEditingController _translationController;
-  late TextEditingController _languageController;
+
+  // Właściwość pomocnicza określająca w jakim trybie jesteśmy
+  bool get _isEditMode => widget.sentence != null;
 
   @override
   void initState() {
     super.initState();
-    // Inicjalizujemy kontrolery wartościami z obiektu przekazanego w konstruktorze
-    _sentenceController = TextEditingController(text: widget.sentence.sentence);
-    _translationController = TextEditingController(text: widget.sentence.translation);
-    _languageController = TextEditingController(text: widget.sentence.language);
+    // Inicjalizujemy kontrolery. Jeśli to edycja - wpisujemy stare dane.
+    _sentenceController = TextEditingController(text: _isEditMode ? widget.sentence!.sentence : '');
+    _translationController = TextEditingController(text: _isEditMode ? widget.sentence!.translation : '');
   }
 
   @override
   void dispose() {
     _sentenceController.dispose();
     _translationController.dispose();
-    _languageController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Pobieramy notifiera kontrolera
-    final controller = ref.read(editSentenceControllerProvider.notifier);
+    bool success = false;
 
-    final success = await controller.editSentence(
-      id: widget.sentence.id,
-      sentence: _sentenceController.text,
-      translation: _translationController.text,
-      language: _languageController.text,
-    );
+    if (_isEditMode) {
+      // LOGIKA EDYCJI
+      final controller = ref.read(editSentenceControllerProvider.notifier);
+      success = await controller.editSentence(
+        id: widget.sentence!.id,
+        sentence: _sentenceController.text,
+        translation: _translationController.text,
+        language: widget.sentence!.language, // Zachowujemy obecny język
+      );
+    } else {
+      // LOGIKA DODAWANIA
+      final controller = ref.read(addSentenceControllerProvider.notifier);
+      success = await controller.addSentence(
+        sentence: _sentenceController.text,
+        translation: _translationController.text,
+        language: 'en', // Domyślnie angielski przy dodawaniu
+      );
+    }
 
-    // Sprawdzamy mounted zanim użyjemy contextu po await (C++ safety rule!)
     if (success && mounted) {
       Navigator.of(context).pop(); // Zamykamy dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Zaktualizowano zdanie'),
-          behavior: SnackBarBehavior.floating, // Wygląda lepiej
+        SnackBar(
+          content: Text(_isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!'),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -65,30 +80,41 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(editSentenceControllerProvider);
-    final isLoading = asyncState.isLoading;
+    // Obserwujemy stan odpowiedniego kontrolera w zależności od trybu
+    final isLoading = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).isLoading 
+        : ref.watch(addSentenceControllerProvider).isLoading;
+        
+    final hasError = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).hasError 
+        : ref.watch(addSentenceControllerProvider).hasError;
+        
+    final errorText = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).error?.toString() 
+        : ref.watch(addSentenceControllerProvider).error?.toString();
+
+    // Tytuł zależy od trybu
+    final titleText = _isEditMode ? "Edytuj zdanie #${widget.sentence!.id}" : "Dodaj nowe zdanie";
 
     return Dialog(
-      // Dialog zamiast AlertDialog, żeby mieć większą kontrolę nad layoutem
       insetPadding: const EdgeInsets.all(16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth*0.9), // Max szerokość na tabletach
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth * 0.9),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisSize: MainAxisSize.min, // Dialog zajmie tyle ile trzeba
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  "Edytuj zdanie #${widget.sentence.id}",
+                  titleText,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 24),
                 
-                // Obsługa błędu
-                if (asyncState.hasError)
+                if (hasError)
                   Container(
                     padding: const EdgeInsets.all(8),
                     margin: const EdgeInsets.only(bottom: 16),
@@ -98,12 +124,11 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                       border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Text(
-                      'Błąd: ${asyncState.error}',
+                      'Błąd: $errorText',
                       style: TextStyle(color: Colors.red.shade800),
                     ),
                   ),
 
-                // Lista pól w Flexible/ScrollView na wypadek małego ekranu/klawiatury
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
@@ -111,22 +136,29 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                         TextFormField(
                           controller: _sentenceController,
                           decoration: const InputDecoration(
-                            labelText: 'Oryginał',
+                            labelText: '🌍 Native Language',
+                            hintText: 'e.g. Meaning in your language',
                             border: OutlineInputBorder(),
-                            alignLabelWithHint: true, // Ważne przy multiline
+                            alignLabelWithHint: true,
                           ),
                           enabled: !isLoading,
-                          minLines: 3, // Domyślnie wysokie na 3 linie
-                          maxLines: null, // Rozszerza się w nieskończoność
+                          minLines: 3,
+                          maxLines: null,
                           keyboardType: TextInputType.multiline,
-                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                          validator: (value) {
+                            if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                              return 'Wypełnij zdanie LUB tłumaczenie';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         
                         TextFormField(
                           controller: _translationController,
                           decoration: const InputDecoration(
-                            labelText: 'Tłumaczenie',
+                            labelText: '🇬🇧 English',
+                            hintText: 'e.g. The weather is beautiful today.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
@@ -134,14 +166,17 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                           minLines: 2,
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
-                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                          validator: (value) {
+                            if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                              return 'Wypełnij zdanie LUB tłumaczenie';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         
-                        // --- ZMIANA: Zwykły Label informacyjny ---
-                        // Zamiast pola tekstowego pokazujemy po prostu informację
                         Padding(
-                          padding: const EdgeInsets.only(left: 4.0), // Lekkie wcięcie, żeby zrównać z labelami inputów
+                          padding: const EdgeInsets.only(left: 4.0),
                           child: Row(
                             children: [
                               const Icon(Icons.language, color: Colors.grey, size: 20),
@@ -161,27 +196,13 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  widget.sentence.language.toUpperCase(),
+                                  _isEditMode ? widget.sentence!.language.toUpperCase() : 'EN',
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
-                        /* 
-                        // --- Oryginalna wersja edycyjna (zakomentowana) ---
-                        TextFormField(
-                          controller: _languageController,
-                          decoration: const InputDecoration(
-                            labelText: 'Język',
-                            border: OutlineInputBorder(),
-                            helperText: 'Kod języka, np. en, de, es', //ISO 639-1 
-                          ),
-                          enabled: !isLoading,
-                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
-                        ),
-                        */
                       ],
                     ),
                   ),
@@ -189,7 +210,6 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                 
                 const SizedBox(height: 24),
                 
-                // Przyciski akcji
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -198,7 +218,7 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                       child: const Text('Anuluj'),
                     ),
                     const SizedBox(width: 8),
-                    FilledButton( // FilledButton to nowy standard Material 3 (zamiast ElevatedButton)
+                    FilledButton(
                       onPressed: isLoading ? null : _submit,
                       child: isLoading
                           ? const SizedBox(
@@ -209,7 +229,7 @@ class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Zapisz zmiany'),
+                          : Text(_isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie'),
                     ),
                   ],
                 )
