@@ -183,282 +183,208 @@ class MyApp extends StatelessWidget {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/login_page.dart
+Ścieżka do pliku: ./lib/features/sentences/sentences_app_bar.dart
 
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
-import 'controllers/login_controller.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
+import './presentation/sentences_provider.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  const SentencesAppBar({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy stan, aby np. pokazać inny spinner na przycisku odświeżania,
+    // jeśli trwa ładowanie (opcjonalny bajer, tutaj prosta wersja).
+    final state = ref.watch(sentencesProvider);
+    final sentencesNotifier = ref.read(sentencesProvider.notifier);
+
+    return AppBar(
+      title: const Text("Sentences"),
+      elevation: 2,
+      actions: [
+        // Przycisk Odśwież
+        IconButton(
+          icon: state.isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54,)
+                )
+              : const Icon(Icons.refresh),
+          tooltip: "Odśwież listę",
+          onPressed: state.isLoading 
+              ? null // Zablokuj, jeśli już ładuje
+              : () {
+                  // Tu wywołujemy logikę "Backendu"
+                  sentencesNotifier.refreshCurrentPage();
+                },
+        ),
+        // Opcjonalnie inne przyciski, np. sortowanie
+        // IconButton(icon: Icon(Icons.filter_list), onPressed: () {}),
+        const UserAvatarButton(),
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
 
-  // W UI nazywamy to _emailCtrl, żeby wiedzieć co wpisuje user,
-  // ale do controllera przekażemy to jako "username" (zgodnie ze standardem OAuth2).
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
 
-  // Lokalny stan widoku (dla ukrywania hasła)
-  bool _isPasswordVisible = false;
+Zawartość pliku:
 
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
-  }
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'presentation/sentences_provider.dart';
+import 'presentation/add_sentence_dialog.dart';
+import 'presentation/widgets/sentence_tile.dart';
 
-  Future<void> _submit() async {
-    // 1. Walidacja formularza
-    if (!_formKey.currentState!.validate()) return;
-
-    // Ukryj klawiaturę (UX)
-    FocusScope.of(context).unfocus();
-
-    // Zapisz stan autofill (dla password managerów)
-    TextInput.finishAutofillContext();
-
-    // 2. Wywołanie logiki biznesowej
-    // Używamy read, bo wykonujemy akcję jednorazową
-    final success = await ref
-        .read(loginControllerProvider.notifier)
-        .login(_emailCtrl.text.trim(), _passCtrl.text);
-
-    // 3. Obsługa wyniku (tylko nawigacja/sukces, błędy są w stanie authState)
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Zalogowano pomyślnie!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      // Przekierowanie na stronę główną (Index 0)
-      ref.read(navigationIndexProvider.notifier).state = 0;
-    }
-  }
+class SentencesPage extends ConsumerWidget {
+  const SentencesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // ZMIANA: Obserwujemy tylko stan logowania (nie globalny auth)
-    final loginState = ref.watch(loginControllerProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sentencesState = ref.watch(sentencesProvider);
+    final notifier = ref.read(sentencesProvider.notifier);
 
     return Scaffold(
-      // AppBar opcjonalny, zależy czy strona jest w Drawerze czy osobno
-      // Tutaj zakładam, że będzie w MainShell, więc AppBar dostarczy shell.
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      //backgroundColor: Colors.transparent,
+      //backgroundColor: Colors.red,
+      backgroundColor: const Color(0xFFFFFFFF),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const AddSentenceDialog(),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            border: Border(
+              top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton.icon(
+                onPressed:
+                    sentencesState.currentPage > 1 && !sentencesState.isLoading
+                    ? () => notifier.previousPage()
+                    : null,
+                icon: const Icon(Icons.arrow_back),
+                label: const Text("Poprzednia"),
+              ),
+
+              Text(
+                "Strona ${sentencesState.currentPage}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              ElevatedButton.icon(
+                onPressed:
+                    !sentencesState.isLastPage && !sentencesState.isLoading
+                    ? () => notifier.nextPage()
+                    : null,
+                label: const Text("Następna"),
+                icon: const Icon(Icons.arrow_forward),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      body: Column(
+        children: [
+          if (sentencesState.errorMessage != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.red.shade100,
+              width: double.infinity,
+              child: Row(
                 children: [
-                  // --- Nagłówek ---
-                  const Icon(
-                    Icons.lock_person_outlined,
-                    size: 80,
-                    color: Colors.deepPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    "Witaj ponownie!",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Text(
+                      'Błąd: ${sentencesState.errorMessage}',
+                      style: TextStyle(color: Colors.red.shade900),
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Zaloguj się, aby kontynuować naukę.",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // --- Email Field ---
-                  TextFormField(
-                    controller: _emailCtrl,
-                    // Logika UI wymusza email
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(
-                      labelText: "Adres email",
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                      hintText: "np. tom@example.com",
-                    ),
-                    textInputAction: TextInputAction.next, // Przycisk "Dalej"
-                    enabled: !loginState.isLoading,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Wpisz adres email';
-                      }
-                      // Walidacja formatu
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return 'Niepoprawny format email';
-                      }
-                      return null;
+                  // Przycisk "Ponów" bezpośrednio przy błędzie
+                  TextButton.icon(
+                    onPressed: () {
+                      notifier.refreshCurrentPage();
                     },
+                    icon: Icon(Icons.refresh, color: Colors.red.shade900),
+                    label: Text(
+                      "Ponów",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
 
-                  // --- Password Field ---
-                  TextFormField(
-                    controller: _passCtrl,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: "Hasło",
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
+          // Container(
+          //   padding: const EdgeInsets.all(8),
+          //   color: Colors.red.shade100,
+          //   width: double.infinity,
+          //   child: Text(
+          //     'Błąd: ${sentencesState.errorMessage}',
+          //     style: const TextStyle(color: Colors.red),
+          //   ),
+          // ),
+          Expanded(
+            child: sentencesState.isLoading && sentencesState.sentences.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : sentencesState.sentences.isEmpty
+                ? const Center(child: Text("Brak zdań do wyświetlenia."))
+                : Stack(
+                    children: [
+                      ListView.separated(
+                        itemCount: sentencesState.sentences.length,
+                        padding: const EdgeInsets.all(8),
+                        separatorBuilder: (context, index) {
+                          return Divider(
+                            height: 16,
+                            thickness: 0.5,
+                            color: Colors.grey.shade400,
+                            indent: 8,
+                            endIndent: 8,
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final item = sentencesState.sentences[index];
+                          // --- UŻYCIE NOWEGO WIDGETU ---
+                          return SentenceTile(sentence: item);
                         },
                       ),
-                    ),
-                    textInputAction: TextInputAction.done, // Przycisk "Gotowe"
-                    onFieldSubmitted: (_) => _submit(), // Enter zatwierdza
-                    enabled: !loginState.isLoading,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Wpisz hasło';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  // ================= NOWY FRAGMENT START =================
-                  // Mały odstęp od pola hasła
-                  const SizedBox(height: 8),
-
-                  // Link "Zapomniałeś hasła?" wyrównany do prawej
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: loginState.isLoading
-                          ? null
-                          : () {
-                              ref.read(navigationIndexProvider.notifier).state = 9; // Index nowej strony
-                            },
-                      style: TextButton.styleFrom(
-                        // Zmniejszamy minimalny rozmiar i padding, żeby tekst
-                        // ładnie licował się z prawą krawędzią pola tekstowego
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                      if (sentencesState.isLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(minHeight: 4),
                         ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor:
-                            Colors.deepPurple, // Spójność z motywem
-                      ),
-                      child: const Text(
-                        "Zapomniałeś hasła?",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  // ================= NOWY FRAGMENT END =================
-                  const SizedBox(height: 24),
-
-                  // --- Error Message Display ---
-                  // Wyświetlamy błąd globalny z Controllera (np. 401 Unauthorized)
-                  if (loginState.error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                loginState.error!,
-                                style: TextStyle(color: Colors.red.shade900),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // --- Submit Button ---
-                  FilledButton(
-                    onPressed: loginState.isLoading ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16),
-                    ),
-                    child: loginState.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text("ZALOGUJ SIĘ"),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- Link do rejestracji ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Nie masz konta?"),
-                      TextButton(
-                        onPressed: loginState.isLoading
-                            ? null
-                            : () {
-                                // Nawigacja do rejestracji (Index 4 w AppShell)
-                                ref
-                                        .read(navigationIndexProvider.notifier)
-                                        .state =
-                                    4;
-                              },
-                        child: const Text("Zarejestruj się"),
-                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -467,1396 +393,406 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/forgot_password_page.dart
+Ścieżka do pliku: ./lib/features/sentences/presentation/delete_sentence_controller.dart
 
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
-import 'controllers/forgot_password_controller.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
 
-class ForgotPasswordPage extends ConsumerStatefulWidget {
-  const ForgotPasswordPage({super.key});
+// Używamy prostego Providera, a nie StateNotifier, bo ten kontroler
+// nie przechowuje stanu (stateless logic), tylko wykonuje akcję.
+final deleteSentenceControllerProvider = Provider((ref) {
+  return DeleteSentenceController(ref);
+});
 
-  @override
-  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
-}
+class DeleteSentenceController {
+  final Ref _ref;
 
-class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
+  DeleteSentenceController(this._ref);
 
-  // Indeks strony logowania w MainShell (według app.dart jest to 5)
-  static const int _loginPageIndex = 5;
+  Future<void> deleteSentence({
+    required BuildContext context,
+    required int sentenceId,
+  }) async {
+    // 1. "Fire and forget" logic from UI perspective (dialog już zamknięty)
+    
+    final repo = _ref.read(sentencesRepositoryProvider);
+    final notifier = _ref.read(sentencesProvider.notifier);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    super.dispose();
-  }
+    try {
+      // Wywołanie API (asynchronicznie)
+      await repo.deleteSentence(sentenceId);
+      if (!context.mounted) return;
+      // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
+      notifier.removeSentenceLocally(sentenceId);
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Ukrywamy klawiaturę
-    FocusScope.of(context).unfocus();
-
-    // Wywołujemy logikę z kontrolera
-    final success = await ref
-        .read(forgotPasswordControllerProvider.notifier)
-        .sendResetLink(_emailCtrl.text.trim());
-
-    if (success && mounted) {
-      // Opcjonalnie: czyścimy pole po sukcesie
-      _emailCtrl.clear();
-      
-      // SnackBar jako dodatkowe potwierdzenie
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Feedback dla użytkownika (Snackbar)
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
-          content: Text('Link został wysłany! Sprawdź skrzynkę e-mail.'),
+          content: Text('Usunięto zdanie.'),
           backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
         ),
       );
-      // Opcjonalnie: Powrót do logowania po sukcesie
-      // ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
-    }
-  }
-
-  void _navigateToLogin() {
-    ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(forgotPasswordControllerProvider);
-
-    return Scaffold(
-      // AppBar jest opcjonalny, jeśli strona jest w MainShell, 
-      // ale dla ForgotPassword często chcemy "czysty" ekran bez menu.
-      // Tutaj zostawiam body, bo MainShell dostarcza AppBar.
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // --- 1. Linia powrotu ---
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: state.isLoading ? null : _navigateToLogin,
-                      icon: const Icon(Icons.arrow_back, size: 20),
-                      label: const Text("Powrót do logowania"),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero, // Zmniejsza padding, by wyrównać do lewej
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-
-                  // --- 2. Ikona (Email) ---
-                  Icon(
-                    state.isSuccess ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
-                    size: 80,
-                    color: state.isSuccess ? Colors.green : Colors.deepPurple,
-                  ),
-                  
-                  const SizedBox(height: 24),
-
-                  // --- 3. Nagłówek ---
-                  Text(
-                    state.isSuccess ? "Sprawdź skrzynkę" : "Przypomnij hasło",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: 8),
-
-                  // --- 4. Podtytuł (Instrukcja) ---
-                  Text(
-                    state.isSuccess 
-                      ? "Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do resetowania hasła."
-                      : "Podaj adres email, na który wyślemy link do\nresetowania hasła.",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // --- 5. Pole Email ---
-                  // Ukrywamy pole lub blokujemy po sukcesie, żeby użytkownik skupił się na komunikacie
-                  if (!state.isSuccess)
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      enabled: !state.isLoading,
-                      decoration: const InputDecoration(
-                        labelText: "Adres email",
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                        hintText: "np. tom@example.com",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Wpisz adres email';
-                        }
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Niepoprawny format email';
-                        }
-                        return null;
-                      },
-                    ),
-
-                  const SizedBox(height: 24),
-
-                  // --- Wyświetlanie błędu ---
-                  if (state.error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                state.error!,
-                                style: TextStyle(color: Colors.red.shade900),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // --- 6. Przycisk Akcji ---
-                  if (!state.isSuccess)
-                    FilledButton(
-                      onPressed: state.isLoading ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
-                      child: state.isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text("WYŚLIJ LINK RESETUJĄCY"),
-                    )
-                  else
-                    // Przycisk powrotu do logowania po sukcesie
-                    FilledButton.icon(
-                      onPressed: _navigateToLogin,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.green,
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
-                      icon: const Icon(Icons.login),
-                      label: const Text("WRÓĆ DO LOGOWANIA"),
-                    ),
-                ],
-              ),
-            ),
-          ),
+    } catch (e) {
+      // Obsługa błędu
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Błąd usuwania: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+    }
   }
 }
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/register_page.dart
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_create_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart'; // Potrzebne, żeby odświeżyć listę po sukcesie
+
+// Controller zarządza stanem operacji dodawania.
+// AsyncValue<void> oznacza, że operacja nie zwraca wartości, ale śledzimy jej status.
+class AddSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref; // Ref pozwala nam wchodzić w interakcję z innymi providerami
+
+  AddSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
+
+  Future<bool> addSentence({
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
+    state = const AsyncValue.loading();
+
+    try {
+      final dto = SentenceCreate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      await _repository.createSentence(dto);
+
+      // --- ZMIANA ---
+      // Zamiast zabijać providera (invalidate), prosimy go o odświeżenie danych.
+      // Dzięki temu zachowujemy numer strony.
+      await _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+      
+      // Jeśli wolałbyś skakać do ostatniej strony (bo tam dodał się element),
+      // odkomentuj metodę w providerze i użyj tutaj:
+      // await _ref.read(sentencesProvider.notifier).goToLastPage();
+
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      // 4. Błąd
+      state = AsyncValue.error(e, stack);
+      return false;
+    }
+  }
+}
+
+// Rejestracja providera
+final addSentenceControllerProvider = 
+    StateNotifierProvider<AddSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return AddSentenceController(repo, ref);
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_update_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+
+// Używamy StateNotifier do zarządzania stanem asynchronicznym (loading/error/data)
+// AsyncValue<void> informuje UI czy trwa zapisywanie.
+class EditSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref;
+
+  EditSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null));
+
+  Future<bool> editSentence({
+    required int id,
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    state = const AsyncValue.loading(); // Pokaż spinner
+
+    try {
+      final dto = SentenceUpdate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      // 1. Wywołanie API
+      final updatedSentence = await _repository.updateSentence(id: id, data: dto);
+
+      // 2. Aktualizacja lokalnego stanu listy (nie musimy odświeżać całej strony!)
+      _ref.read(sentencesProvider.notifier).updateSentenceLocally(updatedSentence);
+
+      state = const AsyncValue.data(null); // Sukces
+      return true;
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack); // Błąd
+      return false;
+    }
+  }
+}
+
+final editSentenceControllerProvider = 
+    StateNotifierProvider<EditSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return EditSentenceController(repo, ref);
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_dialog.dart
 
 Zawartość pliku:
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
-import '../../captcha/presentation/widgets/captcha_box.dart';
-import '../../captcha/presentation/captcha_controller.dart';
-import 'controllers/register_controller.dart';
+import '../data/sentence_model.dart';
+import 'edit_sentence_controller.dart';
+import '../../../core/app_sizes.dart';
 
-class RegisterPage extends ConsumerStatefulWidget {
-  const RegisterPage({super.key});
+class EditSentenceDialog extends ConsumerStatefulWidget {
+  final Sentence sentence; // Przyjmujemy obiekt do edycji
+
+  const EditSentenceDialog({super.key, required this.sentence});
 
   @override
-  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<EditSentenceDialog> createState() => _EditSentenceDialogState();
 }
 
-class _RegisterPageState extends ConsumerState<RegisterPage> {
+class _EditSentenceDialogState extends ConsumerState<EditSentenceDialog> {
   final _formKey = GlobalKey<FormState>();
-
+  
   // Kontrolery
-  final _emailCtrl = TextEditingController();
-  final _userCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _captchaInputCtrl = TextEditingController();
-
-  // Lokalny stan widoku
-  bool _isPasswordVisible = false;
+  late TextEditingController _sentenceController;
+  late TextEditingController _translationController;
+  late TextEditingController _languageController;
 
   @override
   void initState() {
     super.initState();
-    // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
-    _userCtrl.addListener(() {
-      final regState = ref.read(registerControllerProvider);
-      // Sprawdzamy stan rejestracji
-      if (regState.usernameSuggestion != null || regState.error != null) {
-        // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
-        // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
-        ref.read(registerControllerProvider.notifier).clearSuggestion();
-      }
-    });
+    // Inicjalizujemy kontrolery wartościami z obiektu przekazanego w konstruktorze
+    _sentenceController = TextEditingController(text: widget.sentence.sentence);
+    _translationController = TextEditingController(text: widget.sentence.translation);
+    _languageController = TextEditingController(text: widget.sentence.language);
   }
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _userCtrl.dispose();
-    _passCtrl.dispose();
-    _captchaInputCtrl.dispose();
+    _sentenceController.dispose();
+    _translationController.dispose();
+    _languageController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    // 1. Walidacja lokalna formularza
     if (!_formKey.currentState!.validate()) return;
 
-    // 2. Walidacja czy captcha w ogóle załadowana
-    final captchaState = ref.read(captchaControllerProvider);
-    if (captchaState.captcha == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Błąd Captchy. Odśwież obrazek.')),
-      );
-      return;
-    }
+    // Pobieramy notifiera kontrolera
+    final controller = ref.read(editSentenceControllerProvider.notifier);
 
-    // UX: Ukryj klawiaturę
-    FocusScope.of(context).unfocus();
+    final success = await controller.editSentence(
+      id: widget.sentence.id,
+      sentence: _sentenceController.text,
+      translation: _translationController.text,
+      language: _languageController.text,
+    );
 
-    // 3. Strzał do API
-    final success = await ref
-        .read(registerControllerProvider.notifier)
-        .register(
-          email: _emailCtrl.text,
-          username: _userCtrl.text,
-          password: _passCtrl.text,
-          captchaId: captchaState.captcha!.id,
-          captchaAnswer: _captchaInputCtrl.text,
-        );
-
-    // 4. Obsługa wyniku
+    // Sprawdzamy mounted zanim użyjemy contextu po await (C++ safety rule!)
     if (success && mounted) {
+      Navigator.of(context).pop(); // Zamykamy dialog
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Konto założone! Możesz się zalogować.'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
+          content: Text('Zaktualizowano zdanie'),
+          behavior: SnackBarBehavior.floating, // Wygląda lepiej
         ),
       );
-
-      // Czyścimy formularz
-      _emailCtrl.clear();
-      _userCtrl.clear();
-      _passCtrl.clear();
-      _captchaInputCtrl.clear();
-
-      // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationIndexProvider.notifier).state = 5;
-
-      // Pobranie nowej captchy "na zaś"
-      ref.read(captchaControllerProvider.notifier).fetchCaptcha();
-    } else {
-      // W przypadku błędu (np. zły kod captcha), musimy pobrać nowy obrazek,
-      // bo stary token na serwerze został "spalony" przy próbie weryfikacji.
-      if (mounted) {
-        _captchaInputCtrl.clear();
-        ref.read(captchaControllerProvider.notifier).fetchCaptcha();
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ZMIANA: Watchujemy stan rejestracji
-    final regState = ref.watch(registerControllerProvider);
+    final asyncState = ref.watch(editSentenceControllerProvider);
+    final isLoading = asyncState.isLoading;
 
-    return Scaffold(
-      // Body jest centrowane i scrollowalne - identycznie jak w LoginPage
-      body: Center(
-        child: SingleChildScrollView(
+    return Dialog(
+      // Dialog zamiast AlertDialog, żeby mieć większą kontrolę nad layoutem
+      insetPadding: const EdgeInsets.all(16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth*0.9), // Max szerokość na tabletach
+        child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // --- NAGŁÓWEK ---
-                  const Icon(
-                    Icons.person_add_alt_1_outlined,
-                    size: 80,
-                    color: Colors.deepPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    "Utwórz konto",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // Dialog zajmie tyle ile trzeba
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Edytuj zdanie #${widget.sentence.id}",
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 24),
+                
+                // Obsługa błędu
+                if (asyncState.hasError)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
                     ),
-                    textAlign: TextAlign.center,
+                    child: Text(
+                      'Błąd: ${asyncState.error}',
+                      style: TextStyle(color: Colors.red.shade800),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Dołącz do nas i zacznij naukę.",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
 
-                  // --- EMAIL ---
-                  TextFormField(
-                    controller: _emailCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Adres email",
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    enabled: !regState.isLoading,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz email';
-                      if (!v.contains('@')) return 'Niepoprawny format email';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // --- USERNAME ---
-                  TextFormField(
-                    controller: _userCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Nazwa użytkownika",
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.next,
-                    enabled: !regState.isLoading,
-                    validator: (v) {
-                      if (v == null || v.isEmpty){
-                        return 'Wpisz nazwę użytkownika';
-                      }
-                      if (v.length < 3){
-                        return 'Minimum 3 znaki';
-                      }
-                      return null;
-                    },
-                  ),
-                  //------------------ USERNAME SUGGESTION ---------
-                  if (regState.usernameSuggestion != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: InkWell(
-                        onTap: () {
-                          // Wpisujemy sugestię do pola
-                          _userCtrl.text = regState.usernameSuggestion!;
-                          // Czyścimy błąd w kontrolerze
-                          ref
-                              .read(registerControllerProvider.notifier)
-                              .clearSuggestion();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
+                // Lista pól w Flexible/ScrollView na wypadek małego ekranu/klawiatury
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _sentenceController,
+                          decoration: const InputDecoration(
+                            labelText: 'Oryginał',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true, // Ważne przy multiline
                           ),
+                          enabled: !isLoading,
+                          minLines: 3, // Domyślnie wysokie na 3 linie
+                          maxLines: null, // Rozszerza się w nieskończoność
+                          keyboardType: TextInputType.multiline,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _translationController,
+                          decoration: const InputDecoration(
+                            labelText: 'Tłumaczenie',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                          ),
+                          enabled: !isLoading,
+                          minLines: 2,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // --- ZMIANA: Zwykły Label informacyjny ---
+                        // Zamiast pola tekstowego pokazujemy po prostu informację
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0), // Lekkie wcięcie, żeby zrównać z labelami inputów
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.info_outline,
-                                color: Colors.blue,
-                              ),
+                              const Icon(Icons.language, color: Colors.grey, size: 20),
                               const SizedBox(width: 8),
-                              Expanded(
+                              Text(
+                                'Język: ',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.light 
+                                      ? Colors.grey.shade200 
+                                      : Colors.grey.shade700,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                                 child: Text(
-                                  "Login zajęty. Kliknij, aby użyć: ${regState.usernameSuggestion}",
-                                  style: TextStyle(color: Colors.blue.shade900),
+                                  widget.sentence.language.toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  //------------------------------------------------
-                  const SizedBox(height: 16),
 
-                  // --- HASŁO (z okiem) ---
-                  TextFormField(
-                    controller: _passCtrl,
-                    obscureText: !_isPasswordVisible, // Logika ukrywania
-                    decoration: InputDecoration(
-                      labelText: "Hasło",
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: const OutlineInputBorder(),
-                      // Ikona oka
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                        /* 
+                        // --- Oryginalna wersja edycyjna (zakomentowana) ---
+                        TextFormField(
+                          controller: _languageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Język',
+                            border: OutlineInputBorder(),
+                            helperText: 'Kod języka, np. en, de, es', //ISO 639-1 
+                          ),
+                          enabled: !isLoading,
+                          //validator: (v) => v!.isEmpty ? 'Pole wymagane' : null,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
+                        */
+                      ],
                     ),
-                    textInputAction: TextInputAction.next,
-                    enabled: !regState.isLoading,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz hasło';
-
-                      // Sprawdzamy wszystkie warunki naraz
-                      bool hasMinLength = v.length >= 6;
-                      bool hasDigit = RegExp(r'\d').hasMatch(v);
-                      bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(v);
-
-                      // Jeśli którykolwiek warunek nie jest spełniony, zwracamy pełną instrukcję
-                      // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
-                      // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
-                      if (!hasMinLength || !hasDigit || !hasLetter) {
-                        return 'Hasło musi mieć min. 6 znaków, literę i cyfrę';
-                      }
-
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 24),
-
-                  // --- CAPTCHA ---
-                  const Text(
-                    "Weryfikacja bezpieczeństwa",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  CaptchaBox(answerController: _captchaInputCtrl),
-
-                  const SizedBox(height: 24),
-
-                  // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if (regState.error != null &&
-                      regState.usernameSuggestion == null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                regState.error!,
-                                style: TextStyle(color: Colors.red.shade900),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // --- PRZYCISK REJESTRACJI ---
-                  FilledButton(
-                    onPressed: regState.isLoading ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16),
-                    ),
-                    child: regState.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text("UTWÓRZ KONTO"),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- LINK DO LOGOWANIA ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Masz już konto?"),
-                      TextButton(
-                        onPressed: regState.isLoading
-                            ? null
-                            : () {
-                                // Nawigacja do logowania (Index 5 w AppShell)
-                                ref
-                                        .read(navigationIndexProvider.notifier)
-                                        .state =
-                                    5;
-                              },
-                        child: const Text("Zaloguj się"),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/controllers/register_controller.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_error_handler.dart';
-import '../../data/auth_repository.dart';
-import '../../domain/exceptions/auth_exceptions.dart';
-
-class RegisterState {
-  final bool isLoading;
-  final String? error;
-  final String? usernameSuggestion;
-
-  const RegisterState({
-    this.isLoading = false, 
-    this.error, 
-    this.usernameSuggestion
-  });
-
-  RegisterState copyWith({bool? isLoading, String? error, String? usernameSuggestion}) {
-    return RegisterState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error, 
-      usernameSuggestion: usernameSuggestion,
-    );
-  }
-  
-  // Helper do czyszczenia sugestii
-  RegisterState clearSuggestion() {
-    return RegisterState(isLoading: isLoading, error: null, usernameSuggestion: null);
-  }
-}
-
-class RegisterController extends StateNotifier<RegisterState> {
-  final AuthRepository _authRepository;
-
-  RegisterController(this._authRepository) : super(const RegisterState());
-
-  void clearSuggestion() {
-    if (state.usernameSuggestion != null || state.error != null) {
-      state = state.clearSuggestion();
-    }
-  }
-
-  Future<bool> register({
-    required String email,
-    required String username,
-    required String password,
-    required String captchaId,
-    required String captchaAnswer,
-  }) async {
-    state = const RegisterState(isLoading: true); // Reset stanu przy starcie
-
-    try {
-      await _authRepository.register(
-        email: email,
-        username: username,
-        password: password,
-        captchaId: captchaId,
-        captchaAnswer: captchaAnswer,
-      );
-      state = state.copyWith(isLoading: false);
-      // Rejestracja zazwyczaj nie loguje z automatu (chyba że API tak działa),
-      // więc nie ustawiamy tutaj authController.setAuthenticated(true).
-      // Zwracamy true, żeby UI wiedział o sukcesie.
-      return true;
-    } on UsernameTakenException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.message,
-        usernameSuggestion: e.suggestion,
-      );
-      return false;
-    } catch (e) {
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      state = state.copyWith(isLoading: false, error: msg);
-      return false;
-    }
-  }
-}
-
-final registerControllerProvider = StateNotifierProvider.autoDispose<RegisterController, RegisterState>((ref) {
-  return RegisterController(ref.watch(authRepositoryProvider));
-});
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/controllers/forgot_password_controller.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_error_handler.dart';
-import '../../data/auth_repository.dart';
-
-// Stan widoku
-class ForgotPasswordState {
-  final bool isLoading;
-  final String? error;
-  final bool isSuccess;
-
-  const ForgotPasswordState({
-    this.isLoading = false,
-    this.error,
-    this.isSuccess = false,
-  });
-
-  ForgotPasswordState copyWith({
-    bool? isLoading,
-    String? error, 
-    bool? isSuccess,
-  }) {
-    return ForgotPasswordState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      isSuccess: isSuccess ?? this.isSuccess,
-    );
-  }
-}
-
-class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
-  final AuthRepository _authRepository;
-
-  ForgotPasswordController(this._authRepository) : super(const ForgotPasswordState());
-
-  Future<bool> sendResetLink(String email) async {
-    // Reset stanu przed akcją (czyścimy też error z poprzedniej próby)
-    state = const ForgotPasswordState(isLoading: true, error: null);
-
-    try {
-      await _authRepository.forgotPassword(email);
-      
-      // Sukces (Status 202 Accepted)
-      state = state.copyWith(isLoading: false, isSuccess: true);
-      return true;
-    } catch (e) {
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      state = state.copyWith(isLoading: false, error: msg);
-      return false;
-    }
-  }
-
-  void resetState() {
-    state = const ForgotPasswordState();
-  }
-}
-
-// Provider
-final forgotPasswordControllerProvider = 
-    StateNotifierProvider.autoDispose<ForgotPasswordController, ForgotPasswordState>((ref) {
-  return ForgotPasswordController(ref.watch(authRepositoryProvider));
-});
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/controllers/login_controller.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_error_handler.dart';
-import '../../data/auth_repository.dart';
-import '../../data/token_storage.dart';
-import 'auth_controller.dart';
-
-// Stan formularza logowania
-class LoginState {
-  final bool isLoading;
-  final String? error;
-
-  const LoginState({this.isLoading = false, this.error});
-
-  LoginState copyWith({bool? isLoading, String? error}) {
-    // Uwaga: error: error (bez nulla) pozwala wyczyścić błąd przekazując null
-    return LoginState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error, 
-    );
-  }
-}
-
-class LoginController extends StateNotifier<LoginState> {
-  final AuthRepository _authRepository;
-  final TokenStorage _tokenStorage;
-  // Potrzebujemy dostępu do AuthController, żeby zmienić stan globalny po sukcesie
-  final AuthController _authController;
-
-  LoginController(this._authRepository, this._tokenStorage, this._authController)
-      : super(const LoginState());
-
-  Future<bool> login(String username, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      final token = await _authRepository.login(
-        username: username, 
-        password: password
-      );
-      
-      await _tokenStorage.saveToken(token);
-      
-      // Sukces lokalny
-      state = state.copyWith(isLoading: false);
-      
-      // Aktualizacja stanu globalnego aplikacji
-      _authController.setAuthenticated(true);
-      
-      return true;
-    } catch (e) {
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      state = state.copyWith(isLoading: false, error: msg);
-      return false;
-    }
-  }
-}
-
-// Używamy autoDispose, aby stan czyścił się, gdy kontroler nie jest obserwowany 
-// (choć przy IndexedStack on "żyje", ale to dobra praktyka dla formularzy)
-final loginControllerProvider = StateNotifierProvider.autoDispose<LoginController, LoginState>((ref) {
-  return LoginController(
-    ref.watch(authRepositoryProvider),
-    ref.watch(tokenStorageProvider),
-    ref.read(authControllerProvider.notifier), // read, bo potrzebujemy metody, nie stanu
-  );
-});
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/controllers/auth_controller.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/auth_repository.dart';
-import '../../data/token_storage.dart';
-
-// Stan sesji: Interesuje nas tylko czy user jest zalogowany
-class AuthState {
-  final bool isAuthenticated;
-  final bool isAppLoading; // Do splash screena przy starcie
-
-  const AuthState({
-    this.isAuthenticated = false,
-    this.isAppLoading = true, // Domyślnie true, bo przy starcie sprawdzamy storage
-  });
-}
-
-class AuthController extends StateNotifier<AuthState> {
-  final AuthRepository _repository;
-  final TokenStorage _storage;
-
-  AuthController(this._repository, this._storage) : super(const AuthState()) {
-    checkAuthStatus();
-  }
-
-  // Sprawdza przy starcie apki, czy mamy token
-  Future<void> checkAuthStatus() async {
-    final token = await _storage.getToken();
-    if (token != null) {
-      // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
-      state = const AuthState(isAuthenticated: true, isAppLoading: false);
-    } else {
-      state = const AuthState(isAuthenticated: false, isAppLoading: false);
-    }
-  }
-
-  // Metoda wywoływana przez LoginController/RegisterController po sukcesie
-  void setAuthenticated(bool isAuthenticated) {
-    state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
-  }
-
-  Future<void> logout() async {
-    final token = await _storage.getToken();
-    if (token != null) {
-      try {
-        await _repository.logout(token.refreshToken);
-      } catch (_) {
-        // Ignorujemy błędy sieciowe przy wylogowaniu
-      }
-    }
-    await _storage.clearToken();
-    state = const AuthState(isAuthenticated: false, isAppLoading: false);
-  }
-}
-
-// Globalny provider stanu autentykacji
-final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
-  (ref) {
-    return AuthController(
-      ref.watch(authRepositoryProvider),
-      ref.watch(tokenStorageProvider),
-    );
-  },
-);
-
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/presentation/widgets/user_avatar_button.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/navigation_provider.dart';
-import '../controllers/auth_controller.dart';
-
-class UserAvatarButton extends ConsumerWidget {
-  const UserAvatarButton({super.key});
-
-  static const int _loginPageIndex = 5;
-  static const int _settingsPageIndex = 10;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final bool isLoggedIn = authState.isAuthenticated;
-
-    // --- STAN: ZALOGOWANY (Menu Popup) ---
-    if (isLoggedIn) {
-      return Padding(
-        padding: const EdgeInsets.only(right: 8.0),
-        child: PopupMenuButton<String>(
-          offset: const Offset(0, 50),
-          tooltip: 'Menu użytkownika',
-          // Zaokrąglenie samego okienka menu
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          
-          // KLUCZOWA ZMIANA:
-          // Używamy parametru 'icon' zamiast 'child'.
-          // Dzięki temu Flutter traktuje to jako standardową ikonę na pasku
-          // i automatycznie dodaje okrągły efekt "ink splash" przy kliknięciu/najechaniu.
-          icon: CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.deepPurple.shade100,
-            child: const Icon(Icons.person, color: Colors.deepPurple, size: 20),
-          ),
-          
-          onSelected: (value) {
-            // OBSŁUGA KLIKNIĘCIA
-            if (value == 'logout') {
-              _handleLogout(context, ref);
-            } else if (value == 'settings') {
-              ref.read(navigationIndexProvider.notifier).state = _settingsPageIndex;
-            }
-          },
-          
-          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-            const PopupMenuItem<String>(
-              enabled: false,
-              child: Text(
-                "Moje Konto", 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
-              ),
-            ),
-
-            const PopupMenuItem<String>(
-              value: 'settings', // To musi pasować do warunku w onSelected
-              child: Row(
-                children: [
-                  Icon(Icons.settings, color: Colors.black87, size: 20), // Spójna ikona
-                  SizedBox(width: 12),
-                  Text('Ustawienia', style: TextStyle(color: Colors.black87)),
-                ],
-              ),
-            ),
-            
-            const PopupMenuDivider(),
-            const PopupMenuItem<String>(
-              value: 'logout',
-              child: Row(
-                children: [
-                  Icon(Icons.logout, color: Colors.red, size: 20),
-                  SizedBox(width: 12),
-                  Text('Wyloguj się', style: TextStyle(color: Colors.black87)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // --- STAN: NIEZALOGOWANY (Przycisk Logowania) ---
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: IconButton(
-        tooltip: "Zaloguj się",
-        // Tutaj też używamy standardowego IconButton, który ma okrągły splash
-        icon: CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.grey.shade200,
-          child: Icon(Icons.login, color: Colors.grey.shade700, size: 20),
-        ),
-        onPressed: () {
-          ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
-        },
-      ),
-    );
-  }
-
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    await ref.read(authControllerProvider.notifier).logout();
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Wylogowano pomyślnie"),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-    
-    ref.read(navigationIndexProvider.notifier).state = 0;
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/domain/exceptions/auth_exceptions.dart
-
-Zawartość pliku:
-
-class UsernameTakenException implements Exception {
-  final String message;
-  final String suggestion;
-
-  UsernameTakenException({
-    required this.message, 
-    required this.suggestion
-  });
-
-  @override
-  String toString() => message;
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/data/auth_repository.dart
-
-Zawartość pliku:
-
-import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ZMIANA: Importujemy provider dedykowany dla auth
-import 'auth_dio_provider.dart'; 
-import 'models/auth_token.dart';
-import "../domain/exceptions/auth_exceptions.dart";
-
-final authRepositoryProvider = Provider((ref) {
-  // ZMIANA: Watchujemy authDioProvider zamiast głównego dioProvider
-  final dio = ref.watch(authDioProvider); 
-  return AuthRepository(dio);
-});
-
-class AuthRepository {
-  final Dio _dio;
-
-  AuthRepository(this._dio);
-
-  // Logowanie: x-www-form-urlencoded
-  Future<AuthToken> login({required String username, required String password}) async {
-    try {
-      final response = await _dio.post(
-        '/api/v1/auth/login',
-        data: {
-          'username': username,
-          'password': password,
-          'grant_type': 'password', // Wymagane przez OAuth2PasswordBearer
-        },
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType, // WAŻNE!
-        ),
-      );
-      return AuthToken.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Rejestracja: application/json
-Future<void> register({
-    required String email,
-    required String username,
-    required String password,
-    required String captchaId,
-    required String captchaAnswer,
-  }) async {
-    try {
-      await _dio.post(
-        '/api/v1/auth/register',
-        data: {
-          'email': email,
-          'username': username,
-          'password': password,
-          'captcha_id': captchaId,
-          'captcha_answer': captchaAnswer,
-        },
-      );
-    } on DioException catch (e) {
-      // Sprawdzamy, czy to konflikt (409) i czy backend przysłał sugestię
-      if (e.response?.statusCode == 409) {
-        final data = e.response?.data;
-        if (data is Map && data['detail'] is Map) {
-          final suggestion = data['detail']['suggestion'];
-          
-          if (suggestion != null) {
-            // Rzucamy nasz specjalny wyjątek z sugestią
-            throw UsernameTakenException(
-              message: "Nazwa użytkownika jest zajęta.",
-              suggestion: suggestion.toString(),
-            );
-          }
-        }
-      }
-      // Jeśli to nie to, rzucamy błąd dalej (trafi do ApiErrorHandler)
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Wylogowanie
-  Future<void> logout(String refreshToken) async {
-      // API wymaga wysłania refresh tokena przy wylogowaniu
-      await _dio.post('/api/v1/auth/logout', data: {'refresh_token': refreshToken});
-  }
-
-  Future<void> forgotPassword(String email) async {
-    try {
-      // Endpoint zwraca 202 Accepted (nawet jeśli email nie istnieje - security practice)
-      // lub 422 jeśli format emaila jest błędny.
-      await _dio.post(
-        '/api/v1/auth/forgot-password',
-        data: {'email': email},
-      );
-    } catch (e) {
-      rethrow; // Błędy sieciowe/walidacyjne zostaną obsłużone w kontrolerze przez ApiErrorHandler
-    }
-  }
-
-  // ================= ZMIANA: NOWA METODA =================
-  // Zgodnie z dokumentacją: DELETE /api/v1/users/me
-  // Autoryzacja jest wymagana, `_dio` ma już podpięty interceptor z tokenem.
-  Future<void> deleteAccount() async {
-    try {
-      // Endpoint zwraca 204 No Content
-      await _dio.delete('/api/v1/users/me');
-    } catch (e) {
-      rethrow;
-    }
-  }
-  // ================= KONIEC ZMIANY =================
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/data/token_storage.dart
-
-Zawartość pliku:
-
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'models/auth_token.dart';
-
-final tokenStorageProvider = Provider((ref) => TokenStorage());
-
-class TokenStorage {
-  // POPRAWKA: Usuwamy parametr encryptedSharedPreferences.
-  // Dodajemy resetOnError: true -> to "Best Practice" w developmentzie.
-  // Jeśli klucze szyfrowania ulegną uszkodzeniu (np. przy reinstalacji apki w devie),
-  // magazyn zostanie zresetowany zamiast crashować aplikację.
-  final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      resetOnError: true, 
-    ),
-  );
-
-  static const _keyAccess = 'access_token';
-  static const _keyRefresh = 'refresh_token';
-
-  Future<void> saveToken(AuthToken token) async {
-    await _storage.write(key: _keyAccess, value: token.accessToken);
-    await _storage.write(key: _keyRefresh, value: token.refreshToken);
-  }
-
-  Future<AuthToken?> getToken() async {
-    // Odczyt może rzucić wyjątek jeśli klucze systemowe się zmienią, 
-    // dlatego warto otoczyć to try-catch w produkcyjnym kodzie, 
-    // ale resetOnError w opcjach wyżej załatwia większość problemów.
-    final access = await _storage.read(key: _keyAccess);
-    final refresh = await _storage.read(key: _keyRefresh);
-    
-    if (access != null && refresh != null) {
-      return AuthToken(accessToken: access, refreshToken: refresh);
-    }
-    return null;
-  }
-
-  Future<void> clearToken() async {
-    await _storage.delete(key: _keyAccess);
-    await _storage.delete(key: _keyRefresh);
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/data/auth_dio_provider.dart
-
-Zawartość pliku:
-
-import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/config/api_config.dart';
-import '../../../core/network/auth_interceptor_provider.dart';
-
-final authDioProvider = Provider<Dio>((ref) {
-  // 1. Konfiguracja bazowa
-  final dio = Dio(BaseOptions(
-    baseUrl: ApiConfig.authBaseUrl, // Używamy adresu z konfigu
-    connectTimeout: ApiConfig.connectTimeout,
-    receiveTimeout: ApiConfig.receiveTimeout,
-  ));
-
-  // 2. Dodajemy wspólny interceptor autentykacji
-  // (Potrzebny np. do endpointu /logout lub /users/me)
-  final authInterceptor = ref.watch(authInterceptorProvider);
-  dio.interceptors.add(authInterceptor);
-
-  // 3. Opcjonalnie: Dodaj PrettyDioLogger w trybie debug (jeśli używasz)
-  
-  return dio;
-});
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/data/models/auth_token.dart
-
-Zawartość pliku:
-
-class AuthToken {
-  final String accessToken;
-  final String refreshToken;
-
-  AuthToken({required this.accessToken, required this.refreshToken});
-
-  factory AuthToken.fromJson(Map<String, dynamic> json) {
-    return AuthToken(
-      accessToken: json['access_token'] as String,
-      refreshToken: json['refresh_token'] as String,
-    );
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/auth/data/models/user_model.dart
-
-Zawartość pliku:
-
-class User {
-  final String id;
-  final String username;
-  final String email;
-  final String role;
-
-  User({required this.id, required this.username, required this.email, required this.role});
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      username: json['username'],
-      email: json['email'],
-      role: json['account_role'],
-    );
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/captcha/captcha_page.dart
-
-Zawartość pliku:
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/widgets/main_drawer.dart';
-import 'presentation/captcha_controller.dart';
-import 'presentation/widgets/captcha_box.dart';
-
-class CaptchaPage extends ConsumerStatefulWidget {
-  const CaptchaPage({super.key});
-
-  @override
-  ConsumerState<CaptchaPage> createState() => _CaptchaPageState();
-}
-
-class _CaptchaPageState extends ConsumerState<CaptchaPage> {
-  final _captchaInputController = TextEditingController();
-
-  @override
-  void dispose() {
-    _captchaInputController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _verify() async {
-    // Ukrywamy klawiaturę
-    FocusScope.of(context).unfocus();
-    
-    final answer = _captchaInputController.text;
-    if (answer.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Wpisz kod!")),
-      );
-      return;
-    }
-
-    final success = await ref
-        .read(captchaControllerProvider.notifier)
-        .verifyCaptcha(answer);
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Captcha zweryfikowana pomyślnie!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Obserwujemy stan, aby wiedzieć np. czy trwa ładowanie
-    final captchaState = ref.watch(captchaControllerProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Captcha Test"),
-        elevation: 2,
-      ),
-      drawer: const MainDrawer(), // Dodajemy boczny pasek
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Demonstracja modułu Captcha",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Poniższy komponent jest niezależny i gotowy do użycia na ekranach logowania/rejestracji.",
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-
-            // --- REUŻYWALNY WIDGET CAPTCHA ---
-            CaptchaBox(
-              answerController: _captchaInputController,
-              onRefresh: () {
-                // Opcjonalny callback, np. logowanie zdarzenia
-                debugPrint("Użytkownik odświeżył captchę");
-              },
-            ),
-            // ---------------------------------
-
-            const SizedBox(height: 24),
-
-            // Przycisk "Verify" - specyficzny dla tej strony testowej
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: captchaState.isLoading ? null : _verify,
-                icon: const Icon(Icons.check_circle_outline),
-                label: captchaState.isLoading
-                    ? const SizedBox(
-                        width: 20, 
-                        height: 20, 
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      )
-                    : const Text("ZWERYFIKUJ CAPTCHĘ"),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-              ),
+                
+                const SizedBox(height: 24),
+                
+                // Przyciski akcji
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Anuluj'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton( // FilledButton to nowy standard Material 3 (zamiast ElevatedButton)
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Zapisz zmiany'),
+                    ),
+                  ],
+                )
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1865,271 +801,409 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/captcha/presentation/captcha_controller.dart
+Ścieżka do pliku: ./lib/features/sentences/presentation/sentences_provider.dart
 
 Zawartość pliku:
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/captcha_repository.dart';
-import '../data/models/captcha_model.dart';
-import '../../../../core/network/api_error_handler.dart';
+import '../data/sentence_model.dart';
+import '../data/sentences_repository.dart';
+import '../../../core/network/api_error_handler.dart';
 
-// Stan dla naszego kontrolera
-class CaptchaState {
-  final CaptchaModel? captcha; // Obecny obrazek i ID
+class SentencesState {
+  final List<Sentence> sentences;
   final bool isLoading;
   final String? errorMessage;
-  final bool? isVerified; // null = nie sprawdzano, true = ok, false = źle
+  final int currentPage;
+  final int totalPages;
 
-  const CaptchaState({
-    this.captcha,
+  const SentencesState({
+    this.sentences = const [],
     this.isLoading = false,
     this.errorMessage,
-    this.isVerified,
+    this.currentPage = 1,
+    this.totalPages = 1,
   });
 
-  CaptchaState copyWith({
-    CaptchaModel? captcha,
+  bool get isLastPage => currentPage >= totalPages;
+
+  SentencesState copyWith({
+    List<Sentence>? sentences,
     bool? isLoading,
     String? errorMessage,
-    bool? isVerified,
+    int? currentPage,
+    int? totalPages,
   }) {
-    return CaptchaState(
-      captcha: captcha ?? this.captcha,
+    return SentencesState(
+      sentences: sentences ?? this.sentences,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage, // Jeśli null to czyścimy błąd
-      isVerified: isVerified ?? this.isVerified,
+      errorMessage: errorMessage,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
     );
   }
 }
 
-class CaptchaController extends StateNotifier<CaptchaState> {
-  final CaptchaRepository _repository;
+class SentencesNotifier extends StateNotifier<SentencesState> {
+  final SentencesRepository _repository;
+  static const int _perPage = 10;
 
-  CaptchaController(this._repository) : super(const CaptchaState()) {
-    // Automatycznie pobierz captchę przy starcie
-    fetchCaptcha();
+  SentencesNotifier(this._repository) : super(const SentencesState()) {
+    loadSentences(page: 1);
   }
 
-  Future<void> fetchCaptcha() async {
-    state = state.copyWith(isLoading: true, errorMessage: null, isVerified: null);
-    try {
-      final captcha = await _repository.generateCaptcha();
-      state = state.copyWith(
-        isLoading: false,
-        captcha: captcha,
-        errorMessage: null,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: ApiErrorHandler.getErrorMessage(e),
-      );
-    }
-  }
+  Future<void> loadSentences({required int page}) async {
+    if (state.isLoading) return;
 
-  Future<bool> verifyCaptcha(String answer) async {
-    if (state.captcha == null) return false;
-
+    // Resetujemy błąd przy nowej próbie
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final isValid = await _repository.verifyCaptcha(
-        CaptchaVerifyRequest(id: state.captcha!.id, answer: answer),
+      final response = await _repository.getSentences(
+        page: page,
+        perPage: _perPage,
       );
 
       state = state.copyWith(
         isLoading: false,
-        isVerified: isValid,
+        sentences: response.sentences,
+        totalPages: response.totalPages,
+        currentPage: page,
+        errorMessage: null, // Sukces = brak błędu
       );
-      
-      // Jeśli walidacja nie przeszła, można automatycznie odświeżyć captchę, 
-      // bo zazwyczaj token jest jednorazowy.
-      if (!isValid) {
-         // Opcjonalnie: await fetchCaptcha(); 
-         // Wiele systemów wymaga nowej captchy po błędnej próbie.
-      }
-      
-      return isValid;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: ApiErrorHandler.getErrorMessage(e),
-        isVerified: false,
-      );
-      return false;
+      // TU JEST ZMIANA: Używamy naszego parsera błędów
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
+      state = state.copyWith(isLoading: false, errorMessage: friendlyMessage);
     }
   }
-  
-  // Metoda pomocnicza do resetowania stanu weryfikacji (np. gdy użytkownik zaczyna pisać)
-  void resetVerificationStatus() {
-    if (state.isVerified != null) {
-      state = state.copyWith(isVerified: null);
+
+  // --- NOWA METODA ---
+  // Odświeża aktualną stronę bez resetowania stanu do zera
+  Future<void> refreshCurrentPage() async {
+    // Ładujemy ponownie tę samą stronę, na której jesteśmy
+    await loadSentences(page: state.currentPage);
+  }
+
+  /* 
+  // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
+  Future<void> goToLastPage() async {
+     // Najpierw pobierzmy info (może doszła nowa strona?)
+     // To uproszczenie, w idealnym świecie API po dodaniu zwraca ID nowej strony
+     await loadSentences(page: state.totalPages);
+  }
+  */
+
+  void nextPage() {
+    if (!state.isLastPage) {
+      loadSentences(page: state.currentPage + 1);
     }
+  }
+
+  void previousPage() {
+    if (state.currentPage > 1) {
+      loadSentences(page: state.currentPage - 1);
+    }
+  }
+
+  // Usuwa element z lokalnego stanu (UI odświeży się natychmiast)
+  void removeSentenceLocally(int sentenceId) {
+    // std::remove_if w C++ style
+    final updatedList = state.sentences
+        .where((s) => s.id != sentenceId)
+        .toList();
+
+    state = state.copyWith(
+      sentences: updatedList,
+      // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
+    );
+  }
+
+  void updateSentenceLocally(Sentence updatedSentence) {
+    // Tworzymy nową listę, mapując starą
+    final newSentences = state.sentences.map((s) {
+      return s.id == updatedSentence.id ? updatedSentence : s;
+    }).toList();
+
+    // Emitujemy nowy stan
+    state = state.copyWith(sentences: newSentences);
   }
 }
 
-// Używamy .autoDispose, aby stan się czyścił po wyjściu z ekranu
-final captchaControllerProvider = 
-    StateNotifierProvider.autoDispose<CaptchaController, CaptchaState>((ref) {
-  final repo = ref.watch(captchaRepositoryProvider);
-  return CaptchaController(repo);
-});
+final sentencesProvider =
+    StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
+      final repository = ref.watch(sentencesRepositoryProvider);
+      return SentencesNotifier(repository);
+    });
+
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/captcha/presentation/widgets/captcha_box.dart
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_dialog.dart
 
 Zawartość pliku:
 
-import 'dart:convert'; // Do base64Decode
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../captcha_controller.dart';
+import 'add_sentence_controller.dart';
 
-class CaptchaBox extends ConsumerStatefulWidget {
-  final TextEditingController answerController;
-  final VoidCallback? onRefresh;
-
-  const CaptchaBox({
-    super.key, 
-    required this.answerController,
-    this.onRefresh,
-  });
+class AddSentenceDialog extends ConsumerStatefulWidget {
+  const AddSentenceDialog({super.key});
 
   @override
-  ConsumerState<CaptchaBox> createState() => _CaptchaBoxState();
+  ConsumerState<AddSentenceDialog> createState() => _AddSentenceDialogState();
 }
 
-class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
+class _AddSentenceDialogState extends ConsumerState<AddSentenceDialog> {
+  final _formKey = GlobalKey<FormState>();
   
+  final _sentenceController = TextEditingController();
+  final _translationController = TextEditingController();
+  final _languageController = TextEditingController(text: 'EN');
+
   @override
-  void initState() {
-    super.initState();
-    widget.answerController.addListener(() {
-      ref.read(captchaControllerProvider.notifier).resetVerificationStatus();
-    });
+  void dispose() {
+    _sentenceController.dispose();
+    _translationController.dispose();
+    _languageController.dispose();
+    super.dispose();
   }
 
-  // --- NOWA METODA POMOCNICZA ---
-  // Usuwa nagłówek "data:image/png;base64," jeśli istnieje
-  String _cleanBase64(String base64String) {
-    if (base64String.contains(',')) {
-      return base64String.split(',').last;
+  Future<void> _submit() async {
+    // Przed wysłaniem warto upewnić się, że formularz jest poprawny
+    if (_formKey.currentState!.validate()) {
+      final success = await ref.read(addSentenceControllerProvider.notifier).addSentence(
+            sentence: _sentenceController.text, // Może być pusty string
+            language: _languageController.text,
+            translation: _translationController.text, // Może być pusty string
+          );
+
+      if (success && mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dodano nowe zdanie!')),
+        );
+      }
     }
-    return base64String;
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(captchaControllerProvider);
-    final controller = ref.read(captchaControllerProvider.notifier);
+    final asyncState = ref.watch(addSentenceControllerProvider);
+    final isLoading = asyncState.isLoading;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Obrazek Captcha
-            Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: state.isLoading && state.captcha == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : state.captcha != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            // --- TUTAJ POPRAWKA ---
-                            // Używamy metody pomocniczej _cleanBase64
-                            base64Decode(_cleanBase64(state.captcha!.image)), 
-                            fit: BoxFit.contain, // Zmienione na contain, żeby nie ucinało tekstu captchy
-                            errorBuilder: (context, error, stackTrace) {
-                              debugPrint('Błąd wyświetlania obrazka: $error');
-                              return const Center(child: Icon(Icons.broken_image));
-                            },
-                          ),
-                        )
-                      : const Center(child: Text("Brak Captchy")),
-            ),
-
-            const SizedBox(height: 12),
-
-            // 2. Wiersz: Pole tekstowe + Przycisk odświeżania
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: widget.answerController,
-                    decoration: InputDecoration(
-                      labelText: 'Wpisz kod z obrazka',
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      enabledBorder: state.isVerified == false
-                          ? const OutlineInputBorder(borderSide: BorderSide(color: Colors.red))
-                          : null,
-                      focusedBorder: state.isVerified == false
-                          ? const OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2))
-                          : null,
-                    ),
+    return AlertDialog(
+      title: const Text('Dodaj nowe zdanie'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (asyncState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Błąd: ${asyncState.error}',
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: state.isLoading 
-                    ? null 
-                    : () {
-                        controller.fetchCaptcha();
-                        widget.answerController.clear();
-                        if(widget.onRefresh != null) widget.onRefresh!();
-                      },
-                  icon: state.isLoading
-                      ? const SizedBox(
-                          width: 20, 
-                          height: 20, 
-                          child: CircularProgressIndicator(strokeWidth: 2)
-                        )
-                      : const Icon(Icons.refresh),
-                  tooltip: "Nowy kod",
+                
+              TextFormField(
+                controller: _sentenceController,
+                decoration: const InputDecoration(labelText: 'Zdanie (np. Witaj Świecie)'),
+                enabled: !isLoading,
+                // ZMIANA TUTAJ:
+                validator: (value) {
+                  // Sprawdzamy, czy aktualne pole jest puste ORAZ czy drugie pole jest puste
+                  if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _translationController,
+                decoration: const InputDecoration(labelText: 'Tłumaczenie (np. Hello World)'),
+                enabled: !isLoading,
+                // ZMIANA TUTAJ:
+                validator: (value) {
+                  // To samo sprawdzenie w drugą stronę
+                  if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                    return 'Wypełnij zdanie LUB tłumaczenie';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _languageController,
+                decoration: const InputDecoration(labelText: 'Język (np. EN)'),
+                enabled: !isLoading,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Anuluj'),
+        ),
+        ElevatedButton(
+          onPressed: isLoading ? null : _submit,
+          child: isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2)
+                ) 
+              : const Text('Zapisz'),
+        ),
+      ],
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/sentence_model.dart';
+import '../delete_sentence_controller.dart';
+import '../edit_sentence_dialog.dart';
+
+class SentenceTile extends ConsumerWidget {
+  final Sentence sentence;
+
+  const SentenceTile({super.key, required this.sentence});
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Potwierdzenie"),
+        content: const Text("Usunąć to zdanie?"),
+        actions: [
+          // Przycisk "Nie"
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Zamknij dialog
+            },
+            child: const Text("Nie"),
+          ),
+          // Przycisk "Tak" - Czerwony
+          TextButton(
+            onPressed: () {
+              // 1. Najpierw zamykamy dialog
+              Navigator.of(ctx).pop();
+
+              // 2. Delegujemy operację do kontrolera
+              ref
+                  .read(deleteSentenceControllerProvider)
+                  .deleteSentence(context: context, sentenceId: sentence.id);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red, // Czerwony tekst
+            ),
+            child: const Text("Tak"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          child: Text(sentence.id.toString()),
+        ),
+        title: Text(
+          sentence.sentence,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              sentence.translation,
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.language, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  sentence.language,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
-            
-            // 3. Informacja o błędzie
-            if (state.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  state.errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ),
-              
-            if (state.isVerified == false)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Text(
-                  "Niepoprawny kod. Spróbuj ponownie.",
-                  style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-              
-             if (state.isVerified == true)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Text(
-                  "Kod poprawny!",
-                  style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
           ],
+        ),
+        isThreeLine: true,
+
+        // --- SEKCJA TRAILING (POPRAWIONA) ---
+        // Używamy FittedBox, aby uniknąć błędu "Bottom overflowed"
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown, // Skaluje w dół, jeśli brakuje miejsca
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Zajmuje tylko tyle miejsca ile trzeba
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. Ikona USUWANIA (Czerwona)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _showDeleteConfirmation(context, ref),
+                tooltip: 'Usuń zdanie',
+                // Ustawienia kompaktowe:
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32, // Lekko mniejsza ikona dla bezpieczeństwa
+              ),
+              
+              const SizedBox(height: 8), // Mniejszy odstęp (było 12, teraz 8)
+
+              // 2. Ikona EDYCJI (Niebieska)
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                   // TODO: Tu logika edycji
+                   debugPrint("Kliknięto edycję id: ${sentence.id}");
+                   showDialog(
+                     context: context,
+                     builder: (context) => EditSentenceDialog(sentence: sentence),
+                   );
+                },
+                tooltip: 'Edytuj zdanie',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2138,415 +1212,203 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
 
 
 ===============================
-Ścieżka do pliku: ./lib/features/captcha/data/captcha_dio_provider.dart
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_create_model.dart
 
 Zawartość pliku:
 
-import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+class SentenceCreate {
+  final String sentence;
+  final String language;
+  final String translation;
 
-// Provider dedykowany dla mikroserwisu Captcha (port 8001)
-final captchaDioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(
-    // Dostosuj adres IP do swojego środowiska (podobnie jak w dio_provider.dart)
-    // Jeśli używasz emulatora: http://10.0.2.2:8001
-    // Jeśli fizyczne urządzenie/web: Twój adres LAN lub domena
-    //baseUrl: 'http://127.0.0.1:8001', 
-    baseUrl: 'https://dev-captcha.rafal-kruszyna.org',
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
-  ));
-  return dio;
-});
+  const SentenceCreate({
+    required this.sentence,
+    required this.language,
+    required this.translation,
+  });
 
-
-===============================
-Ścieżka do pliku: ./lib/features/captcha/data/captcha_repository.dart
-
-Zawartość pliku:
-
-import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import './captcha_dio_provider.dart';
-import 'models/captcha_model.dart';
-
-// Provider repozytorium
-final captchaRepositoryProvider = Provider<CaptchaRepository>((ref) {
-  final dio = ref.watch(captchaDioProvider);
-  return CaptchaRepository(dio);
-});
-
-class CaptchaRepository {
-  final Dio _dio;
-
-  CaptchaRepository(this._dio);
-
-  Future<CaptchaModel> generateCaptcha() async {
-    try {
-      final response = await _dio.get('/api/v1/captcha');
-      return CaptchaModel.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<bool> verifyCaptcha(CaptchaVerifyRequest request) async {
-    try {
-      final response = await _dio.post(
-        '/api/v1/captcha/verify',
-        data: request.toJson(),
-      );
-      final result = CaptchaVerifyResponse.fromJson(response.data);
-      return result.isValid;
-    } catch (e) {
-      // Jeśli serwer zwróci 422 (błąd walidacji), to technicznie nie jest poprawna captcha
-      // Możesz tu obsłużyć to inaczej, ale na razie uznajmy to za false lub rzućmy błąd.
-      rethrow; 
-    }
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/captcha/data/models/captcha_model.dart
-
-Zawartość pliku:
-
-class CaptchaModel {
-  final String id; // UUID
-  final String image; // Base64 string
-
-  CaptchaModel({required this.id, required this.image});
-
-  factory CaptchaModel.fromJson(Map<String, dynamic> json) {
-    return CaptchaModel(
-      id: json['id'] as String,
-      image: json['image'] as String,
-    );
-  }
-}
-
-class CaptchaVerifyRequest {
-  final String id;
-  final String answer;
-
-  CaptchaVerifyRequest({required this.id, required this.answer});
-
+  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
+  // W C++ to byłaby metoda serializująca do QJsonObject.
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'answer': answer,
+      'sentence': sentence,
+      'language': language,
+      'translation': translation,
     };
   }
 }
 
-class CaptchaVerifyResponse {
-  final bool isValid;
-
-  CaptchaVerifyResponse({required this.isValid});
-
-  factory CaptchaVerifyResponse.fromJson(Map<String, dynamic> json) {
-    return CaptchaVerifyResponse(
-      isValid: json['is_valid'] as bool,
-    );
-  }
-}
-
 
 ===============================
-Ścieżka do pliku: ./lib/features/settings/presentation/settings_page.dart
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_model.dart
 
 Zawartość pliku:
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
-import 'controllers/settings_controller.dart';
+import 'package:equatable/equatable.dart';
 
-class SettingsPage extends ConsumerStatefulWidget {
-  const SettingsPage({super.key});
+// Equatable pozwala porównywać obiekty po wartościach pól, a nie referencji w pamięci.
+// To jak przeładowanie operatora == w C++.
+class Sentence extends Equatable {
+  final int id;
+  final String sentence;
+  final String language;
+  final String translation;
+  // created_at przychodzi jako string, w prawdziwym projekcie parsujemy to na DateTime
+  final String createdAt; 
 
-  @override
-  ConsumerState<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends ConsumerState<SettingsPage> {
-  
-  // Metoda wywołująca dialog z potwierdzeniem
-  Future<void> _confirmAccountDeletion(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red),
-              SizedBox(width: 12),
-              Text("Usuń konto"),
-            ],
-          ),
-          content: const Text(
-            "Czy na pewno chcesz usunąć swoje konto? "
-            "Operacja ta jest nieodwracalna. Wszystkie Twoje dane, "
-            "postępy w nauce i historia zostaną trwale zanonimizowane lub usunięte.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text("ANULUJ"),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text("TAK, USUŃ KONTO"),
-            ),
-          ],
-        );
-      },
-    );
-
-    // Jeśli użytkownik potwierdził w dialogu
-    if (confirmed == true && mounted) {
-      _executeDeletion();
-    }
-  }
-
-  Future<void> _executeDeletion() async {
-    final success = await ref.read(settingsControllerProvider.notifier).deleteAccount();
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Twoje konto zostało usunięte. Przykro nam, że odchodzisz!'),
-          backgroundColor: Colors.blueGrey,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      // Przekierowanie na stronę główną (Index 0) po wylogowaniu
-      ref.read(navigationIndexProvider.notifier).state = 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(settingsControllerProvider);
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600), // Lekko szersze na ustawienia
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // --- Nagłówek ---
-              const Row(
-                children: [
-                  Icon(Icons.settings, size: 32, color: Colors.deepPurple),
-                  SizedBox(width: 12),
-                  Text(
-                    "Ustawienia konta",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Tutaj w przyszłości pojawią się inne karty (np. Powiadomienia, Język)
-              Card(
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Preferencje",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Wkrótce pojawią się tutaj opcje konfiguracyjne aplikacji...",
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 48),
-
-              // ================= DANGER ZONE =================
-              const Text(
-                "Strefa niebezpieczna",
-                style: TextStyle(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.bold, 
-                  color: Colors.red,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.shade200, width: 2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.person_off_outlined, color: Colors.red.shade700, size: 28),
-                        const SizedBox(width: 12),
-                        Text(
-                          "Usunięcie konta",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Usunięcie konta spowoduje bezpowrotną utratę wszystkich danych związanych z Twoim profilem. "
-                      "Tej operacji nie można cofnąć.",
-                      style: TextStyle(color: Colors.red.shade900, height: 1.5),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Box z błędem wewnątrz Danger Zone (jeśli API wyrzuci błąd przy usuwaniu)
-                    if (state.error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error, color: Colors.red),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  state.error!,
-                                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    // Przycisk akcji
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: state.isLoading 
-                            ? null 
-                            : () => _confirmAccountDeletion(context),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        icon: state.isLoading 
-                            ? const SizedBox.shrink() 
-                            : const Icon(Icons.delete_forever),
-                        label: state.isLoading
-                            ? const SizedBox(
-                                width: 20, height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text("TRWALE USUŃ KONTO"),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // ================= END DANGER ZONE =================
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-===============================
-Ścieżka do pliku: ./lib/features/settings/presentation/controllers/settings_controller.dart
-
-Zawartość pliku:
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_error_handler.dart';
-import '../../../auth/data/auth_repository.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
-
-// Stan dla ustawień
-class SettingsState {
-  final bool isLoading;
-  final String? error;
-
-  const SettingsState({
-    this.isLoading = false,
-    this.error,
+  const Sentence({
+    required this.id,
+    required this.sentence,
+    required this.language,
+    required this.translation,
+    required this.createdAt,
   });
 
-  SettingsState copyWith({bool? isLoading, String? error}) {
-    return SettingsState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error, // Przekazanie nulla wyczyści błąd
+  // Factory constructor - w C++ to byłaby statyczna metoda "createFromJson"
+  factory Sentence.fromJson(Map<String, dynamic> json) {
+    return Sentence(
+      id: json['id'] as int,
+      sentence: json['sentence'] as String,
+      language: json['language'] as String,
+      translation: json['translation'] as String,
+      createdAt: json['created_at'] as String,
     );
   }
+
+  @override
+  List<Object?> get props => [id, sentence, language, translation, createdAt];
 }
 
-class SettingsController extends StateNotifier<SettingsState> {
-  final AuthRepository _repository;
-  final AuthController _authController;
 
-  SettingsController(this._repository, this._authController) : super(const SettingsState());
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentences_repository.dart
 
-  Future<bool> deleteAccount() async {
-    state = const SettingsState(isLoading: true, error: null);
+Zawartość pliku:
 
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/dio_provider.dart';
+import 'sentence_model.dart';
+import 'sentence_create_model.dart';
+import 'sentence_update_model.dart';
+
+// Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
+class SentencesResponse {
+  final List<Sentence> sentences;
+  final int totalPages;
+
+  SentencesResponse(this.sentences, this.totalPages);
+}
+
+final sentencesRepositoryProvider = Provider<SentencesRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return SentencesRepository(dio);
+});
+
+class SentencesRepository {
+  final Dio _dio;
+
+  SentencesRepository(this._dio);
+
+  // Zmieniamy typ zwracany na naszą strukturę SentencesResponse
+  Future<SentencesResponse> getSentences({required int page, int perPage = 10}) async {
     try {
-      // Wywołanie API do usunięcia konta
-      await _repository.deleteAccount();
+      final response = await _dio.get(
+        '/api/sentences/',
+        queryParameters: {
+          'page': page,
+          'per_page': perPage,
+        },
+      );
+
+      // 1. Odbieramy główny obiekt JSON (Map<String, dynamic>)
+      final Map<String, dynamic> json = response.data;
+
+      // 2. Wyciągamy listę z klucza "data"
+      final List<dynamic> rawList = json['data'];
       
-      // Jeżeli API zwróci 204, wylogowujemy użytkownika lokalnie z aplikacji
-      // i czyścimy tokeny. Wywołujemy globalny AuthController.
-      await _authController.logout();
-      
-      state = const SettingsState(isLoading: false);
-      return true;
+      // 3. Wyciągamy liczbę stron z klucza "total_pages"
+      final int totalPages = json['total_pages'] ?? 1; // domyślnie 1 jakby api nie dało
+
+      // 4. Mapujemy listę
+      final sentences = rawList.map((e) => Sentence.fromJson(e)).toList();
+
+      // Zwracamy komplet danych
+      return SentencesResponse(sentences, totalPages);
+
     } catch (e) {
-      final msg = ApiErrorHandler.getErrorMessage(e);
-      state = state.copyWith(isLoading: false, error: msg);
-      return false;
+      rethrow;
     }
   }
+
+  Future<void> createSentence(SentenceCreate data) async {
+    try {
+      // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
+      await _dio.post(
+        '/api/sentences/',
+        data: data.toJson(),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSentence(int id) async {
+    try {
+      // Endpoint: DELETE /api/sentences/{sentence_id}
+      await _dio.delete('/api/sentences/$id');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Sentence> updateSentence({
+    required int id,
+    required SentenceUpdate data,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/sentences/$id',
+        data: data.toJson(),
+      );
+      
+      // API zwraca zaktualizowany obiekt Sentence (według dokumnetacji)
+      // Od razu go parsujemy i zwracamy wyżej.
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
 }
 
-// Provider kontrolera
-final settingsControllerProvider = StateNotifierProvider.autoDispose<SettingsController, SettingsState>((ref) {
-  return SettingsController(
-    ref.watch(authRepositoryProvider),
-    ref.read(authControllerProvider.notifier),
-  );
-});
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_update_model.dart
+
+Zawartość pliku:
+
+class SentenceUpdate {
+  // W API te pola są 'anyOf string/null', więc tutaj String?
+  final String? sentence;
+  final String? language;
+  final String? translation;
+
+  const SentenceUpdate({
+    this.sentence,
+    this.language,
+    this.translation,
+  });
+
+  Map<String, dynamic> toJson() {
+    // Serializujemy tylko te pola, które nie są nullem (chociaż w edycji wyślemy wszystkie)
+    return {
+      if (sentence != null) 'sentence': sentence,
+      if (language != null) 'language': language,
+      if (translation != null) 'translation': translation,
+    };
+  }
+}
 
 
 ===============================

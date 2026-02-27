@@ -16,7 +16,7 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 ## Run release version on android
-
+w prawym dolnym rogu VSC wybrac platforme docelowa a nastepnie:
 flutter run --release
 
 ## Build web version
