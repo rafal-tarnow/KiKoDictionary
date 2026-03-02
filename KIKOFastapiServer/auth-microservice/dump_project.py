@@ -4,10 +4,10 @@ import os
 allowed_extensions = ['.ini', '.py', '.sh', '.html']
 
 # Lista zablokowanych katalogów
-blocked_dirs = ['venv', '.venv', '__pycache__', '.pytest_cache', '.git']#, 'migrations']
+blocked_dirs = ['venv', '.venv', '__pycache__', '.pytest_cache', '.git', 'migrations']
 
 # Lista zablokowanych plików (pełne nazwy plików)
-blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore']#, 'alembic.ini']
+blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini']
 
 # Ścieżka startowa (można zmienić na inny katalog)
 start_path = '.'

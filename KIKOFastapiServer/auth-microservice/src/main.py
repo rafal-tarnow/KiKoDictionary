@@ -10,6 +10,7 @@ from src.api.v1.routers import test
 from src.db.models.user import Base
 from src.db.models.refresh_token import RefreshToken
 from src.db.models.password_reset import PasswordResetToken
+from src.db.models.user_profile import UserProfile
 from src.db.session import engine
 from src.api.v1.routers.health import health_router
 from src.api.v1.routers import users

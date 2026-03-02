@@ -42,11 +42,21 @@ a nastepnie:
 
 poetry run alembic upgrade head
 
-### Wygenerowanie nowej migracji
+### Wygenerowanie nowej migracji dla PasswordResetToken
+
 krok 1. jezeli utworzono nowa tabele w modelach to w pliku migrations/env.py dodać linie np.from src.db.models.password_reset import PasswordResetToken
 , w tym pliku dodajemy wszyskie importy z tabelami zeby alembic wiedzial jakie tabele sa potrzebne
-krok 2. alembic revision --autogenerate -m "add_soft_delete_to_user"
+krok 2. poetry run alembic revision --autogenerate -m "add_soft_delete_to_user"
 krok 3. przejrzeć plikc migracji cat ./migrations/versions/21befe77be08_add_soft_delete_to_user.py
+krok 4. zastosowac migracje: poetry run alembic upgrade head
+
+
+### Wygenerowanie nowej migracji dla utworzenia tabeli  user_profiles
+krok 1. jezeli utworzono nowa tabele w modelach to w pliku migrations/env.py dodać linie from src.db.models.user_profile import UserProfile
+, w tym pliku dodajemy wszyskie importy z tabelami zeby alembic wiedzial jakie tabele sa potrzebne
+krok 2. poetry run alembic revision --autogenerate -m "add user_profile table with user native language"
+krok 3. przejrzec plik migracji czy wszystko dobrze cat ./migrations/versions/872780760451_add_user_profile_table_with_user_native_.py
+krok 4. zastosowac migracje: poetry run alembic upgrade head
 
 
 

@@ -3,7 +3,9 @@ from typing import Optional, Any
 from uuid import UUID
 from datetime import datetime
 from src.db.models.user import AccountRole, AccountSubscription
+from src.api.v1.schemas.user_profile import UserProfilePublic
 import re
+
 
 
 # Lista słów, których nie można użyć jako nazwy użytkownika
@@ -102,5 +104,7 @@ class UserPublic(UserBase):
     account_subscription: AccountSubscription
     subscription_expires_at: Optional[datetime] = None
     created_at: datetime
+    # --- [ZMIANA]: Zwracamy zagnieżdżony profil ---
+    profile: Optional[UserProfilePublic] = None 
 
     model_config = ConfigDict(from_attributes=True)

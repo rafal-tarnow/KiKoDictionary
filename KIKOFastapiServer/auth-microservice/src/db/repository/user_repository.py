@@ -1,11 +1,13 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, func
 from datetime import datetime, timezone
 import uuid
 
 from src.db.models.user import User
+from src.db.models.user_profile import UserProfile
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
 import re
@@ -39,9 +41,14 @@ class UserRepository:
         return result.scalars().first()
     
     async def get_by_id(self, user_id: str) -> Optional[User]:
-        result = await self.db.execute(select(User).filter(User.id == user_id))
         # [ZMIANA UWAGA]: Celowo nie sprawdzamy tu is_active, 
         # bo system może potrzebować pobrać usuniętego usera np. żeby wyświetlić "Konto Usunięte" w komentarzach.
+        # aby SQLAlchemy od razu pobrało tabelę user_profiles (wydajność!)
+        result = await self.db.execute(
+            select(User)
+            .options(selectinload(User.profile))
+            .filter(User.id == user_id)
+        )
         return result.scalars().first()
     
 
@@ -79,9 +86,18 @@ class UserRepository:
             hashed_password=hashed_password,
         )
         self.db.add(db_user)
+        await self.db.flush() # [ZMIANA]: Flush nadaje id dla db_user przed commit()
+
+        # [ZMIANA]: Tworzymy domyślny profil przy rejestracji!
+        db_profile = UserProfile(user_id=db_user.id)
+        self.db.add(db_profile)
+
         await self.db.commit()
-        await self.db.refresh(db_user)
-        return db_user
+        # Odświeżamy usera ładując od razu jego profil
+        result = await self.db.execute(
+            select(User).options(selectinload(User.profile)).filter(User.id == db_user.id)
+        )
+        return result.scalars().first()
     
 
     async def update(self, user: User) -> User:

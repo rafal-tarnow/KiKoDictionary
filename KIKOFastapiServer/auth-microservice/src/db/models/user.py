@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import Column, String, DateTime, func, Enum, Index, Boolean
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -35,6 +35,10 @@ class User(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # --- [ZMIANA]: RELACJA 1:1 DO PROFILU ---
+    # uselist=False wymusza relację 1:1, cascade usuwa profil przy usunięciu usera
+    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     # --- PROFESJONALNE ZABEZPIECZENIE ---
     __table_args__ = (
