@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
+import '../../../user/presentation/controllers/user_controller.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -16,8 +17,9 @@ class AuthState {
 class AuthController extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final TokenStorage _storage;
+  final Ref _ref;
 
-  AuthController(this._repository, this._storage) : super(const AuthState()) {
+  AuthController(this._repository, this._storage, this._ref) : super(const AuthState()) {
     checkAuthStatus();
   }
 
@@ -27,6 +29,7 @@ class AuthController extends StateNotifier<AuthState> {
     if (token != null) {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
       state = const AuthState(isAuthenticated: true, isAppLoading: false);
+      _ref.read(userControllerProvider.notifier).fetchUser();
     } else {
       state = const AuthState(isAuthenticated: false, isAppLoading: false);
     }
@@ -35,6 +38,9 @@ class AuthController extends StateNotifier<AuthState> {
   // Metoda wywoływana przez LoginController/RegisterController po sukcesie
   void setAuthenticated(bool isAuthenticated) {
     state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
+    if(isAuthenticated){
+      _ref.read(userControllerProvider.notifier).fetchUser();
+    }
   }
 
   Future<void> logout() async {
@@ -47,6 +53,7 @@ class AuthController extends StateNotifier<AuthState> {
       }
     }
     await _storage.clearToken();
+    _ref.read(userControllerProvider.notifier).clearUser();
     state = const AuthState(isAuthenticated: false, isAppLoading: false);
   }
 }
@@ -57,6 +64,7 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     return AuthController(
       ref.watch(authRepositoryProvider),
       ref.watch(tokenStorageProvider),
+      ref,
     );
   },
 );

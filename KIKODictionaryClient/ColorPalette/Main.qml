@@ -10,6 +10,7 @@ import "../health_page"
 import "../register_page"
 import "../captcha_page"
 import "../login_page"
+import "../test"
 
 Window {
     id: window
@@ -87,12 +88,25 @@ Window {
         onTriggered: optionsMenu.open()
     }
 
+    StackView{
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.verticalCenter
+
+        initialItem: TestApiClientPage{
+
+        }
+
+        //"qrc:/qt/qml/ColorPalette/pages/list_view/ListViewPage.qml"
+    }
+
     Rectangle{
         id: mainView
         //color: "blue"
         anchors.horizontalCenter: parent.horizontalCenter
         width: window.width > 500 ? 500 : window.width
-        anchors.top: parent.top
+        anchors.top: parent.verticalCenter
         anchors.bottom: parent.bottom
 
         ToolBar {

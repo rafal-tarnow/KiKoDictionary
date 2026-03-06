@@ -71,7 +71,6 @@ qt_add_qml_module(dudu
         QML_FILES health_page/ServicesHealthPage.qml
         SOURCES ServerMonitor.h
         SOURCES ServerMonitor.cpp
-        SOURCES ServerMonitor.cpp
         SOURCES AuthManager.hpp
         SOURCES AuthManager.cpp
         QML_FILES register_page/RegisterPage.qml
@@ -88,6 +87,9 @@ qt_add_qml_module(dudu
         QML_FILES login_page/LoginRegisterDialog.qml
         QML_FILES ColorPalette/features/health/ServicesHealthPage.qml
         QML_FILES ColorPalette/features/home/HomePage.qml
+        SOURCES test/ApiClient.h
+        SOURCES test/ApiClient.cpp
+        QML_FILES test/TestApiClientPage.qml
 )
 
 # add SSL support for android
@@ -110,6 +112,7 @@ target_link_libraries(dudu PRIVATE
     Qt6::QuickControls2
 )
 
+target_include_directories(dudu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 install(TARGETS dudu
     BUNDLE  DESTINATION .

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
+import 'widgets/language_selector.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -94,6 +95,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              const LanguageSelector(),
+
+              const SizedBox(height: 48),
 
               // Tutaj w przyszłości pojawią się inne karty (np. Powiadomienia, Język)
               Card(
