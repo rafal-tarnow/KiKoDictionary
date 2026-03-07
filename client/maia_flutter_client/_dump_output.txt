@@ -1430,6 +1430,8 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation_provider.dart';
+import '../../../../core/constants/app_languages.dart'; // NOWY IMPORT
+import '../../../user/presentation/controllers/user_controller.dart'; // NOWY IMPORT
 import '../controllers/auth_controller.dart';
 
 class UserAvatarButton extends ConsumerWidget {
@@ -1441,30 +1443,46 @@ class UserAvatarButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    // Nasłuchujemy danych użytkownika, aby wydobyć język
+    final userState = ref.watch(userControllerProvider); 
+    
     final bool isLoggedIn = authState.isAuthenticated;
 
     // --- STAN: ZALOGOWANY (Menu Popup) ---
     if (isLoggedIn) {
+      // Wyciągamy język z globalnego stanu (jeśli jest załadowany)
+      final String? langCode = userState.valueOrNull?.profile?.nativeLanguage;
+
       return Padding(
         padding: const EdgeInsets.only(right: 8.0),
         child: PopupMenuButton<String>(
           offset: const Offset(0, 50),
           tooltip: 'Menu użytkownika',
-          // Zaokrąglenie samego okienka menu
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           
-          // KLUCZOWA ZMIANA:
-          // Używamy parametru 'icon' zamiast 'child'.
-          // Dzięki temu Flutter traktuje to jako standardową ikonę na pasku
-          // i automatycznie dodaje okrągły efekt "ink splash" przy kliknięciu/najechaniu.
-          icon: CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.deepPurple.shade100,
-            child: const Icon(Icons.person, color: Colors.deepPurple, size: 20),
+          // ================= ZMIANA: WIDGET BADGE Z FLAGĄ =================
+          icon: Badge(
+            // Wyrównanie do prawego dolnego rogu
+            alignment: Alignment.bottomRight,
+            // Delikatne przesunięcie, by flaga częściowo wystawała za avatar
+            offset: const Offset(4, -12),
+            // Białe tło pod flagą tworzy elegancki "cutout" (wycięcie)
+            backgroundColor: Colors.white,
+            
+            // Tworzymy cień i padding dla flagi
+            label: Text(
+              AppLanguages.getFlag(langCode ?? 'en'), // Zabezpieczenie na null
+              style: const TextStyle(fontSize: 10, height: 1.1),
+            ),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.deepPurple.shade100,
+              child: const Icon(Icons.person, color: Colors.deepPurple, size: 20),
+            ),
           ),
+          // =================================================================
           
           onSelected: (value) {
-            // OBSŁUGA KLIKNIĘCIA
             if (value == 'logout') {
               _handleLogout(context, ref);
             } else if (value == 'settings') {
@@ -1473,19 +1491,20 @@ class UserAvatarButton extends ConsumerWidget {
           },
           
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               enabled: false,
               child: Text(
-                "Moje Konto", 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+                // Wyświetlamy też login użytkownika w menu dla lepszego UX!
+                userState.valueOrNull?.username ?? "Moje Konto", 
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
               ),
             ),
 
             const PopupMenuItem<String>(
-              value: 'settings', // To musi pasować do warunku w onSelected
+              value: 'settings',
               child: Row(
                 children: [
-                  Icon(Icons.settings, color: Colors.black87, size: 20), // Spójna ikona
+                  Icon(Icons.settings, color: Colors.black87, size: 20),
                   SizedBox(width: 12),
                   Text('Ustawienia', style: TextStyle(color: Colors.black87)),
                 ],
@@ -1513,7 +1532,6 @@ class UserAvatarButton extends ConsumerWidget {
       padding: const EdgeInsets.only(right: 8.0),
       child: IconButton(
         tooltip: "Zaloguj się",
-        // Tutaj też używamy standardowego IconButton, który ma okrągły splash
         icon: CircleAvatar(
           radius: 18,
           backgroundColor: Colors.grey.shade200,
@@ -3719,17 +3737,19 @@ Zawartość pliku:
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/data/token_storage.dart';
+import '../../features/auth/presentation/controllers/auth_controller.dart'; // Dodany import
 
 // Provider zwracający skonfigurowany Interceptor
 final authInterceptorProvider = Provider<Interceptor>((ref) {
   final storage = ref.watch(tokenStorageProvider);
-  return AuthInterceptor(storage);
+  return AuthInterceptor(storage, ref); // Wstrzykujemy ref
 });
 
 class AuthInterceptor extends Interceptor {
   final TokenStorage _storage;
+  final Ref _ref; // Ref pozwala nam wezwać logout
 
-  AuthInterceptor(this._storage);
+  AuthInterceptor(this._storage, this._ref);
 
   @override
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -3746,8 +3766,13 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // Tu w przyszłości dodasz logikę odświeżania tokena (Refresh Token)
-    // jeśli err.response?.statusCode == 401
+    // [ZMIANA] Automatyczne wylogowanie przy błędzie 401
+    // (Na tym etapie z pominięciem procedury Refresh Token - zrobimy to później)
+    if (err.response?.statusCode == 401) {
+      // Czyścimy lokalny stan tokenów i usera (wylogowuje z aplikacji)
+      _ref.read(authControllerProvider.notifier).logout();
+    }
+    
     return handler.next(err);
   }
 }
@@ -3947,10 +3972,8 @@ class ApiErrorHandler {
 Zawartość pliku:
 
 class AppLanguages {
-  // Prywatny konstruktor - zapobiega instancjonowaniu klasy
   AppLanguages._();
 
-  // Mapa mapująca kody ISO 639-1 z backendu na nazwy wyświetlane w UI
   static const Map<String, String> supported = {
     'en': 'English (Angielski)',
     'pl': 'Polski',
@@ -3960,9 +3983,21 @@ class AppLanguages {
     'uk': 'Українська (Ukraiński)',
   };
 
-  // Metoda pomocnicza
   static String getName(String code) {
     return supported[code] ?? 'Nieznany ($code)';
+  }
+
+  // ================= ZMIANA: NOWA FUNKCJA DO FLAG =================
+  static String getFlag(String code) {
+    switch (code) {
+      case 'pl': return '🇵🇱';
+      case 'en': return '🇬🇧'; // lub '🇺🇸' w zależności od preferencji
+      case 'es': return '🇪🇸';
+      case 'de': return '🇩🇪';
+      case 'fr': return '🇫🇷';
+      case 'uk': return '🇺🇦';
+      default: return '🌍'; // Fallback
+    }
   }
 }
 

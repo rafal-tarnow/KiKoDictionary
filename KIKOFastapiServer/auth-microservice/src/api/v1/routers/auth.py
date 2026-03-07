@@ -166,44 +166,68 @@ async def refresh_access_token(
     db: AsyncSession = Depends(get_db)
 ):
     refresh_token_repo = RefreshTokenRepository(db)
+    user_repo = UserRepository(db)
     
-    # 1. Znajdź token odświeżający w bazie danych
-    db_refresh_token = await refresh_token_repo.get_by_token(token=token_request.refresh_token)
-
-    # 2. Sprawdź, czy token istnieje i czy nie wygasł
-    if not db_refresh_token or db_refresh_token.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # 3. Jeśli token istnieje, ALE WYGASŁ, usuń go i odrzuć
-    if db_refresh_token.expires_at < datetime.now(timezone.utc):
-        await refresh_token_repo.delete(token_id=db_refresh_token.id) # <-- DODANA LINIA
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token", # Można zostawić ten sam komunikat
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # 4. Zweryfikuj poprawność samego JWT (chociaż baza jest głównym źródłem prawdy)
+    # 1. Weryfikacja sygnatury i poprawności struktury JWT
     try:
         payload = jwt.decode(
             token_request.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         if payload.get("type") != "refresh":
              raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+        
+        user_id_from_token = payload.get("sub")
     except JWTError:
+        # Jeśli token jest całkowicie fałszywy lub sfałszowano sygnaturę, odrzucamy go natychmiast
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")
+
+    # 2. Szukamy tokenu w bazie (White-listing)
+    db_refresh_token = await refresh_token_repo.get_by_token(token=token_request.refresh_token)
+
+    # --- MECHANIZM "TOKEN REUSE DETECTION" ---
+    # Jeśli token jest ważny kryptograficznie (przeszedł punkt 1), ale NIE MA go w naszej bazie
+    # oznacza to, że ktoś (prawowity user lub haker) użył już skasowanego tokena.
+    # Względy bezpieczeństwa nakazują wtedy UNIEWAŻNIĆ wszystkie sesje (kompromitacja).
+    if not db_refresh_token:
+        # Awaryjnie czyścimy wszystkie sesje dla tego usera (wymusi ponowne podanie hasła)
+        if user_id_from_token:
+            await refresh_token_repo.delete_all_for_user(user_id=user_id_from_token)
+            
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been compromised or revoked. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    # ----------------------------------------
+
+    # 3. Sprawdź, czy token po prostu nie wygasł z powodu czasu (7 dni)
+    # Usunięto tu kasowanie tokena. Niech kasuje go cykliczny skrypt na serwerze 
+    # (albo zostawiamy go jako martwy dowód w bazie).
+    if db_refresh_token.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 4. BEZPIECZEŃSTWO KRYTYCZNE: Sprawdzamy czy użytkownik wciąż jest aktywny!
+    user = await user_repo.get_by_id(db_refresh_token.user_id)
+    if not user or not user.is_active:
+        # Użytkownik został usunięty lub zablokowany, kasujemy jego token.
+        await refresh_token_repo.delete_all_for_user(user_id=db_refresh_token.user_id)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is deactivated or deleted"
+        )
 
     # 5. Stwórz nowy token dostępowy
     new_access_token = create_access_token(data={"sub": str(db_refresh_token.user_id)})
     
-    # (Token Rotation): unieważnij stary i wydaj nowy refresh token
+    # 6. (Token Rotation): Unieważnij STARY token i wydaj NOWY
     await refresh_token_repo.delete(token_id=db_refresh_token.id)
     new_refresh_token = create_refresh_token(data={"sub": str(db_refresh_token.user_id)})
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
     await refresh_token_repo.create(
         user_id=db_refresh_token.user_id,
         token=new_refresh_token,

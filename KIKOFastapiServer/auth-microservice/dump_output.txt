@@ -997,7 +997,10 @@ from src.api.v1.schemas.user_profile import UserProfileUpdate, UserProfilePublic
 router = APIRouter(prefix="/api/v1/users", tags=["Users"])
 
 @router.get("/me", response_model=user_schema.UserPublic)
-async def read_users_me(current_user: UserDb = Depends(get_current_user)):
+async def read_users_me(
+    current_user: UserDb = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db) # <--- DODAJ TĘ LINIJKĘ
+):
     """
     Pobiera dane aktualnie zalogowanego użytkownika WRAZ Z PROFILEM.
     Zwracany JSON będzie zawierał obiekt "profile": {"native_language": "en", ...}
