@@ -152,7 +152,7 @@ async def test_logout_user(client, valid_register_data):
      # 4. Sprawdź, czy odświeżenie tokena teraz zawiedzie
     refresh_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refresh_response.status_code == 401
-    assert "Invalid or expired refresh token" in refresh_response.json()["detail"]
+    assert "Token has been compromised" in refresh_response.json()["detail"]
     
 
 

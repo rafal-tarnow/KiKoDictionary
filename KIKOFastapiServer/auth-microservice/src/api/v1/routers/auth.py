@@ -203,7 +203,13 @@ async def refresh_access_token(
     # 3. Sprawdź, czy token po prostu nie wygasł z powodu czasu (7 dni)
     # Usunięto tu kasowanie tokena. Niech kasuje go cykliczny skrypt na serwerze 
     # (albo zostawiamy go jako martwy dowód w bazie).
-    if db_refresh_token.expires_at < datetime.now(timezone.utc):
+    expires_at = db_refresh_token.expires_at
+    
+    # [ZMIANA]: Fallback dla baz typu SQLite, które mogą gubić info o strefie
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token expired. Please log in again.",

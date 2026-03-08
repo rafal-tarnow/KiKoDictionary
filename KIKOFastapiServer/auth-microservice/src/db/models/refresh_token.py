@@ -10,7 +10,9 @@ class RefreshToken(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     refresh_token = Column(String, unique=True, index=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    # [ZMIANA]: Włączamy timezone=True, żeby Python wiedział jak traktować tę datę
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User")
