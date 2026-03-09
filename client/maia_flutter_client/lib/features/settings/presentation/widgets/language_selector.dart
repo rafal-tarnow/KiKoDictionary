@@ -41,7 +41,10 @@ class LanguageSelector extends ConsumerWidget {
             // Obsługa różnych stanów (loading/error/data)
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Błąd pobierania profilu: $err', style: const TextStyle(color: Colors.red)),
+              error: (err, _) => Text(
+                'Błąd pobierania profilu: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
               data: (user) {
                 if (user == null || user.profile == null) {
                   return const Text("Brak danych profilu.");
@@ -53,39 +56,51 @@ class LanguageSelector extends ConsumerWidget {
                   value: currentLang,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                   // Blokujemy dropdown, jeśli w tle trwa zapisywanie
-                  items: AppLanguages.supported.entries.map((entry) {
+                  items: AppLanguages.supported.keys.map((String langCode) {
+                    final flag = AppLanguages.getFlag(langCode);
+                    final name = AppLanguages.getName(langCode);
+
                     return DropdownMenuItem(
-                      value: entry.key,
-                      child: Text(entry.value),
+                      value: langCode,
+                      child: Text(
+                        '$flag   $name', // Spacja dla czytelności
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     );
                   }).toList(),
-                  onChanged: settingsState.isLoading 
-                    ? null 
-                    : (String? newValue) async {
-                        if (newValue != null && newValue != currentLang) {
-                          // Wywołujemy zapis w kontrolerze
-                          final success = await ref
-                              .read(settingsControllerProvider.notifier)
-                              .updateLanguage(newValue);
-                          
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Język został zaktualizowany!"),
-                                backgroundColor: Colors.green,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
+                  onChanged: settingsState.isLoading
+                      ? null
+                      : (String? newValue) async {
+                          if (newValue != null && newValue != currentLang) {
+                            // Wywołujemy zapis w kontrolerze
+                            final success = await ref
+                                .read(settingsControllerProvider.notifier)
+                                .updateLanguage(newValue);
+
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Język został zaktualizowany!"),
+                                  backgroundColor: Colors.green,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
                           }
-                        }
-                      },
+                        },
                 );
               },
             ),
-            
+
             // Komunikat błędu z zapisu (jeśli backend rzuci np. 422)
             if (settingsState.error != null) ...[
               const SizedBox(height: 8),
@@ -93,7 +108,7 @@ class LanguageSelector extends ConsumerWidget {
                 settingsState.error!,
                 style: const TextStyle(color: Colors.red, fontSize: 13),
               ),
-            ]
+            ],
           ],
         ),
       ),

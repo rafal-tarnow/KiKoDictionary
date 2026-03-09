@@ -1,27 +1,27 @@
-// import 'package:flutter/material.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'app.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app.dart';
 
-// void main() {
-//   // ProviderScope przechowuje stan wszystkich providerów
-//   runApp(const ProviderScope(child: MyApp()));
-// }
+void main() {
+  // ProviderScope przechowuje stan wszystkich providerów
+  runApp(const ProviderScope(child: MyApp()));
+}
 
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'English Learning App',
-//       theme: ThemeData(
-//         //colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-//         useMaterial3: true,
-//       ),
-//       home: const MainShell(),
-//     );
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'English Learning App',
+      theme: ThemeData(
+        //colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const MainShell(),
+    );
+  }
+}
 
 
 //---------------------------------------------------------------------
@@ -268,148 +268,148 @@
 
 //-----------------------------------------------------------
 
-import 'dart:ui';
-import 'package:flutter/material.dart';
+// import 'dart:ui';
+// import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+// void main() {
+//   runApp(const MyApp());
+// }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Szkło na szachownicy',
-      home: AnimationScreen(),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return const MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Szkło na szachownicy',
+//       home: AnimationScreen(),
+//     );
+//   }
+// }
 
-class AnimationScreen extends StatefulWidget {
-  const AnimationScreen({super.key});
+// class AnimationScreen extends StatefulWidget {
+//   const AnimationScreen({super.key});
 
-  @override
-  State<AnimationScreen> createState() => _AnimationScreenState();
-}
+//   @override
+//   State<AnimationScreen> createState() => _AnimationScreenState();
+// }
 
-class _AnimationScreenState extends State<AnimationScreen> {
-  bool isTop = false;
+// class _AnimationScreenState extends State<AnimationScreen> {
+//   bool isTop = false;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-              // --- 1. TŁO: GENEROWANA SZACHOWNICA ---
-              // Positioned.fill rozciąga tło na cały ekran
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: CheckerboardPainter(),
-                ),
-              ),
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       body: LayoutBuilder(
+//         builder: (context, constraints) {
+//           return Stack(
+//             children: [
+//               // --- 1. TŁO: GENEROWANA SZACHOWNICA ---
+//               // Positioned.fill rozciąga tło na cały ekran
+//               Positioned.fill(
+//                 child: CustomPaint(
+//                   painter: CheckerboardPainter(),
+//                 ),
+//               ),
 
-              // --- 2. ANIMOWANY SZKLANY PANEL ---
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 400), // Lekko wydłużone, by podziwiać rozmycie
-                curve: Curves.easeOutBack,
+//               // --- 2. ANIMOWANY SZKLANY PANEL ---
+//               AnimatedPositioned(
+//                 duration: const Duration(milliseconds: 400), // Lekko wydłużone, by podziwiać rozmycie
+//                 curve: Curves.easeOutBack,
                 
-                // Pozycjonowanie i rozmiary (jak w poprzednim kodzie)
-                left: isTop ? (constraints.maxWidth / 2) - 60 : 20,
-                top: isTop ? 40 : 20,
-                bottom: isTop ? null : 20, // Jeśli na górze odpinamy dół, inaczej margines 20px
-                width: 120, // Stała szerokość dla lepszego efektu szkła
-                height: isTop ? 120 : constraints.maxHeight - 40,
+//                 // Pozycjonowanie i rozmiary (jak w poprzednim kodzie)
+//                 left: isTop ? (constraints.maxWidth / 2) - 60 : 20,
+//                 top: isTop ? 40 : 20,
+//                 bottom: isTop ? null : 20, // Jeśli na górze odpinamy dół, inaczej margines 20px
+//                 width: 120, // Stała szerokość dla lepszego efektu szkła
+//                 height: isTop ? 120 : constraints.maxHeight - 40,
                 
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isTop = !isTop;
-                    });
-                  },
+//                 child: GestureDetector(
+//                   onTap: () {
+//                     setState(() {
+//                       isTop = !isTop;
+//                     });
+//                   },
                   
-                  // --- 3. MAGIA SZKŁA NA SZACHOWNICY ---
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutBack,
-                    clipBehavior: Clip.antiAlias, // Ścina rozmycie do zaokrągleń!
+//                   // --- 3. MAGIA SZKŁA NA SZACHOWNICY ---
+//                   child: AnimatedContainer(
+//                     duration: const Duration(milliseconds: 400),
+//                     curve: Curves.easeOutBack,
+//                     clipBehavior: Clip.antiAlias, // Ścina rozmycie do zaokrągleń!
                     
-                    decoration: BoxDecoration(
-                      // Półprzezroczysty biały kolor udający zmatowienie szyby
-                      color: Colors.white.withOpacity(0.15),
+//                     decoration: BoxDecoration(
+//                       // Półprzezroczysty biały kolor udający zmatowienie szyby
+//                       color: Colors.white.withOpacity(0.15),
                       
-                      // Animacja zaokrągleń: Pasek -> Kółko
-                      borderRadius: BorderRadius.circular(isTop ? 60 : 20),
+//                       // Animacja zaokrągleń: Pasek -> Kółko
+//                       borderRadius: BorderRadius.circular(isTop ? 60 : 20),
                       
-                      // Cienka ramka imitująca odbicie światła na krawędzi szkła
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
-                        width: 1.5,
-                      ),
+//                       // Cienka ramka imitująca odbicie światła na krawędzi szkła
+//                       border: Border.all(
+//                         color: Colors.white.withOpacity(0.5),
+//                         width: 1.5,
+//                       ),
                       
-                      // Opcjonalny, bardzo delikatny cień rzucany przez sam panel
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                        )
-                      ]
-                    ),
+//                       // Opcjonalny, bardzo delikatny cień rzucany przez sam panel
+//                       boxShadow: [
+//                         BoxShadow(
+//                           color: Colors.black.withOpacity(0.2),
+//                           blurRadius: 15,
+//                           spreadRadius: 2,
+//                         )
+//                       ]
+//                     ),
                     
-                    // Filtr rozmywający to, co jest pod spodem (szachownicę)
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-                      child: Center(
-                        // Zawartość na szkle (Tekst/Ikona)
-                        child: Icon(
-                          isTop ? Icons.touch_app : Icons.swipe_up,
-                          color: Colors.white,
-                          size: 40,
-                          // Cień pod ikoną, by była widoczna na czarno-białym tle
-                          shadows: const [Shadow(color: Colors.black87, blurRadius: 10)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
+//                     // Filtr rozmywający to, co jest pod spodem (szachownicę)
+//                     child: BackdropFilter(
+//                       filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+//                       child: Center(
+//                         // Zawartość na szkle (Tekst/Ikona)
+//                         child: Icon(
+//                           isTop ? Icons.touch_app : Icons.swipe_up,
+//                           color: Colors.white,
+//                           size: 40,
+//                           // Cień pod ikoną, by była widoczna na czarno-białym tle
+//                           shadows: const [Shadow(color: Colors.black87, blurRadius: 10)],
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           );
+//         },
+//       ),
+//     );
+//   }
+// }
 
-// --- NARZĘDZIE INŻYNIERSKIE: RYSOWNIK SZACHOWNICY ---
-// Rysuje idealną siatkę kwadratów bezpośrednio na Canvasie.
-class CheckerboardPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintBlack = Paint()..color = const Color(0xFF222222); // Ciemny szary
-    final paintWhite = Paint()..color = const Color(0xFFDDDDDD); // Jasny szary
+// // --- NARZĘDZIE INŻYNIERSKIE: RYSOWNIK SZACHOWNICY ---
+// // Rysuje idealną siatkę kwadratów bezpośrednio na Canvasie.
+// class CheckerboardPainter extends CustomPainter {
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final paintBlack = Paint()..color = const Color(0xFF222222); // Ciemny szary
+//     final paintWhite = Paint()..color = const Color(0xFFDDDDDD); // Jasny szary
     
-    const double squareSize = 30.0; // Rozmiar pojedynczego kwadratu w pikselach
+//     const double squareSize = 30.0; // Rozmiar pojedynczego kwadratu w pikselach
 
-    for (double y = 0; y < size.height; y += squareSize) {
-      for (double x = 0; x < size.width; x += squareSize) {
-        int row = (y / squareSize).floor();
-        int col = (x / squareSize).floor();
+//     for (double y = 0; y < size.height; y += squareSize) {
+//       for (double x = 0; x < size.width; x += squareSize) {
+//         int row = (y / squareSize).floor();
+//         int col = (x / squareSize).floor();
         
-        // Co drugi kwadrat ma inny kolor
-        final paint = (row + col) % 2 == 0 ? paintBlack : paintWhite;
+//         // Co drugi kwadrat ma inny kolor
+//         final paint = (row + col) % 2 == 0 ? paintBlack : paintWhite;
         
-        canvas.drawRect(Rect.fromLTWH(x, y, squareSize, squareSize), paint);
-      }
-    }
-  }
+//         canvas.drawRect(Rect.fromLTWH(x, y, squareSize, squareSize), paint);
+//       }
+//     }
+//   }
 
-  // Szachownica jest statyczna, nie musi się przerysowywać co klatkę
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+//   // Szachownica jest statyczna, nie musi się przerysowywać co klatkę
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+// }
