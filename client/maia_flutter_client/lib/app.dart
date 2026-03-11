@@ -84,14 +84,7 @@ class MainShell extends ConsumerWidget {
     ),
   ];
 
-  // static const List<String> _titles = [
-  //   'Ogłoszenia parafialne',
-  //   'Dictionary',
-  //   'Words',
-  //   'Sentences',
-  //   'Test',
-  //   'Health Check',
-  // ];
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

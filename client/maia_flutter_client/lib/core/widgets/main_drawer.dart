@@ -49,12 +49,12 @@ class MainDrawer extends ConsumerWidget {
             index: 0,
             isSelected: selectedIndex == 0,
           ),
-          _DrawerTile(
-            title: 'Slownik',
-            icon: Icons.menu_book,
-            index: 1,
-            isSelected: selectedIndex == 1,
-          ),
+          // _DrawerTile(
+          //   title: 'Slownik',
+          //   icon: Icons.menu_book,
+          //   index: 1,
+          //   isSelected: selectedIndex == 1,
+          // ),
           _DrawerTile(
             title: 'Slowka',
             icon: Icons.school,
@@ -67,44 +67,44 @@ class MainDrawer extends ConsumerWidget {
             index: 3,
             isSelected: selectedIndex == 3,
           ),
-          _DrawerTile(
-            title: 'Rejestracja',
-            icon: Icons.chat,
-            index: 4,
-            isSelected: selectedIndex == 4,
-          ),
-          _DrawerTile(
-            title: 'Logowanie',
-            icon: Icons.login,
-            index: 5,
-            isSelected: selectedIndex == 5,
-          ),
-          const Divider(),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
-            child: Text(
-              "DEV TOOLS",
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ),
-          _DrawerTile(
-            title: 'Test',
-            icon: Icons.quiz,
-            index: 6,
-            isSelected: selectedIndex == 6,
-          ),
-          _DrawerTile(
-            title: 'Health Check',
-            icon: Icons.dns,
-            index: 7,
-            isSelected: selectedIndex == 7,
-          ),
-          _DrawerTile(
-            title: 'Captcha Test',
-            icon: Icons.security,
-            index: 8,
-            isSelected: selectedIndex == 8,
-          ),
+          // _DrawerTile(
+          //   title: 'Rejestracja',
+          //   icon: Icons.chat,
+          //   index: 4,
+          //   isSelected: selectedIndex == 4,
+          // ),
+          // _DrawerTile(
+          //   title: 'Logowanie',
+          //   icon: Icons.login,
+          //   index: 5,
+          //   isSelected: selectedIndex == 5,
+          // ),
+          // const Divider(),
+          // const Padding(
+          //   padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
+          //   child: Text(
+          //     "DEV TOOLS",
+          //     style: TextStyle(color: Colors.grey, fontSize: 12),
+          //   ),
+          // ),
+          // _DrawerTile(
+          //   title: 'Test',
+          //   icon: Icons.quiz,
+          //   index: 6,
+          //   isSelected: selectedIndex == 6,
+          // ),
+          // _DrawerTile(
+          //   title: 'Health Check',
+          //   icon: Icons.dns,
+          //   index: 7,
+          //   isSelected: selectedIndex == 7,
+          // ),
+          // _DrawerTile(
+          //   title: 'Captcha Test',
+          //   icon: Icons.security,
+          //   index: 8,
+          //   isSelected: selectedIndex == 8,
+          // ),
         ],
       ),
     );
