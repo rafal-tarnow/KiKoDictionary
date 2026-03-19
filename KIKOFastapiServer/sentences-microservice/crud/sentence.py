@@ -4,8 +4,12 @@ from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
 from fastapi import HTTPException
 
-def create_sentence(db: Session, sentence: SentenceCreate):
+# ================= 1. PRZESTRZEŃ PRYWATNA (Wymaga user_id) =================
+
+# [ZMIANA]: Wymagamy user_id przy tworzeniu
+def create_sentence(db: Session, sentence: SentenceCreate, user_id: str):
     db_sentence = Sentence(
+        user_id=user_id, # [ZMIANA]: Przypisanie właściciela
         sentence=sentence.sentence,
         language=sentence.language,
         translation=sentence.translation
@@ -15,29 +19,33 @@ def create_sentence(db: Session, sentence: SentenceCreate):
     db.refresh(db_sentence)
     return db_sentence
 
-def get_sentences(db: Session, page: int, per_page: int):
+# [ZMIANA - NOWA NAZWA]: Zwracamy zdania TYLKO danego użytkownika
+def get_my_sentences(db: Session, page: int, per_page: int, user_id: str):
+    """Pobiera zdania tylko zalogowanego użytkownika (Prywatny notatnik)"""
     offset = (page - 1) * per_page
     
     # 2. DODAJEMY SORTOWANIE (ORDER BY created_at DESC)
-    # Sortujemy po dacie utworzenia malejąco (najnowsze na górze)
-    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    # [ZMIANA]: Dodano filtr filter(Sentence.user_id == user_id)
+    query = db.query(Sentence).filter(Sentence.user_id == user_id).order_by(desc(Sentence.created_at))
     
     # Pobieramy dane z uwzględnieniem paginacji
     sentences = query.offset(offset).limit(per_page).all()
     
     # Liczymy całkowitą ilość (dla paginacji na frontendzie)
-    total = db.query(Sentence).count()
+    total = query.count() # [ZMIANA]: Zliczamy tylko zdania z query wyżej (dla usera)
     
     return sentences, total
 
-def get_sentence(db: Session, sentence_id: int):
-    sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Pobranie konkretnego zdania Z uwzględnieniem właściciela
+def get_sentence(db: Session, sentence_id: int, user_id: str):
+    sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     return sentence
 
-def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Aktualizacja zdania Z uwzględnieniem właściciela
+def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate, user_id: str):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     
@@ -52,10 +60,26 @@ def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpda
     db.refresh(db_sentence)
     return db_sentence
 
-def delete_sentence(db: Session, sentence_id: int):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Usuwanie zdania Z uwzględnieniem właściciela
+def delete_sentence(db: Session, sentence_id: int, user_id: str):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     db.delete(db_sentence)
     db.commit()
     return {"message": "Sentence deleted successfully"}
+
+
+# ================= 2. PRZESTRZEŃ PUBLICZNA (Społeczność) =================
+
+# [ZMIANA]: CAŁKIEM NOWA FUNKCJA pobierająca wszystko od wszystkich
+def get_community_sentences(db: Session, page: int, per_page: int):
+    """Pobiera wszystkie zdania w systemie (Feed Społecznościowy) bez względu na to czyje są."""
+    offset = (page - 1) * per_page
+    
+    # Sortujemy najnowsze na górze (brak filtra na user_id!)
+    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    sentences = query.offset(offset).limit(per_page).all()
+    total = query.count()
+    
+    return sentences, total

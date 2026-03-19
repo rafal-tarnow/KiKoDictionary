@@ -34,6 +34,50 @@ def get_db():
 
 
 ===============================
+Ścieżka do pliku: ./dependencies.py
+
+Zawartość pliku:
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from typing import Optional
+
+from src.core.config import settings
+
+# OAuth2PasswordBearer "tłumaczy" FastAPI, że aplikacja oczekuje nagłówka Authorization: Bearer <token>
+# tokenUrl nie ma tu znaczenia dla walidacji, służy tylko dokumentacji Swagger UI
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://127.0.0.1:8002/api/v1/auth/login")
+
+def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+    """
+    Weryfikuje token JWT i wyciąga z niego 'sub' (czyli user_id).
+    Rzuca 401 Unauthorized, jeśli token jest nieważny, wygasły lub sfałszowany.
+    Zwraca string (UUID) reprezentujący ID użytkownika.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        # Dekodowanie z użyciem SECRET_KEY z serwisu Auth
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        
+        # Wyciągnięcie ID usera i upewnienie się, że to token dostępowy, a nie odświeżający
+        user_id: Optional[str] = payload.get("sub")
+        token_type: Optional[str] = payload.get("type")
+        
+        if user_id is None or token_type != "access":
+            raise credentials_exception
+            
+        return user_id
+    except JWTError:
+        raise credentials_exception
+
+
+===============================
 Ścieżka do pliku: ./main.py
 
 Zawartość pliku:
@@ -197,16 +241,26 @@ Zawartość pliku:
 
 from sqlalchemy import Column, Integer, String, DateTime
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Sentence(Base):
     __tablename__ = "sentences"
     
     id = Column(Integer, primary_key=True, index=True)
+    
+    # ================= ZMIANA: Powiązanie zdania z użytkownikiem =================
+    # Baza sentences nie wie o istnieniu bazy Auth, więc nie ma tu klucza obcego (ForeignKey).
+    # Przechowujemy po prostu stringa (UUID) wskazującego na właściciela.
+    user_id = Column(String, index=True, nullable=False)
+    # =============================================================================
+    
     sentence = Column(String, index=True)
     language = Column(String, index=True)
     translation = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # ================= ZMIANA: Spójność czasowa z Auth Service =================
+    # Wymuszamy czas świadomy stref czasowych (UTC)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 ===============================
@@ -218,26 +272,64 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder  # Dodaj ten import
+from fastapi.encoders import jsonable_encoder
 from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate
-from crud.sentence import create_sentence, get_sentences, get_sentence, update_sentence, delete_sentence
+
+# ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
+from crud.sentence import (
+    create_sentence, 
+    get_my_sentences, 
+    get_community_sentences, 
+    get_sentence, 
+    update_sentence, 
+    delete_sentence
+)
 from database import get_db
+
+# ================= ZMIANA: Importujemy naszą zależność =================
+from dependencies import get_current_user_id
 import math
 
 router = APIRouter(prefix="/api/sentences", tags=["sentences"])
 
-@router.post("/", response_model=Sentence)
-def create_sentence_endpoint(sentence: SentenceCreate, db: Session = Depends(get_db)):
-    return create_sentence(db, sentence)
+# ================= 1. PRZESTRZEŃ PUBLICZNA =================
 
-@router.get("/", response_model=List[Sentence])
-def read_sentences_endpoint(
+# [ZMIANA]: Nowy, otwarty endpoint. 
+# Zwróć uwagę na brak "user_id = Depends(...)". To pozwala przeglądać gościom.
+@router.get("/community", response_model=List[Sentence])
+def read_community_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    sentences, total = get_sentences(db, page, per_page)
-    total_pages = math.ceil(total / per_page)
+    sentences, total = get_community_sentences(db, page, per_page)
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    
+    items = [Sentence.from_orm(s) for s in sentences]
+    encoded_items = jsonable_encoder(items)
+    
+    return JSONResponse(
+        content={
+            "data": encoded_items,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages
+        }
+    )
+
+# ================= 2. PRZESTRZEŃ PRYWATNA =================
+
+# [ZMIANA]: Przepinamy pobieranie prywatnej listy na ścieżkę /me
+@router.get("/me", response_model=List[Sentence])
+def read_my_sentences_endpoint(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+):
+    sentences, total = get_my_sentences(db, page, per_page, user_id) # [ZMIANA]: Nowa funkcja
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
     
     # Użyj jsonable_encoder do konwersji listy obiektów Sentence
     items = [Sentence.from_orm(s) for s in sentences]
@@ -253,17 +345,40 @@ def read_sentences_endpoint(
         }
     )
 
+# CZYSTA KOLEKCJA (DODAWANIE)
+@router.post("/", response_model=Sentence)
+def create_sentence_endpoint(
+    sentence: SentenceCreate, 
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+):
+    return create_sentence(db, sentence, user_id) # [ZMIANA]: Przekazujemy user_id
+
+# ZABEZPIECZONY KONKRETNY ZASÓB (CZYTANIE/EDYCJA/USUWANIE)
 @router.get("/{sentence_id}", response_model=Sentence)
-def read_sentence_endpoint(sentence_id: int, db: Session = Depends(get_db)):
-    return get_sentence(db, sentence_id)
+def read_sentence_endpoint(
+    sentence_id: int, 
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+):
+    return get_sentence(db, sentence_id, user_id) # [ZMIANA]
 
 @router.put("/{sentence_id}", response_model=Sentence)
-def update_sentence_endpoint(sentence_id: int, sentence_update: SentenceUpdate, db: Session = Depends(get_db)):
-    return update_sentence(db, sentence_id, sentence_update)
+def update_sentence_endpoint(
+    sentence_id: int, 
+    sentence_update: SentenceUpdate, 
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+):
+    return update_sentence(db, sentence_id, sentence_update, user_id) # [ZMIANA]
 
 @router.delete("/{sentence_id}")
-def delete_sentence_endpoint(sentence_id: int, db: Session = Depends(get_db)):
-    return delete_sentence(db, sentence_id)
+def delete_sentence_endpoint(
+    sentence_id: int, 
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+):
+    return delete_sentence(db, sentence_id, user_id) # [ZMIANA]
 
 
 ===============================
@@ -272,12 +387,17 @@ def delete_sentence_endpoint(sentence_id: int, db: Session = Depends(get_db)):
 Zawartość pliku:
 
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
 from fastapi import HTTPException
 
-def create_sentence(db: Session, sentence: SentenceCreate):
+# ================= 1. PRZESTRZEŃ PRYWATNA (Wymaga user_id) =================
+
+# [ZMIANA]: Wymagamy user_id przy tworzeniu
+def create_sentence(db: Session, sentence: SentenceCreate, user_id: str):
     db_sentence = Sentence(
+        user_id=user_id, # [ZMIANA]: Przypisanie właściciela
         sentence=sentence.sentence,
         language=sentence.language,
         translation=sentence.translation
@@ -287,18 +407,33 @@ def create_sentence(db: Session, sentence: SentenceCreate):
     db.refresh(db_sentence)
     return db_sentence
 
-def get_sentences(db: Session, page: int, per_page: int):
+# [ZMIANA - NOWA NAZWA]: Zwracamy zdania TYLKO danego użytkownika
+def get_my_sentences(db: Session, page: int, per_page: int, user_id: str):
+    """Pobiera zdania tylko zalogowanego użytkownika (Prywatny notatnik)"""
     offset = (page - 1) * per_page
-    return db.query(Sentence).offset(offset).limit(per_page).all(), db.query(Sentence).count()
+    
+    # 2. DODAJEMY SORTOWANIE (ORDER BY created_at DESC)
+    # [ZMIANA]: Dodano filtr filter(Sentence.user_id == user_id)
+    query = db.query(Sentence).filter(Sentence.user_id == user_id).order_by(desc(Sentence.created_at))
+    
+    # Pobieramy dane z uwzględnieniem paginacji
+    sentences = query.offset(offset).limit(per_page).all()
+    
+    # Liczymy całkowitą ilość (dla paginacji na frontendzie)
+    total = query.count() # [ZMIANA]: Zliczamy tylko zdania z query wyżej (dla usera)
+    
+    return sentences, total
 
-def get_sentence(db: Session, sentence_id: int):
-    sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Pobranie konkretnego zdania Z uwzględnieniem właściciela
+def get_sentence(db: Session, sentence_id: int, user_id: str):
+    sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     return sentence
 
-def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Aktualizacja zdania Z uwzględnieniem właściciela
+def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate, user_id: str):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     
@@ -313,13 +448,29 @@ def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpda
     db.refresh(db_sentence)
     return db_sentence
 
-def delete_sentence(db: Session, sentence_id: int):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id).first()
+# [ZMIANA]: Usuwanie zdania Z uwzględnieniem właściciela
+def delete_sentence(db: Session, sentence_id: int, user_id: str):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     db.delete(db_sentence)
     db.commit()
     return {"message": "Sentence deleted successfully"}
+
+
+# ================= 2. PRZESTRZEŃ PUBLICZNA (Społeczność) =================
+
+# [ZMIANA]: CAŁKIEM NOWA FUNKCJA pobierająca wszystko od wszystkich
+def get_community_sentences(db: Session, page: int, per_page: int):
+    """Pobiera wszystkie zdania w systemie (Feed Społecznościowy) bez względu na to czyje są."""
+    offset = (page - 1) * per_page
+    
+    # Sortujemy najnowsze na górze (brak filtra na user_id!)
+    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    sentences = query.offset(offset).limit(per_page).all()
+    total = query.count()
+    
+    return sentences, total
 
 
 ===============================
@@ -357,12 +508,19 @@ class Sentence(BaseModel):
 
 Zawartość pliku:
 
+import os
 from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Maia Sentences Microservice"
     VERSION: str = "1.0.0"
+
+    # ================= ZMIANA: JWT Settings =================
+    # Te same wartości co w Auth Service
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    # ========================================================
 
     class Config:
         env_file = ".env"

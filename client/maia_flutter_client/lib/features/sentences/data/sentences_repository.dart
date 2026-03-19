@@ -27,7 +27,7 @@ class SentencesRepository {
   Future<SentencesResponse> getSentences({required int page, int perPage = 10}) async {
     try {
       final response = await _dio.get(
-        '/api/sentences/',
+        '/api/sentences/me',
         queryParameters: {
           'page': page,
           'per_page': perPage,

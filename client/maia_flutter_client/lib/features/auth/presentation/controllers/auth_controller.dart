@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
+import '../../../sentences/presentation/sentences_provider.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -30,6 +31,9 @@ class AuthController extends StateNotifier<AuthState> {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
       state = const AuthState(isAuthenticated: true, isAppLoading: false);
       _ref.read(userControllerProvider.notifier).fetchUser();
+
+      // ZMIANA: Pobierz prywatne zdania po wejściu do aplikacji
+      _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
     } else {
       state = const AuthState(isAuthenticated: false, isAppLoading: false);
     }
@@ -40,6 +44,9 @@ class AuthController extends StateNotifier<AuthState> {
     state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
     if(isAuthenticated){
       _ref.read(userControllerProvider.notifier).fetchUser();
+
+      // ZMIANA: Zmuś aplikację do załadowania Zdań NOWEGO użytkownika
+      _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
     }
   }
 
@@ -53,7 +60,11 @@ class AuthController extends StateNotifier<AuthState> {
       }
     }
     await _storage.clearToken();
+
+    // ZMIANA: Czyścimy pamięć globalną (User + Sentences) z danych starego użytkownika!
     _ref.read(userControllerProvider.notifier).clearUser();
+    _ref.read(sentencesProvider.notifier).clearData(); 
+    
     state = const AuthState(isAuthenticated: false, isAppLoading: false);
   }
 }

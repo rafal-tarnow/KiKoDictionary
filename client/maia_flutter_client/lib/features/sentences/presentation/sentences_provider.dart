@@ -122,6 +122,10 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
     // Emitujemy nowy stan
     state = state.copyWith(sentences: newSentences);
   }
+
+  void clearData(){
+    state = const SentencesState();
+  }
 }
 
 final sentencesProvider =
