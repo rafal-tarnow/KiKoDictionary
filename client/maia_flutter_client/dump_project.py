@@ -9,7 +9,7 @@ allowed_extensions = ['.dart']
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary'  , 'sentences' , 'test']
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'auth', 'captcha', 'dictionary' , 'health' , 'home'  , 'settings',  'test' , 'words', ]
 
-blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'captcha', 'dictionary' , 'health' , 'home' ,  'test' , 'words' ]
+blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'auth', 'captcha', 'dictionary' , 'health' , 'home' ,  'test' , 'user', 'words' ]
 
 # Lista zablokowanych plików (pełne nazwy plików)
 blocked_files = ['dump_output.txt', 'dump_project.py', '.gitignore', 'alembic.ini', '__init__.py', 'main_smart_home.dart']

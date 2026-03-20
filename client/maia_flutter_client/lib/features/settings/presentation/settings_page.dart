@@ -12,56 +12,36 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  
-  // Metoda wywołująca dialog z potwierdzeniem
+
+// Metoda wywołująca dialog z potwierdzeniem
   Future<void> _confirmAccountDeletion(BuildContext context) async {
+    // ================= ZMIANA =================
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false, // Wymusza podjęcie decyzji przyciskami (nie można kliknąć w tło, żeby zamknąć)
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red),
-              SizedBox(width: 12),
-              Text("Usuń konto"),
-            ],
-          ),
-          content: const Text(
-            "Czy na pewno chcesz usunąć swoje konto? "
-            "Operacja ta jest nieodwracalna. Wszystkie Twoje dane, "
-            "postępy w nauce i historia zostaną trwale zanonimizowane lub usunięte.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text("ANULUJ"),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text("TAK, USUŃ KONTO"),
-            ),
-          ],
-        );
+        return const _DeleteAccountDialog(); // Odwołanie do naszej nowej klasy z polem tekstowym
       },
     );
+    // ==========================================
 
-    // Jeśli użytkownik potwierdził w dialogu
+    // Jeśli użytkownik przepisał tekst i potwierdził w dialogu
     if (confirmed == true && mounted) {
       _executeDeletion();
     }
   }
 
   Future<void> _executeDeletion() async {
-    final success = await ref.read(settingsControllerProvider.notifier).deleteAccount();
+    final success = await ref
+        .read(settingsControllerProvider.notifier)
+        .deleteAccount();
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Twoje konto zostało usunięte. Przykro nam, że odchodzisz!'),
+          content: Text(
+            'Twoje konto zostało usunięte. Przykro nam, że odchodzisz!',
+          ),
           backgroundColor: Colors.blueGrey,
           behavior: SnackBarBehavior.floating,
         ),
@@ -79,7 +59,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600), // Lekko szersze na ustawienia
+          constraints: const BoxConstraints(
+            maxWidth: 600,
+          ), // Lekko szersze na ustawienia
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -110,7 +92,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     children: [
                       const Text(
                         "Preferencje",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -128,8 +113,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Text(
                 "Strefa niebezpieczna",
                 style: TextStyle(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.bold, 
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                   color: Colors.red,
                   letterSpacing: 1.2,
                 ),
@@ -148,7 +133,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.person_off_outlined, color: Colors.red.shade700, size: 28),
+                        Icon(
+                          Icons.person_off_outlined,
+                          color: Colors.red.shade700,
+                          size: 28,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           "Usunięcie konta",
@@ -167,7 +156,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       style: TextStyle(color: Colors.red.shade900, height: 1.5),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Box z błędem wewnątrz Danger Zone (jeśli API wyrzuci błąd przy usuwaniu)
                     if (state.error != null)
                       Padding(
@@ -186,7 +175,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Expanded(
                                 child: Text(
                                   state.error!,
-                                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
@@ -198,21 +190,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: state.isLoading 
-                            ? null 
+                        onPressed: state.isLoading
+                            ? null
                             : () => _confirmAccountDeletion(context),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.red.shade600,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        icon: state.isLoading 
-                            ? const SizedBox.shrink() 
+                        icon: state.isLoading
+                            ? const SizedBox.shrink()
                             : const Icon(Icons.delete_forever),
                         label: state.isLoading
                             ? const SizedBox(
-                                width: 20, height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text("TRWALE USUŃ KONTO"),
                       ),
@@ -228,3 +224,123 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 }
+
+
+// ================= ZMIANA: NOWY WIDGET DO POTWIERDZANIA =================
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final _textController = TextEditingController();
+  bool _isButtonEnabled = false;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged(String value) {
+    // ZMIANA: Zmieniono wymaganą frazę na "usuń konto"
+    final isValid = value.trim().toLowerCase() == 'usuń konto';
+    
+    if (isValid != _isButtonEnabled) {
+      setState(() {
+        _isButtonEnabled = isValid;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 32),
+                  SizedBox(width: 12),
+                  Text(
+                    "Trwałe usunięcie konta",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "Ta operacja jest nieodwracalna. Stracisz dostęp do wszystkich swoich zwrotów, słówek i statystyk nauki.",
+                style: TextStyle(fontSize: 15, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              
+              // Instrukcja dla użytkownika
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
+                  children: const [
+                    TextSpan(text: "Aby potwierdzić, przepisz poniżej słowa: "),
+                    TextSpan(
+                      text: "USUŃ KONTO",
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Pole tekstowe do wpisywania
+              TextField(
+                controller: _textController,
+                onChanged: _onTextChanged,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: "Wpisz 'USUŃ KONTO'",
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Przyciski akcji
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text("ANULUJ"),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _isButtonEnabled
+                        ? () => Navigator.of(context).pop(true)
+                        : null, // Jeśli tekst się nie zgadza, przycisk jest nieaktywny
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red.shade600, // Ciemniejszy, "krwisty" czerwony
+                      foregroundColor: Colors.white, // Biały tekst dla aktywnego
+                      disabledBackgroundColor: Colors.red.shade300, // Lekko wyblakły czerwony dla nieaktywnego
+                      disabledForegroundColor: Colors.white, // Wymuszenie białego tekstu dla nieaktywnego!
+                    ),
+                    child: const Text("TAK, USUŃ KONTO"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// ================= KONIEC ZMIANY =================
