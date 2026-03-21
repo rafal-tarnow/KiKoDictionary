@@ -80,32 +80,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
               const LanguageSelector(),
 
-              const SizedBox(height: 48),
+              // const SizedBox(height: 48),
 
               // Tutaj w przyszłości pojawią się inne karty (np. Powiadomienia, Język)
-              Card(
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Preferencje",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Wkrótce pojawią się tutaj opcje konfiguracyjne aplikacji...",
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Card(
+              //   elevation: 1,
+              //   child: Padding(
+              //     padding: const EdgeInsets.all(16.0),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         const Text(
+              //           "Preferencje",
+              //           style: TextStyle(
+              //             fontSize: 18,
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
+              //         const SizedBox(height: 8),
+              //         Text(
+              //           "Wkrótce pojawią się tutaj opcje konfiguracyjne aplikacji...",
+              //           style: TextStyle(color: Colors.grey.shade600),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
 
               const SizedBox(height: 48),
 
