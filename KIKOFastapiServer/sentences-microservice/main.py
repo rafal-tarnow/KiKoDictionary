@@ -18,6 +18,8 @@ from math import ceil
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.exceptions import RequestValidationError
+from src.core.exceptions import validation_exception_handler
 
 from routers import sentence
 from database import engine
@@ -29,6 +31,8 @@ from src.api.endpoints.health import health_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sentence Learning API")
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Zamontuj katalog assets/img pod ścieżką /img
 app.mount("/img/faces", StaticFiles(directory="assets/img"), name="img")

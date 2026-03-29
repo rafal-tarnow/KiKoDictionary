@@ -1,16 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field # <=== ZMIANA: Import Field
 from datetime import datetime
 from typing import Optional
+from src.core.config import settings # <=== ZMIANA: Import konfiguracji
 
 class SentenceCreate(BaseModel):
-    sentence: str
-    language: str
-    translation: str
+    # <=== ZMIANA: Ustawiamy min_length=0 i max_length z konfiguracji. 
+    # Używamy default="", dzięki czemu jeśli user na szybko nie wpisze tłumaczenia, 
+    # pole nie wywali błędu, tylko zapisze się jako puste.
+    sentence: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    language: str = Field(default="", min_length=0, max_length=50)
+    translation: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
 
 class SentenceUpdate(BaseModel):
-    sentence: Optional[str] = None
-    language: Optional[str] = None
-    translation: Optional[str] = None
+    sentence: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    language: Optional[str] = Field(None, min_length=0, max_length=50)
+    translation: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
 
 class Sentence(BaseModel):
     id: int

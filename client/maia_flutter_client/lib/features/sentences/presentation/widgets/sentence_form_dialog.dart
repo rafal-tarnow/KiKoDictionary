@@ -93,6 +93,8 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
         ? ref.watch(editSentenceControllerProvider).error?.toString() 
         : ref.watch(addSentenceControllerProvider).error?.toString();
 
+  debugPrint(errorText);
+
     // Tytuł zależy od trybu
     final titleText = _isEditMode ? "Edytuj zdanie #${widget.sentence!.id}" : "Dodaj nowe zdanie";
 

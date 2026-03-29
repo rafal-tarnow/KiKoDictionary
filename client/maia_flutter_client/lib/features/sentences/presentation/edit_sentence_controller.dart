@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentence_update_model.dart';
 import '../data/sentences_repository.dart';
 import 'sentences_provider.dart';
+import '../../../core/network/api_error_handler.dart';
 
 // Używamy StateNotifier do zarządzania stanem asynchronicznym (loading/error/data)
 // AsyncValue<void> informuje UI czy trwa zapisywanie.
@@ -33,17 +34,32 @@ class EditSentenceController extends StateNotifier<AsyncValue<void>> {
       // 2. Aktualizacja lokalnego stanu listy (nie musimy odświeżać całej strony!)
       _ref.read(sentencesProvider.notifier).updateSentenceLocally(updatedSentence);
 
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
       state = const AsyncValue.data(null); // Sukces
       return true;
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack); // Błąd
+      // ================= ZMIANA: PROFESJONALNA OBSŁUGA BŁĘDU =================
+      final friendlyErrorMessage = ApiErrorHandler.getErrorMessage(e);
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = AsyncValue.error(friendlyErrorMessage, stack);
+      // =======================================================================
       return false;
     }
   }
 }
 
+// ================= ZMIANA: autoDispose =================
+// Dodajemy .autoDispose, by zrzucić błędy po zamknięciu okna.
 final editSentenceControllerProvider = 
-    StateNotifierProvider<EditSentenceController, AsyncValue<void>>((ref) {
+    StateNotifierProvider.autoDispose<EditSentenceController, AsyncValue<void>>((ref) {
   final repo = ref.watch(sentencesRepositoryProvider);
   return EditSentenceController(repo, ref);
 });
+// =======================================================

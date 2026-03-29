@@ -34,6 +34,21 @@ class ApiErrorHandler {
 
     // KROK 1: Sprawdź, czy serwer przysłał konkretny komunikat błędu.
     if (data is Map) {
+      // ================= ZMIANA: Obsługa naszego Custom Validation Error z FastAPI =================
+      // Sprawdzamy czy to błąd walidacji i czy zawiera NASZ klucz 'details' (dodany na backendzie)
+      if (statusCode == 422 &&
+          data.containsKey('details') &&
+          data['details'] is List) {
+        final list = data['details'] as List;
+        if (list.isNotEmpty && list.first is Map) {
+          // Pobieramy wiadomość prosto z backendu (np. "Tekst w polu 'sentence' jest za długi. Obecny limit to 150 znaków.")
+          final backendMsg =
+              list.first['message']?.toString() ?? "Błąd walidacji danych.";
+          return backendMsg;
+        }
+      }
+      // =========================================================================================
+
       // Obsługa błędu 422 (FastAPI Validation Error)
       if (statusCode == 422 && data['detail'] is List) {
         final list = data['detail'] as List;
@@ -142,11 +157,13 @@ class ApiErrorHandler {
       return "Wartość jest za krótka (wymagane min. 6 znaków).";
     }
     //auth service error
-    if(msg.contains("Database error: Resource is locked. Service temporarily unavailable.")){
+    if (msg.contains(
+      "Database error: Resource is locked. Service temporarily unavailable.",
+    )) {
       return "Serwis jest chwilowo zajęty (baza danych zablokowana). Spróbuj ponownie za chwilę.";
     }
     //auth service error
-    if(msg.contains("Database error: Internal operation failed.")){
+    if (msg.contains("Database error: Internal operation failed.")) {
       return "Wystąpił wewnętrzny błąd bazy danych. Spróbuj ponownie.";
     }
 

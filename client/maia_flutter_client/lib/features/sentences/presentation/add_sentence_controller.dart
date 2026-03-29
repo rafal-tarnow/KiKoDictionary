@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentence_create_model.dart';
 import '../data/sentences_repository.dart';
 import 'sentences_provider.dart'; // Potrzebne, żeby odświeżyć listę po sukcesie
+import '../../../core/network/api_error_handler.dart';
 
 // Controller zarządza stanem operacji dodawania.
 // AsyncValue<void> oznacza, że operacja nie zwraca wartości, ale śledzimy jej status.
@@ -38,19 +39,39 @@ class AddSentenceController extends StateNotifier<AsyncValue<void>> {
       // odkomentuj metodę w providerze i użyj tutaj:
       // await _ref.read(sentencesProvider.notifier).goToLastPage();
 
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      // Jeśli użytkownik zamknął dialog w trakcie wysyłania, kontroler (dzięki .autoDispose)
+      // został zniszczony. Nie możemy przypisywać mu nowego stanu.
+      if (!mounted) return false;
+      // =======================================================================
+
       state = const AsyncValue.data(null);
       return true;
     } catch (e, stack) {
-      // 4. Błąd
-      state = AsyncValue.error(e, stack);
+      // ================= ZMIANA: PROFESJONALNA OBSŁUGA BŁĘDU =================
+      // Zamiast wrzucać do stanu surowy DioException (obiekt 'e'),
+      // parsujemy go na przyjazny tekst i wstawiamy jako String.
+      final friendlyErrorMessage = ApiErrorHandler.getErrorMessage(e);
+
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = AsyncValue.error(friendlyErrorMessage, stack);
+      // =======================================================================
       return false;
     }
   }
 }
 
-// Rejestracja providera
+// ================= ZMIANA: autoDispose =================
+// Zmieniamy StateNotifierProvider na StateNotifierProvider.autoDispose
+// Dzięki temu, gdy okno dialogowe znika, stan (w tym stary błąd) ulega samozniszczeniu.
 final addSentenceControllerProvider = 
-    StateNotifierProvider<AddSentenceController, AsyncValue<void>>((ref) {
+    StateNotifierProvider.autoDispose<AddSentenceController, AsyncValue<void>>((ref) {
   final repo = ref.watch(sentencesRepositoryProvider);
   return AddSentenceController(repo, ref);
 });
+// =======================================================
