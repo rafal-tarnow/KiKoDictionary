@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentences_repository.dart';
 import 'sentences_provider.dart';
+import '../../../core/network/api_error_handler.dart';
 
 // Używamy prostego Providera, a nie StateNotifier, bo ten kontroler
 // nie przechowuje stanu (stateless logic), tylko wykonuje akcję.
@@ -19,7 +20,7 @@ class DeleteSentenceController {
     required int sentenceId,
   }) async {
     // 1. "Fire and forget" logic from UI perspective (dialog już zamknięty)
-    
+
     final repo = _ref.read(sentencesRepositoryProvider);
     final notifier = _ref.read(sentencesProvider.notifier);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -27,6 +28,8 @@ class DeleteSentenceController {
     try {
       // Wywołanie API (asynchronicznie)
       await repo.deleteSentence(sentenceId);
+
+      // Zabezpieczenie przed wyciekiem
       if (!context.mounted) return;
       // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
       notifier.removeSentenceLocally(sentenceId);
@@ -41,9 +44,14 @@ class DeleteSentenceController {
       );
     } catch (e) {
       // Obsługa błędu
+
+      if(!context.mounted) return;
+
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Błąd usuwania: ${e.toString()}'),
+          content: Text(friendlyMessage),
           backgroundColor: Colors.red,
         ),
       );

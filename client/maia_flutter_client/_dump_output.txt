@@ -1171,6 +1171,7 @@ class DeleteSentenceController {
       );
     } catch (e) {
       // Obsługa błędu
+      debugPrint('[ERROR] ${e.toString()}');
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Błąd usuwania: ${e.toString()}'),
