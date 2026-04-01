@@ -19,5 +19,6 @@ def get_captcha_generator():
     return CaptchaGenerator(
         width=settings.CAPTCHA_WIDTH,
         height=settings.CAPTCHA_HEIGHT,
-        length=settings.CAPTCHA_LENGTH
+        length=settings.CAPTCHA_LENGTH,
+        use_digits=settings.CAPTCHA_USE_DIGITS
     )

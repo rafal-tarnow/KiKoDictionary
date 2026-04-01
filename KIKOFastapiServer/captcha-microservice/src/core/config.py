@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     CAPTCHA_WIDTH: int = 200
     CAPTCHA_HEIGHT: int = 80
     CACHE_TTL: int = 300  # 5 minutes in seconds
+    
+    # ================= ZMIANA: Flaga konfiguracyjna do cyfr =================
+    # Domyślnie ustawiamy na True, aby generować tylko litery
+    CAPTCHA_USE_DIGITS: bool = True
+    # ========================================================================
 
     class Config:
         env_file = ".env"

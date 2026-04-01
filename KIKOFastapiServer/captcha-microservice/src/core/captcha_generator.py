@@ -5,11 +5,23 @@ from typing import Tuple
 from captcha.image import ImageCaptcha  # To musisz mieć zainstalowane
 
 class CaptchaGenerator:
-    def __init__(self, width: int, height: int, length: int):
+    def __init__(self, width: int, height: int, length: int, use_digits: bool = False):
         self.width = width
         self.height = height
         self.length = length
-        self.characters = string.ascii_uppercase + string.digits
+
+        # PRO TIP: Używamy "Safe Alphabet" (Bez mylących liter: O, I, Q)
+        safe_letters = "ABCDEFGHJKLMNPRSTUVWXYZ"
+        # Jeśli kiedykolwiek włączysz cyfry, one też są bezpieczne (bez 0 i 1)
+        safe_digits = "23456789"
+        
+        # Budowanie dostępnej puli znaków na podstawie flagi
+        if use_digits:
+            self.characters = safe_letters + safe_digits
+        else:
+            self.characters = safe_letters
+
+
         # Inicjalizacja generatora z biblioteki.
         # Nie podajemy argumentu 'fonts', więc biblioteka użyje swoich WBUDOWANYCH czcionek.
         # To gwarantuje identyczny wygląd na każdym systemie (Dev/Prod).
@@ -19,7 +31,7 @@ class CaptchaGenerator:
         # Generowanie losowego tekstu
         text = ''.join(random.choice(self.characters) for _ in range(self.length))
         
-        print(f"CAPTCHA TEXT = {text}")
+        #print(f"CAPTCHA TEXT = {text}")
 
         # Generowanie obrazka przez bibliotekę
         # Metoda generate zwraca obiekt BytesIO (strumień bajtów)
