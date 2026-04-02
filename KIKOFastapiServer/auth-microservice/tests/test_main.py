@@ -155,4 +155,30 @@ async def test_logout_user(client, valid_register_data):
     assert "Token has been compromised" in refresh_response.json()["detail"]
     
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_password, expected_error_msg", [
+    ("a1B2c3d", "Value error, Password must be at least 8 characters long"),  # 7 znaków
+    ("1234567", "Value error, Password must be at least 8 characters long"),  # 7 cyfr
+    ("abcdefg", "Value error, Password must be at least 8 characters long"),  # 7 liter
+])
+async def test_post_register_user_invalid_password(client, valid_register_data, invalid_password, expected_error_msg):
+    """
+    Testuje wymogi bezpieczeństwa (min. 8 znaków).
+    """
+    invalid_data = valid_register_data.copy()
+    invalid_data["password"] = invalid_password
+    
+    response = client.post("/api/v1/auth/register", json=invalid_data)
+    assert response.status_code == 422
+    
+    response_json = response.json()
+    assert "detail" in response_json
+    errors = response_json["detail"]
+    
+    assert any(
+        error["loc"] == ["body", "password"] and error["msg"] == expected_error_msg
+        for error in errors
+    ), f"Expected password error: '{expected_error_msg}', got {errors}"
+
+
 

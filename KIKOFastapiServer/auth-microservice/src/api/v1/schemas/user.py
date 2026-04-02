@@ -75,14 +75,14 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     # ZMIANA: Usuwamy 'min_length=6' stąd, żeby uniknąć błędu "String should have..."
     # Zostawiamy description dla dokumentacji
-    password: str = Field(..., description="Password must be at least 6 characters long")
+    password: str = Field(..., description="Password must be at least 8 characters long")
 
     @field_validator("password")
     @classmethod
     def validate_password_content(cls, value: str) -> str:
         # 1. ZMIANA: Dodajemy walidację długości TUTAJ, żeby mieć własny komunikat
-        if len(value) < 6:
-            raise ValueError("Password must be at least 6 characters long")
+        if len(value) < 8:
+            raise ValueError("Password must be at least 8 characters long")
 
         # 2. Wymaganie: minimum jedna cyfra
         if not re.search(r"\d", value):

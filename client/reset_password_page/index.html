@@ -230,7 +230,7 @@
                 <form id="reset-form">
                     <!-- Pole: Nowe Hasło -->
                     <div class="input-group">
-                        <input type="password" id="password" class="input-field" placeholder=" " required minlength="6">
+                        <input type="password" id="password" class="input-field" placeholder=" " required minlength="8">
                         <label for="password" class="input-label">New password</label>
                         <span class="material-symbols-outlined toggle-password" onclick="toggleVisibility('password', this)">visibility_off</span>
                     </div>
@@ -316,12 +316,12 @@
             }
 
             // 2. Walidacja siły hasła (Taka sama jak w backendzie/flutterze)
-            const hasMinLength = password.length >= 6;
+            const hasMinLength = password.length >= 8;
             const hasDigit = /\d/.test(password);
             const hasLetter = /[a-zA-Z]/.test(password);
 
             if (!hasMinLength || !hasDigit || !hasLetter) {
-                showError("Password must be at least 6 characters long, contain a letter and a digit.");
+                showError("Password must be at least 8 characters long, contain a letter and a digit.");
                 return;
             }
 
@@ -430,7 +430,7 @@
                 msg.includes("letter") ||
                 msg.includes("characters")) {
                 
-                return "Password must be at least 6 characters long, and contain both a letter and a digit.";
+                return "Password must be at least 8 characters long, and contain both a letter and a digit.";
             }
 
             // 3. Inne błędy

@@ -257,7 +257,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       if (v == null || v.isEmpty) return 'Wpisz hasło';
 
                       // Sprawdzamy wszystkie warunki naraz
-                      bool hasMinLength = v.length >= 6;
+                      bool hasMinLength = v.length >= 8;
                       bool hasDigit = RegExp(r'\d').hasMatch(v);
                       bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(v);
 
@@ -265,7 +265,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
                       // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
                       if (!hasMinLength || !hasDigit || !hasLetter) {
-                        return 'Hasło musi mieć min. 6 znaków, literę i cyfrę';
+                        return 'Hasło musi mieć min. 8 znaków, literę i cyfrę';
                       }
 
                       return null;

@@ -144,8 +144,8 @@ class ApiErrorHandler {
     if (msg.contains("value is not a valid email address")) {
       return "Niepoprawny format adresu email.";
     }
-    if (msg.contains("Password must be at least 6 characters long")) {
-      return "Hasło musi mieć co najmniej 6 znaków.";
+    if (msg.contains("Password must be at least 8 characters long")) {
+      return "Hasło musi mieć co najmniej 8 znaków.";
     }
     if (msg.contains("Password must contain at least one digit")) {
       return "Hasło musi zawierać co najmniej jedną cyfrę.";
@@ -153,8 +153,8 @@ class ApiErrorHandler {
     if (msg.contains("Password must contain at least one letter")) {
       return "Hasło musi zawierać co najmniej jedną literę.";
     }
-    if (msg.contains("String should have at least 6 characters")) {
-      return "Wartość jest za krótka (wymagane min. 6 znaków).";
+    if (msg.contains("String should have at least 8 characters")) {
+      return "Wartość jest za krótka (wymagane min. 8 znaków).";
     }
     //auth service error
     if (msg.contains(
