@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
@@ -9,6 +9,7 @@ from src.db.repository.refresh_token_repository import RefreshTokenRepository
 from src.db.repository.user_profile_repository import UserProfileRepository
 from src.api.v1.schemas import user as user_schema
 from src.api.v1.schemas.user_profile import UserProfileUpdate, UserProfilePublic
+from src.api.v1.schemas.user import UserUpdateUsername
 
 # Tworzymy oddzielny router do zarządzania profilami użytkowników
 router = APIRouter(prefix="/api/v1/users", tags=["Users"])
@@ -35,6 +36,47 @@ async def read_users_me(
         )
     # ----------------------------------------------
     return current_user
+
+
+@router.patch("/me/username", response_model=user_schema.UserPublic)
+async def update_username(
+    username_update: UserUpdateUsername,
+    current_user: UserDb = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Zmienia nazwę użytkownika (Core Identity).
+    Jeśli nazwa jest zajęta, zwraca kod 409 i sugeruje 3 wolne alternatywy.
+    """
+    new_username = username_update.username
+    
+    # 1. Optymalizacja: Jeśli użytkownik wysłał dokładnie ten sam login, który ma - nic nie rób (Sukces)
+    if current_user.username.lower() == new_username.lower():
+        return current_user
+        
+    user_repo = UserRepository(db)
+    
+    # 2. Sprawdzenie, czy nowa nazwa jest wolna
+    existing_user = await user_repo.get_by_username(new_username)
+    if existing_user:
+        # POBIERAMY SUGESTIE (Magia UX!)
+        suggestions = await user_repo.suggest_available_usernames(new_username)
+        
+        # Zwracamy złożony obiekt JSON z błędem i pomocną dłonią dla frontendu
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Username already taken",
+                "suggestions": suggestions
+            }
+        )
+        
+    # 3. Jeśli wolne - zmieniamy, zapisujemy i zwracamy zaktualizowany obiekt
+    current_user.username = new_username
+    updated_user = await user_repo.update(current_user)
+    
+    return updated_user
+    
 
 # --- [ZMIANA]: NOWY ENDPOINT DO AKTUALIZACJI JĘZYKA / USTAWIEŃ ---
 @router.patch("/me/profile", response_model=UserProfilePublic)

@@ -33,83 +33,42 @@ router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=user_schema.UserPublic, status_code=status.HTTP_201_CREATED)
 async def register_user(
-    user_in: UserRegister, # <--- Używamy schematu zawierającego pola captcha
+    user_in: UserRegister, 
     db: AsyncSession = Depends(get_db)
 ):
-    # --- 1. WERYFIKACJA CAPTCHA Z TIMEOUTEM ---
+    # --- 1. WERYFIKACJA CAPTCHA Z TIMEOUTEM (BEZ ZMIAN) ---
     captcha_url = f"{settings.CAPTCHA_SERVICE_URL}/captcha/verify"
-    
-    captcha_payload = {
-        "id": str(user_in.captcha_id),
-        "answer": user_in.captcha_answer
-    }
+    captcha_payload = {"id": str(user_in.captcha_id), "answer": user_in.captcha_answer}
 
-    # Ustawienie timeout na 5 sekund
-    # timeout=5.0 oznacza: max 5s na nawiązanie połączenia, max 5s na odczyt danych itd.
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             response = await client.post(captcha_url, json=captcha_payload)
-            response.raise_for_status() # Rzuci błąd jeśli Captcha Service zwróci 4xx lub 5xx
-            
+            response.raise_for_status() 
             verify_data = response.json()
-            
             if not verify_data.get("is_valid"):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail="Invalid CAPTCHA answer"
-                )
-
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid CAPTCHA answer")
         except httpx.TimeoutException:
-            # Obsługa przekroczenia czasu oczekiwania (5 sekund)
-            print("Błąd: Serwis Captcha nie odpowiedział w ciągu 5 sekund.")
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT, 
-                detail="Captcha verification timed out. Please try again later."
-            )
-            
+            raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Captcha verification timed out. Please try again later.")
         except httpx.RequestError as exc:
-            # Obsługa braku połączenia (np. serwis leży, zły adres URL)
-            print(f"Błąd połączenia z serwisem Captcha: {exc}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-                detail="Captcha service unavailable. Please try again later."
-            )
-        
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Captcha service unavailable. Please try again later.")
         except httpx.HTTPStatusError as exc:
-            # Obsługa błędów HTTP (np. 500 z serwera Captcha)
-            print(f"Serwis Captcha zwrócił błąd HTTP: {exc.response.status_code}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Error communicating with captcha service."
-            )
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Error communicating with captcha service.")
 
     # --- 2. LOGIKA BIZNESOWA REJESTRACJI ---
-    
-    # Konwersja UserRegister -> UserCreate (usuwamy pola captcha)
     user_create_data = UserCreate(
         **user_in.model_dump(exclude={"captcha_id", "captcha_answer"})
     )
 
     repo = UserRepository(db)
     
-    # Sprawdzenie czy email istnieje
+    # ================= [ZMIANA 1]: Sprawdzamy TYLKO email =================
     db_user = await repo.get_by_email(email=user_create_data.email)
     if db_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     
-    # Sprawdzenie czy username istnieje
-    db_user = await repo.get_by_username(username=user_create_data.username)
-    if db_user:
-        suggested_username = await repo.suggest_available_username(user_create_data.username)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, 
-            detail={
-                "message": "Username already taken",
-                "suggestion": suggested_username
-            }
-        )
+    # USUNIĘTO sprawdzanie get_by_username - to zadanie spadło na generator w Repozytorium!
+    # ======================================================================
     
-    # Utworzenie użytkownika
     user = await repo.create(user_data=user_create_data)
     return user
 

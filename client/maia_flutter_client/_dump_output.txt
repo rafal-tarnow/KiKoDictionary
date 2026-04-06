@@ -712,7 +712,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   // Kontrolery
   final _emailCtrl = TextEditingController();
-  final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _captchaInputCtrl = TextEditingController();
 
@@ -720,24 +719,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isPasswordVisible = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
-    _userCtrl.addListener(() {
-      final regState = ref.read(registerControllerProvider);
-      // Sprawdzamy stan rejestracji
-      if (regState.usernameSuggestion != null || regState.error != null) {
-        // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
-        // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
-        ref.read(registerControllerProvider.notifier).clearSuggestion();
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _emailCtrl.dispose();
-    _userCtrl.dispose();
     _passCtrl.dispose();
     _captchaInputCtrl.dispose();
     super.dispose();
@@ -764,7 +747,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         .read(registerControllerProvider.notifier)
         .register(
           email: _emailCtrl.text,
-          username: _userCtrl.text,
           password: _passCtrl.text,
           captchaId: captchaState.captcha!.id,
           captchaAnswer: _captchaInputCtrl.text,
@@ -782,7 +764,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
       // Czyścimy formularz
       _emailCtrl.clear();
-      _userCtrl.clear();
       _passCtrl.clear();
       _captchaInputCtrl.clear();
 
@@ -861,67 +842,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-
-                  // --- USERNAME ---
-                  TextFormField(
-                    controller: _userCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Nazwa użytkownika",
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.next,
-                    enabled: !regState.isLoading,
-                    validator: (v) {
-                      if (v == null || v.isEmpty){
-                        return 'Wpisz nazwę użytkownika';
-                      }
-                      if (v.length < 3){
-                        return 'Minimum 3 znaki';
-                      }
-                      return null;
-                    },
-                  ),
-                  //------------------ USERNAME SUGGESTION ---------
-                  if (regState.usernameSuggestion != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: InkWell(
-                        onTap: () {
-                          // Wpisujemy sugestię do pola
-                          _userCtrl.text = regState.usernameSuggestion!;
-                          // Czyścimy błąd w kontrolerze
-                          ref
-                              .read(registerControllerProvider.notifier)
-                              .clearSuggestion();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "Login zajęty. Kliknij, aby użyć: ${regState.usernameSuggestion}",
-                                  style: TextStyle(color: Colors.blue.shade900),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  //------------------------------------------------
+                  
                   const SizedBox(height: 16),
 
                   // --- HASŁO (z okiem) ---
@@ -979,8 +900,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 24),
 
                   // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if (regState.error != null &&
-                      regState.usernameSuggestion == null)
+                  if (regState.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(
@@ -1065,79 +985,59 @@ Zawartość pliku:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_error_handler.dart';
 import '../../data/auth_repository.dart';
-import '../../domain/exceptions/auth_exceptions.dart';
+
 
 class RegisterState {
   final bool isLoading;
   final String? error;
-  final String? usernameSuggestion;
 
+  // Usunięto 'usernameSuggestion'
   const RegisterState({
     this.isLoading = false, 
     this.error, 
-    this.usernameSuggestion
   });
 
-  RegisterState copyWith({bool? isLoading, String? error, String? usernameSuggestion}) {
+  RegisterState copyWith({bool? isLoading, String? error}) {
     return RegisterState(
       isLoading: isLoading ?? this.isLoading,
       error: error, 
-      usernameSuggestion: usernameSuggestion,
     );
   }
-  
-  // Helper do czyszczenia sugestii
-  RegisterState clearSuggestion() {
-    return RegisterState(isLoading: isLoading, error: null, usernameSuggestion: null);
-  }
 }
+
 
 class RegisterController extends StateNotifier<RegisterState> {
   final AuthRepository _authRepository;
 
   RegisterController(this._authRepository) : super(const RegisterState());
 
-  void clearSuggestion() {
-    if (state.usernameSuggestion != null || state.error != null) {
-      state = state.clearSuggestion();
-    }
-  }
 
   Future<bool> register({
     required String email,
-    required String username,
     required String password,
     required String captchaId,
     required String captchaAnswer,
   }) async {
-    state = const RegisterState(isLoading: true); // Reset stanu przy starcie
+    state = const RegisterState(isLoading: true); 
 
     try {
       await _authRepository.register(
         email: email,
-        username: username,
-        password: password,
+        password: password, // <-- Brak loginu
         captchaId: captchaId,
         captchaAnswer: captchaAnswer,
       );
       state = state.copyWith(isLoading: false);
-      // Rejestracja zazwyczaj nie loguje z automatu (chyba że API tak działa),
-      // więc nie ustawiamy tutaj authController.setAuthenticated(true).
-      // Zwracamy true, żeby UI wiedział o sukcesie.
       return true;
-    } on UsernameTakenException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.message,
-        usernameSuggestion: e.suggestion,
-      );
-      return false;
+      
+    // Usunięto obsługę wyjątku UsernameTakenException
     } catch (e) {
       final msg = ApiErrorHandler.getErrorMessage(e);
       state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
+
 }
 
 final registerControllerProvider = StateNotifierProvider.autoDispose<RegisterController, RegisterState>((ref) {
@@ -1544,7 +1444,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ZMIANA: Importujemy provider dedykowany dla auth
 import 'auth_dio_provider.dart'; 
 import 'models/auth_token.dart';
-import "../domain/exceptions/auth_exceptions.dart";
 
 final authRepositoryProvider = Provider((ref) {
   // ZMIANA: Watchujemy authDioProvider zamiast głównego dioProvider
@@ -1578,10 +1477,9 @@ class AuthRepository {
   }
 
   // Rejestracja: application/json
-Future<void> register({
+  Future<void> register({
     required String email,
-    required String username,
-    required String password,
+    required String password, // Brak username
     required String captchaId,
     required String captchaAnswer,
   }) async {
@@ -1590,31 +1488,14 @@ Future<void> register({
         '/api/v1/auth/register',
         data: {
           'email': email,
-          'username': username,
+          // Brak pola 'username', backend sobie z tym poradzi
           'password': password,
           'captcha_id': captchaId,
           'captcha_answer': captchaAnswer,
         },
       );
-    } on DioException catch (e) {
-      // Sprawdzamy, czy to konflikt (409) i czy backend przysłał sugestię
-      if (e.response?.statusCode == 409) {
-        final data = e.response?.data;
-        if (data is Map && data['detail'] is Map) {
-          final suggestion = data['detail']['suggestion'];
-          
-          if (suggestion != null) {
-            // Rzucamy nasz specjalny wyjątek z sugestią
-            throw UsernameTakenException(
-              message: "Nazwa użytkownika jest zajęta.",
-              suggestion: suggestion.toString(),
-            );
-          }
-        }
-      }
-      // Jeśli to nie to, rzucamy błąd dalej (trafi do ApiErrorHandler)
-      rethrow;
     } catch (e) {
+      // Usunęliśmy sprawdzanie błędów 409 i logiki sugestii, bo to już nie wystąpi!
       rethrow;
     }
   }
@@ -2348,6 +2229,139 @@ class LanguageSelector extends ConsumerWidget {
   }
 }
 
+
+
+===============================
+Ścieżka do pliku: ./lib/features/user/presentation/controllers/user_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/user_repository.dart';
+import '../../../auth/data/models/user_model.dart';
+
+// Stan asynchroniczny (może być loading, error, lub załadowane dane Usera)
+class UserController extends StateNotifier<AsyncValue<User?>> {
+  final UserRepository _repository;
+
+  // Na starcie ustawiamy stan jako ładujący
+  UserController(this._repository) : super(const AsyncValue.loading());
+
+  // Pobiera dane usera z backendu i zapisuje w stanie globalnym
+  Future<void> fetchUser() async {
+    state = const AsyncValue.loading();
+    try {
+      final user = await _repository.getUserMe();
+      state = AsyncValue.data(user);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+
+  // Szybka, lokalna aktualizacja po sukcesie z PATCH. 
+  // Zapobiega to konieczności pobierania całego usera od nowa.
+  void updateLocalProfileLanguage(String newLanguage) {
+    final currentUser = state.value;
+    if (currentUser?.profile != null) {
+      // W Darcie obiekty są immutable, więc by to zrobić "podręcznikowo", 
+      // powinniśmy mieć metodę copyWith w modelu.
+      // Skrócona wersja mutacji (jako że to uproszczenie w Darcie):
+      state = AsyncValue.data(User(
+        id: currentUser!.id,
+        username: currentUser.username,
+        email: currentUser.email,
+        role: currentUser.role,
+        profile: currentUser.profile, // Uwaga, to referencja, zmieniamy niżej
+      ));
+      
+      // Aby ui zaktualizowało się natychmiast musimy zasymulować zmianę.
+      // W wersji produkcyjnej najlepiej dodać metodę `copyWith` do klas User i UserProfile.
+      fetchUser(); // Na ten moment: pobierzmy usera z bazy zaktualizowanego, to gwarantuje spójność.
+    }
+  }
+
+  // Czyszczenie stanu po wylogowaniu
+  void clearUser() {
+    state = const AsyncValue.data(null);
+  }
+}
+
+// Provider globalny (trzyma stan tak długo jak aplikacja działa)
+final userControllerProvider = StateNotifierProvider<UserController, AsyncValue<User?>>((ref) {
+  return UserController(ref.watch(userRepositoryProvider));
+});
+
+
+===============================
+Ścieżka do pliku: ./lib/features/user/data/user_repository.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/data/auth_dio_provider.dart'; // Używamy tego samego dio co Auth (z tokenem)
+import '../../auth/data/models/user_model.dart';
+import 'models/user_profile_model.dart';
+
+final userRepositoryProvider = Provider<UserRepository>((ref) {
+  final dio = ref.watch(authDioProvider);
+  return UserRepository(dio);
+});
+
+class UserRepository {
+  final Dio _dio;
+
+  UserRepository(this._dio);
+
+  // Pobranie własnych danych (odpala się po logowaniu)
+  Future<User> getUserMe() async {
+    try {
+      final response = await _dio.get('/api/v1/users/me');
+      return User.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Zaktualizowanie profilu (PATCH)
+  Future<UserProfile> updateProfile({required String nativeLanguage}) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/users/me/profile',
+        data: {
+          'native_language': nativeLanguage,
+          // ui_theme narazie nie wysyłamy, backend je pominie
+        },
+      );
+      return UserProfile.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/user/data/models/user_profile_model.dart
+
+Zawartość pliku:
+
+class UserProfile {
+  final String nativeLanguage;
+  final String uiTheme;
+
+  UserProfile({
+    required this.nativeLanguage,
+    required this.uiTheme,
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      nativeLanguage: json['native_language'] as String? ?? 'en',
+      uiTheme: json['ui_theme'] as String? ?? 'system',
+    );
+  }
+}
 
 
 ===============================

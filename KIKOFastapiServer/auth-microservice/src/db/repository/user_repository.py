@@ -5,12 +5,15 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, func
 from datetime import datetime, timezone
 import uuid
+import re
+from coolname import generate_slug
+import random
 
 from src.db.models.user import User
 from src.db.models.user_profile import UserProfile
 from src.api.v1.schemas.user import UserCreate
 from src.core.security import get_password_hash
-import re
+
 
 class UserRepository:
     def __init__(self, db_session: AsyncSession):
@@ -72,32 +75,86 @@ class UserRepository:
         return result.scalars().first()
     
 
+    async def _generate_unique_username(self) -> str:
+        """
+        Generuje przyjazny dla ucha, unikalny login (np. CleverTiger842).
+        Gwarantuje unikalność poprzez odpytanie bazy danych w pętli.
+        """
+        while True:
+            # Generuje 2 losowe, ładne słowa, usuwa myślniki i robi CamelCase
+            # np. "brave-panther" -> "BravePanther"
+            base_slug = generate_slug(2).title().replace("-", "")
+            
+            # Dodaje losowy sufix liczbowy dla gwarancji unikalności
+            suffix = random.randint(100, 9999)
+            candidate = f"{base_slug}{suffix}"
+            
+            # Sprawdzenie czy w bazie już istnieje taki sam
+            exists = await self.get_by_username(candidate)
+            if not exists:
+                return candidate
+            
+
+    async def suggest_available_usernames(self, base_username: str, limit: int = 3) -> list[str]:
+        """
+        Zwraca listę wolnych nazw użytkownika bazujących na wpisanym słowie.
+        Wysyła tylko JEDNO zapytanie do bazy (wydajność!).
+        """
+        suggestions = []
+        candidates = set()
+        
+        # 1. Tworzymy pulę np. 10 kandydatów (z krótkimi sufixami)
+        while len(candidates) < 10:
+            suffix = random.randint(10, 999)
+            candidates.add(f"{base_username}{suffix}")
+            
+        # 2. Odpytujemy bazę JEDNYM ZAPYTANIEM o wszystkie te nazwy naraz
+        query = select(User.username).filter(
+            func.lower(User.username).in_([c.lower() for c in candidates])
+        )
+        result = await self.db.execute(query)
+        taken_usernames = {u.lower() for u in result.scalars().all()}
+        
+        # 3. Zwracamy tylko te, których baza NIE znalazła
+        for candidate in candidates:
+            if candidate.lower() not in taken_usernames:
+                suggestions.append(candidate)
+                if len(suggestions) == limit:
+                    break
+                    
+        return suggestions
+
+
     async def create(self, user_data: UserCreate) -> User:
         hashed_password = get_password_hash(user_data.password)
         
-        # WAŻNE: Zapisujemy user_data.username W ORYGINALE (np. "RafalDev").
-        # Unikalność ("rafaldev" vs "RafalDev") jest pilnowana przez:
-        # 1. get_by_username() użyte w routerze przed zapisem (Application Layer check)
-        # 2. Index unique na func.lower(username) w bazie (Database Layer check)
+        generated_username = await self._generate_unique_username()
         
         db_user = User(
-            username=user_data.username, # Zachowujemy casing dla ładnego wyświetlania
+            username=generated_username, 
             email=user_data.email.lower(),
             hashed_password=hashed_password,
         )
+        
         self.db.add(db_user)
-        await self.db.flush() # [ZMIANA]: Flush nadaje id dla db_user przed commit()
+        # 1. Zapisujemy Usera, aby dostać jego ID
+        await self.db.flush()
 
-        # [ZMIANA]: Tworzymy domyślny profil przy rejestracji!
+        # 2. Tworzymy Profil przypięty do tego ID
         db_profile = UserProfile(user_id=db_user.id)
         self.db.add(db_profile)
 
+        # 3. Pełny commit transakcji
         await self.db.commit()
-        # Odświeżamy usera ładując od razu jego profil
-        result = await self.db.execute(
-            select(User).options(selectinload(User.profile)).filter(User.id == db_user.id)
-        )
-        return result.scalars().first()
+        
+        # ================= ZMIANA (NAPRAWA BŁĘDU MissingGreenlet) =================
+        # Zamiast odpalać kolejne ciężkie zapytanie SQL przez selectinload (co wiesza asyncio w testach),
+        # po prostu "ręcznie" dopinamy dopiero co stworzony profil do obiektu db_user.
+        await self.db.refresh(db_user)
+        await self.db.refresh(db_profile)
+        db_user.profile = db_profile
+        
+        return db_user
     
 
     async def update(self, user: User) -> User:
@@ -109,40 +166,6 @@ class UserRepository:
         await self.db.refresh(user) # Odświeżenie danych (np. updated_at)
         return user
 
-
-    async def suggest_available_username(self, username: str) -> str:
-        """
-        Generuje unikalną nazwę użytkownika, dodając liczbę na końcu.
-        Np. jeśli 'Tom' jest zajęty, szuka 'Tom1', 'Tom2'... i zwraca pierwszy wolny.
-        """
-        base_username = username
-        
-        # Pobieramy wszystkie loginy, które zaczynają się tak samo (ignorując wielkość liter)
-        # Używamy LIKE 'username%', żeby znaleźć 'Tom', 'Tom1', 'Tom999'
-        query = select(User.username).filter(
-            func.lower(User.username).like(f"{base_username.lower()}%")
-        )
-        result = await self.db.execute(query)
-        existing_usernames = result.scalars().all()
-
-        # Jeśli nie ma żadnych konfliktów (teoretycznie funkcja wywoływana tylko gdy są), zwracamy oryginał
-        if not existing_usernames:
-            return base_username
-
-        # Tworzymy zbiór małych liter dla szybkiego sprawdzania
-        existing_set = {u.lower() for u in existing_usernames}
-
-        # Jeśli podstawowa nazwa jest wolna (np. ktoś usunął konto w międzyczasie), zwracamy ją
-        if base_username.lower() not in existing_set:
-            return base_username
-
-        # Szukamy pierwszej wolnej liczby
-        counter = 1
-        while True:
-            new_username = f"{base_username}{counter}"
-            if new_username.lower() not in existing_set:
-                return new_username
-            counter += 1
 
     # --- [ZMIANA]: NOWA METODA - PROFESJONALNE USUWANIE KONTA ---
     async def soft_delete_user(self, user: User) -> None:

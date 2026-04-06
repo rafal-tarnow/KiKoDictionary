@@ -17,7 +17,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   // Kontrolery
   final _emailCtrl = TextEditingController();
-  final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _captchaInputCtrl = TextEditingController();
 
@@ -25,24 +24,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _isPasswordVisible = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Dodajemy listener, który wyczyści sugestię/błąd jak user zacznie pisać w username
-    _userCtrl.addListener(() {
-      final regState = ref.read(registerControllerProvider);
-      // Sprawdzamy stan rejestracji
-      if (regState.usernameSuggestion != null || regState.error != null) {
-        // Wywołujemy metodę czyszczącą tylko jeśli faktycznie jest co czyścić
-        // (żeby nie odświeżać UI przy każdym znaku bez potrzeby)
-        ref.read(registerControllerProvider.notifier).clearSuggestion();
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _emailCtrl.dispose();
-    _userCtrl.dispose();
     _passCtrl.dispose();
     _captchaInputCtrl.dispose();
     super.dispose();
@@ -69,7 +52,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         .read(registerControllerProvider.notifier)
         .register(
           email: _emailCtrl.text,
-          username: _userCtrl.text,
           password: _passCtrl.text,
           captchaId: captchaState.captcha!.id,
           captchaAnswer: _captchaInputCtrl.text,
@@ -87,7 +69,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
       // Czyścimy formularz
       _emailCtrl.clear();
-      _userCtrl.clear();
       _passCtrl.clear();
       _captchaInputCtrl.clear();
 
@@ -166,67 +147,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-
-                  // --- USERNAME ---
-                  TextFormField(
-                    controller: _userCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Nazwa użytkownika",
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.next,
-                    enabled: !regState.isLoading,
-                    validator: (v) {
-                      if (v == null || v.isEmpty){
-                        return 'Wpisz nazwę użytkownika';
-                      }
-                      if (v.length < 3){
-                        return 'Minimum 3 znaki';
-                      }
-                      return null;
-                    },
-                  ),
-                  //------------------ USERNAME SUGGESTION ---------
-                  if (regState.usernameSuggestion != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: InkWell(
-                        onTap: () {
-                          // Wpisujemy sugestię do pola
-                          _userCtrl.text = regState.usernameSuggestion!;
-                          // Czyścimy błąd w kontrolerze
-                          ref
-                              .read(registerControllerProvider.notifier)
-                              .clearSuggestion();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "Login zajęty. Kliknij, aby użyć: ${regState.usernameSuggestion}",
-                                  style: TextStyle(color: Colors.blue.shade900),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  //------------------------------------------------
+                  
                   const SizedBox(height: 16),
 
                   // --- HASŁO (z okiem) ---
@@ -284,8 +205,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 24),
 
                   // --- ERROR BOX (Wystylizowany jak w Login) ---
-                  if (regState.error != null &&
-                      regState.usernameSuggestion == null)
+                  if (regState.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Container(

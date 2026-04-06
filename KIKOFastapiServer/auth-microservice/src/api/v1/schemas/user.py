@@ -20,14 +20,9 @@ RESERVED_USERNAMES = {
 # Tutaj prosta wersja: a-z, 0-9, _, -
 USERNAME_REGEX = r"^[a-zA-Z0-9_-]+$"
 
+
 class UserBase(BaseModel):
     email: EmailStr
-    # ZMIANA: Usunięto min_length i max_length z Field(), aby uniknąć generycznych błędów Pydantic.
-    # Walidacja długości odbywa się teraz w validate_username_security.
-    username: str = Field(
-        ..., 
-        description="Username must be 3-30 characters, strictly alphanumeric, underscores or hyphens."
-    )
 
     # Używamy mode='before', żeby naprawić dane zanim Pydantic zacznie marudzić
     @field_validator("email", mode="before")
@@ -40,40 +35,8 @@ class UserBase(BaseModel):
         return v
 
 
-    @field_validator("username")
-    @classmethod
-    def validate_username_security(cls, value: str) -> str:
-        # --- WAŻNE: NIE USUWAĆ PONIŻSZEGO BLOKU ---
-        # Sprawdzamy długość ręcznie tutaj, zamiast w Field(), aby zwrócić
-        # precyzyjny komunikat błędu dla Frontendu, zamiast generycznego
-        # "String should have at least X characters" z Pydantic.
-        if len(value) < 3:
-            raise ValueError("Username must be at least 3 characters long.")
-        if len(value) > 30:
-            raise ValueError("Username cannot be longer than 30 characters.")
-        # ------------------------------------------
-
-        # 1. Sprawdzenie znaków (Regex)
-        if not re.match(USERNAME_REGEX, value):
-            raise ValueError("Username can only contain letters, numbers, underscores (_), and hyphens (-).")
-
-        # 2. Sprawdzenie słów zastrzeżonych
-        if value.lower() in RESERVED_USERNAMES:
-            raise ValueError("This username is reserved and cannot be used.")
-            
-        # 3. Sprawdzenie czy nie wygląda jak email (żeby ludzie nie wpisywali tu maila)
-        if "@" in value:
-             raise ValueError("Username cannot contain '@' symbol.")
-
-        # 4. Podwójne kropki/podkreślenia (opcjonalne - estetyka)
-        if "__" in value or "--" in value:
-            raise ValueError("Username cannot contain consecutive underscores or hyphens.")
-
-        return value
-    
-
 class UserCreate(UserBase):
-    # ZMIANA: Usuwamy 'min_length=6' stąd, żeby uniknąć błędu "String should have..."
+    # ZMIANA: Usuwamy 'min_length=8' stąd, żeby uniknąć błędu "String should have..."
     # Zostawiamy description dla dokumentacji
     password: str = Field(..., description="Password must be at least 8 characters long")
 
@@ -94,12 +57,15 @@ class UserCreate(UserBase):
             
         return value
 
+
 class UserRegister(UserCreate):
     captcha_id: UUID
     captcha_answer: str
     
+
 class UserPublic(UserBase):
     id: UUID
+    username: str
     account_role: AccountRole
     account_subscription: AccountSubscription
     subscription_expires_at: Optional[datetime] = None
@@ -108,3 +74,24 @@ class UserPublic(UserBase):
     profile: Optional[UserProfilePublic] = None 
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserUpdateUsername(BaseModel):
+    username: str = Field(..., description="Username must be 3-30 characters.")
+
+    @field_validator("username")
+    @classmethod
+    def validate_username_security(cls, value: str) -> str:
+        if len(value) < 3:
+            raise ValueError("Username must be at least 3 characters long.")
+        if len(value) > 30:
+            raise ValueError("Username cannot be longer than 30 characters.")
+        if not re.match(USERNAME_REGEX, value):
+            raise ValueError("Username can only contain letters, numbers, underscores (_), and hyphens (-).")
+        if value.lower() in RESERVED_USERNAMES:
+            raise ValueError("This username is reserved and cannot be used.")
+        if "@" in value:
+             raise ValueError("Username cannot contain '@' symbol.")
+        if "__" in value or "--" in value:
+            raise ValueError("Username cannot contain consecutive underscores or hyphens.")
+        return value
