@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
+import 'widgets/username_editor.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -77,6 +78,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              const UsernameEditor(),
+
+              const SizedBox(height: 16),
 
               const LanguageSelector(),
 

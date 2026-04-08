@@ -46,19 +46,28 @@ async def update_username(
 ):
     """
     Zmienia nazwę użytkownika (Core Identity).
-    Jeśli nazwa jest zajęta, zwraca kod 409 i sugeruje 3 wolne alternatywy.
+    Pozwala na zmianę wielkości liter własnego loginu (np. z 'Ania' na 'ania').
+    Jeśli nazwa jest zajęta przez INNEGO użytkownika, zwraca kod 409 i sugeruje wolne alternatywy.
     """
     new_username = username_update.username
     
-    # 1. Optymalizacja: Jeśli użytkownik wysłał dokładnie ten sam login, który ma - nic nie rób (Sukces)
-    if current_user.username.lower() == new_username.lower():
+    # ================= [ZMIANA 1]: Blokujemy tylko IDENTYCZNE ciągi znaków =================
+    # Jeśli wysłał dokładnie "Ania", a w bazie ma "Ania" - oszczędzamy bazę i zwracamy sukces.
+    # Usunęliśmy tu użycie .lower(), aby "Ania" != "ania" przeszło dalej!
+    if current_user.username == new_username:
         return current_user
+    # =========================================================================================
         
     user_repo = UserRepository(db)
     
     # 2. Sprawdzenie, czy nowa nazwa jest wolna
     existing_user = await user_repo.get_by_username(new_username)
-    if existing_user:
+    
+    # ================= [ZMIANA 2]: Inteligentna obsługa Konfliktu (Casing Exception) =================
+    # Błąd 409 rzucamy TYLKO wtedy, gdy ktoś inny ma już tę nazwę.
+    # Jeśli existing_user to my sami (existing_user.id == current_user.id), 
+    # to znaczy, że po prostu zmieniamy "Ania" na "ania" lub "ANIA" i pozwalamy na to.
+    if existing_user and existing_user.id != current_user.id:
         # POBIERAMY SUGESTIE (Magia UX!)
         suggestions = await user_repo.suggest_available_usernames(new_username)
         
@@ -70,8 +79,9 @@ async def update_username(
                 "suggestions": suggestions
             }
         )
+    # =================================================================================================
         
-    # 3. Jeśli wolne - zmieniamy, zapisujemy i zwracamy zaktualizowany obiekt
+    # 3. Jeśli wolne (lub zmieniamy tylko własny Casing) - zmieniamy, zapisujemy i zwracamy zaktualizowany obiekt
     current_user.username = new_username
     updated_user = await user_repo.update(current_user)
     

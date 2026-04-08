@@ -5,19 +5,37 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../user/data/user_repository.dart'; // NOWE
 import '../../../user/presentation/controllers/user_controller.dart'; // NOWE
+import '../../../user/domain/exceptions/user_exceptions.dart';
 
 class SettingsState {
   final bool isLoading;
   final String? error;
+  // ================= ZMIANA 2: Nowe pole dla sugestii =================
+  final List<String>? usernameSuggestions;
 
-  const SettingsState({this.isLoading = false, this.error});
+  const SettingsState({
+    this.isLoading = false, 
+    this.error,
+    this.usernameSuggestions,
+  });
 
-  SettingsState copyWith({bool? isLoading, String? error}) {
+  SettingsState copyWith({
+    bool? isLoading, 
+    String? error,
+    List<String>? usernameSuggestions,
+  }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error, // Tu nie dajemy ??, by móc nadpisać nullem
+      usernameSuggestions: usernameSuggestions, // Tu też nie, by móc wyczyścić
     );
   }
+
+  // Funkcja pomocnicza (Clean Code)
+  SettingsState clearErrorAndSuggestions() {
+    return SettingsState(isLoading: isLoading, error: null, usernameSuggestions: null);
+  }
+  // ====================================================================
 }
 
 class SettingsController extends StateNotifier<SettingsState> {
@@ -28,6 +46,42 @@ class SettingsController extends StateNotifier<SettingsState> {
 
   SettingsController(this._authRepo, this._userRepo, this._authController, this._ref) 
       : super(const SettingsState());
+
+  // ================= ZMIANA 3: Funkcja czyszcząca UI z błędów w locie =================
+  void clearUsernameError() {
+    if (state.error != null || state.usernameSuggestions != null) {
+      state = state.clearErrorAndSuggestions();
+    }
+  }
+
+  Future<bool> updateUsername(String newUsername) async {
+    state = state.copyWith(isLoading: true, error: null, usernameSuggestions: null);
+    try {
+      // 1. Strzał do API
+      await _userRepo.updateUsername(newUsername: newUsername);
+      
+      // 2. Jeśli sukces -> Odświeżamy globalny stan Usera (żeby avatar w AppBar się zmienił!)
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      state = state.copyWith(isLoading: false);
+      return true;
+
+    } on UsernameConflictException catch (e) {
+      // 3. Jeśli konflikt -> Przekazujemy sugestie z backendu do UI
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        usernameSuggestions: e.suggestions,
+      );
+      return false;
+
+    } catch (e) {
+      // 4. Inne błędy (np. 422 zbyt krótka nazwa, brak neta)
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
 
   // === NOWA FUNKCJA DO JĘZYKA ===
   Future<bool> updateLanguage(String newLangCode) async {

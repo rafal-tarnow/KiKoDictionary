@@ -1682,6 +1682,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
+import 'widgets/username_editor.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -1756,6 +1757,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              const UsernameEditor(),
+
+              const SizedBox(height: 16),
 
               const LanguageSelector(),
 
@@ -2037,19 +2042,37 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../user/data/user_repository.dart'; // NOWE
 import '../../../user/presentation/controllers/user_controller.dart'; // NOWE
+import '../../../user/domain/exceptions/user_exceptions.dart';
 
 class SettingsState {
   final bool isLoading;
   final String? error;
+  // ================= ZMIANA 2: Nowe pole dla sugestii =================
+  final List<String>? usernameSuggestions;
 
-  const SettingsState({this.isLoading = false, this.error});
+  const SettingsState({
+    this.isLoading = false, 
+    this.error,
+    this.usernameSuggestions,
+  });
 
-  SettingsState copyWith({bool? isLoading, String? error}) {
+  SettingsState copyWith({
+    bool? isLoading, 
+    String? error,
+    List<String>? usernameSuggestions,
+  }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error, // Tu nie dajemy ??, by móc nadpisać nullem
+      usernameSuggestions: usernameSuggestions, // Tu też nie, by móc wyczyścić
     );
   }
+
+  // Funkcja pomocnicza (Clean Code)
+  SettingsState clearErrorAndSuggestions() {
+    return SettingsState(isLoading: isLoading, error: null, usernameSuggestions: null);
+  }
+  // ====================================================================
 }
 
 class SettingsController extends StateNotifier<SettingsState> {
@@ -2060,6 +2083,42 @@ class SettingsController extends StateNotifier<SettingsState> {
 
   SettingsController(this._authRepo, this._userRepo, this._authController, this._ref) 
       : super(const SettingsState());
+
+  // ================= ZMIANA 3: Funkcja czyszcząca UI z błędów w locie =================
+  void clearUsernameError() {
+    if (state.error != null || state.usernameSuggestions != null) {
+      state = state.clearErrorAndSuggestions();
+    }
+  }
+
+  Future<bool> updateUsername(String newUsername) async {
+    state = state.copyWith(isLoading: true, error: null, usernameSuggestions: null);
+    try {
+      // 1. Strzał do API
+      await _userRepo.updateUsername(newUsername: newUsername);
+      
+      // 2. Jeśli sukces -> Odświeżamy globalny stan Usera (żeby avatar w AppBar się zmienił!)
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      state = state.copyWith(isLoading: false);
+      return true;
+
+    } on UsernameConflictException catch (e) {
+      // 3. Jeśli konflikt -> Przekazujemy sugestie z backendu do UI
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        usernameSuggestions: e.suggestions,
+      );
+      return false;
+
+    } catch (e) {
+      // 4. Inne błędy (np. 422 zbyt krótka nazwa, brak neta)
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
 
   // === NOWA FUNKCJA DO JĘZYKA ===
   Future<bool> updateLanguage(String newLangCode) async {
@@ -2104,6 +2163,226 @@ final settingsControllerProvider = StateNotifierProvider.autoDispose<SettingsCon
     ref,
   );
 });
+
+
+===============================
+Ścieżka do pliku: ./lib/features/settings/presentation/widgets/username_editor.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../user/presentation/controllers/user_controller.dart';
+import '../controllers/settings_controller.dart';
+
+class UsernameEditor extends ConsumerStatefulWidget {
+  const UsernameEditor({super.key});
+
+  @override
+  ConsumerState<UsernameEditor> createState() => _UsernameEditorState();
+}
+
+class _UsernameEditorState extends ConsumerState<UsernameEditor> {
+  final _usernameCtrl = TextEditingController();
+  // ================= [ZMIANA 1]: Flaga pomocnicza =================
+  // Dzięki niej wiemy, czy już wpisaliśmy nazwę do kontrolera po raz pierwszy,
+  // żeby nie nadpisywać jej, gdy użytkownik zacznie coś zmieniać.
+  bool _isInitialized = false;
+  // ================================================================
+
+  @override
+  void initState() {
+    super.initState();
+    // UX: Czyścimy błędy, gdy użytkownik zaczyna wpisywać nową nazwę
+    _usernameCtrl.addListener(() {
+      ref.read(settingsControllerProvider.notifier).clearUsernameError();
+    });
+  }
+
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final newName = _usernameCtrl.text.trim();
+    if (newName.isEmpty) return;
+
+    // UX: Chowamy klawiaturę
+    FocusScope.of(context).unfocus();
+
+    final success = await ref
+        .read(settingsControllerProvider.notifier)
+        .updateUsername(newName);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Nazwa użytkownika została zmieniona!"),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Obserwujemy stan globalny (żeby zablokować UI podczas ładowania profilu z neta)
+    final userState = ref.watch(userControllerProvider);
+    // Obserwujemy nasz lokalny kontroler ustawień (żeby widzieć błędy, sugestie, loadery)
+    final settingsState = ref.watch(settingsControllerProvider);
+
+    return Card(
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.badge_outlined, color: Colors.deepPurple),
+                SizedBox(width: 8),
+                Text(
+                  "Nazwa Użytkownika",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Ta nazwa widnieje w przestrzeni publicznej. Możesz w każdej chwili zmienić losowo wygenerowany identyfikator na swój własny.",
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+
+            userState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, __) => const Text("Nie udało się załadować profilu.", style: TextStyle(color: Colors.red)),
+              data: (user) {
+                if (user == null) return const SizedBox.shrink();
+
+                // ================= [ZMIANA 2]: Bezpieczne inicjowanie danych =================
+                // Robimy to tylko raz (po załadowaniu usera).
+                // Schedule microtask zapobiega błędom w cyklu życia widżetów (SetState podczas Builda)
+                if (!_isInitialized && _usernameCtrl.text.isEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _usernameCtrl.text = user.username;
+                        _isInitialized = true;
+                      });
+                    }
+                  });
+                }
+                // ===============================================================================
+
+                // Sprawdzamy czy wpisany tekst w polu jest taki sam jak ten w bazie
+                // Żeby niepotrzebnie nie wysyłać zapytania
+                final isSameAsCurrent = _usernameCtrl.text.trim().toLowerCase() == user.username.toLowerCase();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _usernameCtrl,
+                            enabled: !settingsState.isLoading,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              labelText: "Twoja nazwa",
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Przycisk Zapisz obok pola tekstowego
+                        FilledButton(
+                          onPressed: (settingsState.isLoading || isSameAsCurrent) ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          ),
+                          child: settingsState.isLoading
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text("ZAPISZ"),
+                        ),
+                      ],
+                    ),
+
+                    // --- OBSŁUGA BŁĘDÓW I SUGESTII ---
+                    if (settingsState.error != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    settingsState.error!,
+                                    style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.w500),
+                                  ),
+                                  
+                                  // ====== MAGIA UX: WYŚWIETLANIE SUGESTII (PIGUŁKI) ======
+                                  if (settingsState.usernameSuggestions != null && settingsState.usernameSuggestions!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Dostępne alternatywy:",
+                                      style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 8.0,
+                                      runSpacing: 4.0,
+                                      children: settingsState.usernameSuggestions!.map((suggestion) {
+                                        return ActionChip(
+                                          label: Text(suggestion),
+                                          backgroundColor: Colors.white,
+                                          side: BorderSide(color: Colors.red.shade200),
+                                          labelStyle: TextStyle(color: Colors.red.shade900, fontSize: 13),
+                                          onPressed: () {
+                                            // Gdy user kliknie sugestię, wpisujemy ją w pole!
+                                            _usernameCtrl.text = suggestion;
+                                            ref.read(settingsControllerProvider.notifier).clearUsernameError();
+                                          },
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                  // =======================================================
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 
 ===============================
@@ -2293,6 +2572,25 @@ final userControllerProvider = StateNotifierProvider<UserController, AsyncValue<
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/user/domain/exceptions/user_exceptions.dart
+
+Zawartość pliku:
+
+class UsernameConflictException implements Exception {
+  final String message;
+  final List<String> suggestions;
+
+  UsernameConflictException({
+    required this.message,
+    required this.suggestions,
+  });
+
+  @override
+  String toString() => message;
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/user/data/user_repository.dart
 
 Zawartość pliku:
@@ -2302,6 +2600,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/data/auth_dio_provider.dart'; // Używamy tego samego dio co Auth (z tokenem)
 import '../../auth/data/models/user_model.dart';
 import 'models/user_profile_model.dart';
+import '../domain/exceptions/user_exceptions.dart';
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   final dio = ref.watch(authDioProvider);
@@ -2334,6 +2633,34 @@ class UserRepository {
         },
       );
       return UserProfile.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<User> updateUsername({required String newUsername}) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/users/me/username',
+        data: {'username': newUsername},
+      );
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      // Wyłapujemy specyficzny błąd 409 z FastAPI
+      if (e.response?.statusCode == 409) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is Map) {
+          final detail = data['detail'];
+          // Bezpiecznie parsowanie listy sugestii przysłanej przez serwer
+          final suggestions = List<String>.from(detail['suggestions'] ?? []);
+          
+          throw UsernameConflictException(
+            message: "Ta nazwa użytkownika jest już zajęta.",
+            suggestions: suggestions,
+          );
+        }
+      }
+      rethrow; // Inne błędy (np. brak neta, 422) lecą dalej do ApiErrorHandler
     } catch (e) {
       rethrow;
     }
