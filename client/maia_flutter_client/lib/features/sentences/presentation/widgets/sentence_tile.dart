@@ -77,7 +77,7 @@ class SentenceTile extends ConsumerWidget {
                 Icon(Icons.language, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  sentence.sourceLanguage,
+                  '${sentence.sourceLanguage}:${sentence.targetLanguage}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
