@@ -142,6 +142,8 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+
+                //MAIN LAYOUT - TITLE 
                 Text(
                   titleText,
                   style: Theme.of(context).textTheme.headlineSmall,
@@ -167,10 +169,12 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
+                        //MAIN LAYOUT - Native language text
                         TextFormField(
                           controller: _originalTextCtrl,
                           decoration: InputDecoration(
-                            labelText: '$sourceFlag Native Language (${activeSourceLang.toUpperCase()})',
+                            labelText:
+                                '$sourceFlag Native Language (${activeSourceLang.toUpperCase()})',
                             hintText: 'e.g. Meaning in your language',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
@@ -189,16 +193,18 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                         ),
                         const SizedBox(height: 16),
 
+                        //MAIN LAYOUT - Translated text 
                         TextFormField(
                           controller: _translatedTextCtrl,
                           decoration: InputDecoration(
-                            labelText: '$targetFlag Target Language (${activeTargetLang.toUpperCase()})',
+                            labelText:
+                                '$targetFlag Target Language (${activeTargetLang.toUpperCase()})',
                             hintText: 'e.g. The weather is beautiful today.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
                           enabled: !isLoading,
-                          minLines: 2,
+                          minLines: 3,
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           validator: (value) {
@@ -209,48 +215,49 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        // const SizedBox(height: 16),
 
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4.0),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.language,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Język: ',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey[700]),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.light
-                                      ? Colors.grey.shade200
-                                      : Colors.grey.shade700,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                // child: Text(
-                                //   _isEditMode
-                                //       ? widget.sentence!.language.toUpperCase()
-                                //       : 'EN',
-                                //   style: const TextStyle(
-                                //     fontWeight: FontWeight.bold,
-                                //   ),
-                                // ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // //MAIN LAYOUT - Languages info Row
+                        // Padding(
+                        //   padding: const EdgeInsets.only(left: 4.0),
+                        //   child: Row(
+                        //     children: [
+                        //       const Icon(
+                        //         Icons.language,
+                        //         color: Colors.grey,
+                        //         size: 20,
+                        //       ),
+                        //       const SizedBox(width: 8),
+                        //       Text(
+                        //         'Język: ',
+                        //         style: Theme.of(context).textTheme.bodyMedium
+                        //             ?.copyWith(color: Colors.grey[700]),
+                        //       ),
+                        //       Container(
+                        //         padding: const EdgeInsets.symmetric(
+                        //           horizontal: 8,
+                        //           vertical: 2,
+                        //         ),
+                        //         decoration: BoxDecoration(
+                        //           color:
+                        //               Theme.of(context).brightness ==
+                        //                   Brightness.light
+                        //               ? Colors.grey.shade200
+                        //               : Colors.grey.shade700,
+                        //           borderRadius: BorderRadius.circular(4),
+                        //         ),
+                        //         // child: Text(
+                        //         //   _isEditMode
+                        //         //       ? widget.sentence!.language.toUpperCase()
+                        //         //       : 'EN',
+                        //         //   style: const TextStyle(
+                        //         //     fontWeight: FontWeight.bold,
+                        //         //   ),
+                        //         // ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -258,6 +265,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
 
                 const SizedBox(height: 24),
 
+                //MAIN LAYOUT - BUTTONS AT BOTTOM
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -269,7 +277,9 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: isLoading ? null : () => _submit(activeSourceLang, activeTargetLang),
+                      onPressed: isLoading
+                          ? null
+                          : () => _submit(activeSourceLang, activeTargetLang),
                       child: isLoading
                           ? const SizedBox(
                               width: 20,
