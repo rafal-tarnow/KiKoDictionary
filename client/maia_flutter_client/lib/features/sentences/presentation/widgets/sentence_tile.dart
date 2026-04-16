@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_languages.dart';
 import '../../data/sentence_model.dart';
 import '../delete_sentence_controller.dart';
 import 'sentence_form_dialog.dart';
@@ -56,7 +57,7 @@ class SentenceTile extends ConsumerWidget {
           child: Text(sentence.id.toString()),
         ),
         title: Text(
-          sentence.sentence,
+          sentence.originalText,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
@@ -64,7 +65,7 @@ class SentenceTile extends ConsumerWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              sentence.translation,
+              sentence.translatedText,
               style: const TextStyle(
                 fontStyle: FontStyle.italic,
                 color: Colors.black87,
@@ -76,7 +77,7 @@ class SentenceTile extends ConsumerWidget {
                 Icon(Icons.language, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  sentence.language,
+                  sentence.sourceLanguage,
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],

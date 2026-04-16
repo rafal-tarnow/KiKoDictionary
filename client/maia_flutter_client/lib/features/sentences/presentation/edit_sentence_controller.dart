@@ -15,17 +15,19 @@ class EditSentenceController extends StateNotifier<AsyncValue<void>> {
 
   Future<bool> editSentence({
     required int id,
-    required String sentence,
-    required String language,
-    required String translation,
+    required String originalText,
+    required String translatedText,
+    required String sourceLanguage,
+    required String targetLanguage,
   }) async {
     state = const AsyncValue.loading(); // Pokaż spinner
 
     try {
       final dto = SentenceUpdate(
-        sentence: sentence,
-        language: language,
-        translation: translation,
+        originalText: originalText,
+        translatedText: translatedText,
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
       );
 
       // 1. Wywołanie API

@@ -8,12 +8,15 @@ from fastapi import HTTPException
 
 # [ZMIANA]: Wymagamy user_id przy tworzeniu
 def create_sentence(db: Session, sentence: SentenceCreate, user_id: str):
+    # ================= [ZMIANA 3]: Mapowanie nowych pól przy tworzeniu =================
     db_sentence = Sentence(
-        user_id=user_id, # [ZMIANA]: Przypisanie właściciela
-        sentence=sentence.sentence,
-        language=sentence.language,
-        translation=sentence.translation
+        user_id=user_id,
+        original_text=sentence.original_text,
+        translated_text=sentence.translated_text,
+        source_language=sentence.source_language,
+        target_language=sentence.target_language
     )
+    # ===================================================================================
     db.add(db_sentence)
     db.commit()
     db.refresh(db_sentence)
@@ -49,12 +52,16 @@ def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpda
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     
-    if sentence_update.sentence is not None:
-        db_sentence.sentence = sentence_update.sentence
-    if sentence_update.language is not None:
-        db_sentence.language = sentence_update.language
-    if sentence_update.translation is not None:
-        db_sentence.translation = sentence_update.translation
+    # ================= [ZMIANA 4]: Mapowanie nowych pól przy aktualizacji =================
+    if sentence_update.original_text is not None:
+        db_sentence.original_text = sentence_update.original_text
+    if sentence_update.translated_text is not None:
+        db_sentence.translated_text = sentence_update.translated_text
+    if sentence_update.source_language is not None:
+        db_sentence.source_language = sentence_update.source_language
+    if sentence_update.target_language is not None:
+        db_sentence.target_language = sentence_update.target_language
+    # ======================================================================================
     
     db.commit()
     db.refresh(db_sentence)

@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/app_sizes.dart';
+import '../../../../core/constants/app_languages.dart';
+import '../../../user/presentation/controllers/user_controller.dart';
 import '../../data/sentence_model.dart';
 import '../add_sentence_controller.dart';
 import '../edit_sentence_controller.dart';
@@ -21,9 +23,9 @@ class SentenceFormDialog extends ConsumerStatefulWidget {
 
 class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  
-  late TextEditingController _sentenceController;
-  late TextEditingController _translationController;
+
+  late TextEditingController _originalTextCtrl;
+  late TextEditingController _translatedTextCtrl;
 
   // Właściwość pomocnicza określająca w jakim trybie jesteśmy
   bool get _isEditMode => widget.sentence != null;
@@ -32,18 +34,22 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   void initState() {
     super.initState();
     // Inicjalizujemy kontrolery. Jeśli to edycja - wpisujemy stare dane.
-    _sentenceController = TextEditingController(text: _isEditMode ? widget.sentence!.sentence : '');
-    _translationController = TextEditingController(text: _isEditMode ? widget.sentence!.translation : '');
+    _originalTextCtrl = TextEditingController(
+      text: _isEditMode ? widget.sentence!.originalText : '',
+    );
+    _translatedTextCtrl = TextEditingController(
+      text: _isEditMode ? widget.sentence!.translatedText : '',
+    );
   }
 
   @override
   void dispose() {
-    _sentenceController.dispose();
-    _translationController.dispose();
+    _originalTextCtrl.dispose();
+    _translatedTextCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(String sourceLang, String targetLang) async {
     if (!_formKey.currentState!.validate()) return;
 
     bool success = false;
@@ -53,17 +59,19 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       final controller = ref.read(editSentenceControllerProvider.notifier);
       success = await controller.editSentence(
         id: widget.sentence!.id,
-        sentence: _sentenceController.text,
-        translation: _translationController.text,
-        language: widget.sentence!.language, // Zachowujemy obecny język
+        originalText: _originalTextCtrl.text.trim(),
+        translatedText: _translatedTextCtrl.text.trim(),
+        sourceLanguage: sourceLang, // Zachowujemy obecny język
+        targetLanguage: targetLang,
       );
     } else {
       // LOGIKA DODAWANIA
       final controller = ref.read(addSentenceControllerProvider.notifier);
       success = await controller.addSentence(
-        sentence: _sentenceController.text,
-        translation: _translationController.text,
-        language: 'en', // Domyślnie angielski przy dodawaniu
+        originalText: _originalTextCtrl.text.trim(),
+        translatedText: _translatedTextCtrl.text.trim(),
+        sourceLanguage: sourceLang, // Domyślnie angielski przy dodawaniu
+        targetLanguage: targetLang,
       );
     }
 
@@ -71,7 +79,9 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       Navigator.of(context).pop(); // Zamykamy dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!'),
+          content: Text(
+            _isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -81,27 +91,49 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   @override
   Widget build(BuildContext context) {
     // Obserwujemy stan odpowiedniego kontrolera w zależności od trybu
-    final isLoading = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).isLoading 
+    final isLoading = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).isLoading
         : ref.watch(addSentenceControllerProvider).isLoading;
-        
-    final hasError = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).hasError 
+
+    final hasError = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).hasError
         : ref.watch(addSentenceControllerProvider).hasError;
-        
-    final errorText = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).error?.toString() 
+
+    final errorText = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).error?.toString()
         : ref.watch(addSentenceControllerProvider).error?.toString();
 
-  debugPrint(errorText);
+    // ================= [ZMIANA 3]: INTELIGENTNE ROZPOZNAWANIE JĘZYKA =================
+    // Jeśli to edycja -> bierzemy z bazy. Jeśli dodawanie -> wyciągamy profil usera.
+    final userState = ref.watch(userControllerProvider);
+    final profileNativeLang =
+        userState.valueOrNull?.profile?.nativeLanguage ?? 'en';
+
+    final String activeSourceLang = _isEditMode
+        ? widget.sentence!.sourceLanguage
+        : profileNativeLang;
+    final String activeTargetLang = _isEditMode
+        ? widget.sentence!.targetLanguage
+        : 'en';
+
+    // Wyciągamy piękne flagi z naszej klasy AppLanguages
+    final String sourceFlag = AppLanguages.getFlag(activeSourceLang);
+    final String targetFlag = AppLanguages.getFlag(activeTargetLang);
+    // =================================================================================
+
+    debugPrint(errorText);
 
     // Tytuł zależy od trybu
-    final titleText = _isEditMode ? "Edytuj zdanie #${widget.sentence!.id}" : "Dodaj nowe zdanie";
+    final titleText = _isEditMode
+        ? "Edytuj zdanie #${widget.sentence!.id}"
+        : "Dodaj nowe zdanie";
 
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth * 0.9),
+        constraints: const BoxConstraints(
+          maxWidth: AppSizes.maxMobileWidth * 0.9,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -115,7 +147,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 24),
-                
+
                 if (hasError)
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -136,9 +168,9 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                     child: Column(
                       children: [
                         TextFormField(
-                          controller: _sentenceController,
-                          decoration: const InputDecoration(
-                            labelText: '🌍 Native Language',
+                          controller: _originalTextCtrl,
+                          decoration: InputDecoration(
+                            labelText: '$sourceFlag Native Language (${activeSourceLang.toUpperCase()})',
                             hintText: 'e.g. Meaning in your language',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
@@ -148,18 +180,19 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           validator: (value) {
-                            if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                            if ((value == null || value.isEmpty) &&
+                                _translatedTextCtrl.text.isEmpty) {
                               return 'Wypełnij zdanie LUB tłumaczenie';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         TextFormField(
-                          controller: _translationController,
-                          decoration: const InputDecoration(
-                            labelText: '🇬🇧 English',
+                          controller: _translatedTextCtrl,
+                          decoration: InputDecoration(
+                            labelText: '$targetFlag Target Language (${activeTargetLang.toUpperCase()})',
                             hintText: 'e.g. The weather is beautiful today.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
@@ -169,38 +202,51 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           validator: (value) {
-                            if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                            if ((value == null || value.isEmpty) &&
+                                _originalTextCtrl.text.isEmpty) {
                               return 'Wypełnij zdanie LUB tłumaczenie';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         Padding(
                           padding: const EdgeInsets.only(left: 4.0),
                           child: Row(
                             children: [
-                              const Icon(Icons.language, color: Colors.grey, size: 20),
+                              const Icon(
+                                Icons.language,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Język: ',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[700],
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey[700]),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.light 
-                                      ? Colors.grey.shade200 
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.light
+                                      ? Colors.grey.shade200
                                       : Colors.grey.shade700,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text(
-                                  _isEditMode ? widget.sentence!.language.toUpperCase() : 'EN',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
+                                // child: Text(
+                                //   _isEditMode
+                                //       ? widget.sentence!.language.toUpperCase()
+                                //       : 'EN',
+                                //   style: const TextStyle(
+                                //     fontWeight: FontWeight.bold,
+                                //   ),
+                                // ),
                               ),
                             ],
                           ),
@@ -209,19 +255,21 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                      onPressed: isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('Anuluj'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: isLoading ? null : _submit,
+                      onPressed: isLoading ? null : () => _submit(activeSourceLang, activeTargetLang),
                       child: isLoading
                           ? const SizedBox(
                               width: 20,
@@ -231,10 +279,12 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(_isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie'),
+                          : Text(
+                              _isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie',
+                            ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),

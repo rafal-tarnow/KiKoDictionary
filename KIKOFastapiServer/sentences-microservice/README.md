@@ -49,3 +49,12 @@ from database import Base
 from models.sentence import Sentence
 target_metadata = Base.metadata
 6. alembic revision --autogenerate -m "Add user_id to sentences and migrate data"
+
+### Wygenerowanie nowej migracji dla utworzenia tabeli  user_profiles
+krok 1. source .venv/bin/activate
+krok 2. jezeli utworzono nowa tabele w modelach to w pliku migrations/env.py dodać linie from src.db.models.user_profile import UserProfile
+, w tym pliku dodajemy wszyskie importy z tabelami zeby alembic wiedzial jakie tabele sa potrzebne
+krok 3. alembic revision --autogenerate -m "Add dual 
+language support"
+krok 4. przejrzec plik migracji czy wszystko dobrze cat ./migrations/versions/872780760451_add_user_profile_table_with_user_native_.py
+krok 5. zastosowac migracje:  run alembic upgrade head

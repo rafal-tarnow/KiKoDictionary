@@ -1,21 +1,24 @@
 class SentenceCreate {
-  final String sentence;
-  final String language;
-  final String translation;
+  // ================= [ZMIANA]: Zmiana pól w DTO =================
+  final String originalText;
+  final String translatedText;
+  final String sourceLanguage;
+  final String targetLanguage;
 
   const SentenceCreate({
-    required this.sentence,
-    required this.language,
-    required this.translation,
+    required this.originalText,
+    required this.translatedText,
+    required this.sourceLanguage,
+    required this.targetLanguage,
   });
 
-  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
-  // W C++ to byłaby metoda serializująca do QJsonObject.
   Map<String, dynamic> toJson() {
     return {
-      'sentence': sentence,
-      'language': language,
-      'translation': translation,
+      'original_text': originalText,
+      'translated_text': translatedText,
+      'source_language': sourceLanguage,
+      'target_language': targetLanguage,
     };
   }
+  // ==============================================================
 }

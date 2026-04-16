@@ -102,6 +102,8 @@ from math import ceil
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.exceptions import RequestValidationError
+from src.core.exceptions import validation_exception_handler
 
 from routers import sentence
 from database import engine
@@ -113,6 +115,8 @@ from src.api.endpoints.health import health_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sentence Learning API")
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Zamontuj katalog assets/img pod ścieżką /img
 app.mount("/img/faces", StaticFiles(directory="assets/img"), name="img")
@@ -242,24 +246,25 @@ Zawartość pliku:
 from sqlalchemy import Column, Integer, String, DateTime
 from database import Base
 from datetime import datetime, timezone
+from src.core.config import settings
 
 class Sentence(Base):
     __tablename__ = "sentences"
     
     id = Column(Integer, primary_key=True, index=True)
-    
-    # ================= ZMIANA: Powiązanie zdania z użytkownikiem =================
-    # Baza sentences nie wie o istnieniu bazy Auth, więc nie ma tu klucza obcego (ForeignKey).
-    # Przechowujemy po prostu stringa (UUID) wskazującego na właściciela.
     user_id = Column(String, index=True, nullable=False)
-    # =============================================================================
     
-    sentence = Column(String, index=True)
-    language = Column(String, index=True)
-    translation = Column(String)
+    # ================= [ZMIANA 1]: Nowe nazewnictwo pól =================
+    # 'original_text' zastępuje 'sentence'
+    # 'translated_text' zastępuje 'translation'
+    original_text = Column(String(settings.MAX_CHARS_PREMIUM), index=True, nullable=False, default="")
+    translated_text = Column(String(settings.MAX_CHARS_PREMIUM), nullable=False, default="")
     
-    # ================= ZMIANA: Spójność czasowa z Auth Service =================
-    # Wymuszamy czas świadomy stref czasowych (UTC)
+    # Rozbicie języka na źródłowy i docelowy
+    source_language = Column(String(10), index=True, nullable=False, default="en")
+    target_language = Column(String(10), index=True, nullable=False, default="en")
+    # ====================================================================
+    
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
@@ -396,12 +401,15 @@ from fastapi import HTTPException
 
 # [ZMIANA]: Wymagamy user_id przy tworzeniu
 def create_sentence(db: Session, sentence: SentenceCreate, user_id: str):
+    # ================= [ZMIANA 3]: Mapowanie nowych pól przy tworzeniu =================
     db_sentence = Sentence(
-        user_id=user_id, # [ZMIANA]: Przypisanie właściciela
-        sentence=sentence.sentence,
-        language=sentence.language,
-        translation=sentence.translation
+        user_id=user_id,
+        original_text=sentence.original_text,
+        translated_text=sentence.translated_text,
+        source_language=sentence.source_language,
+        target_language=sentence.target_language
     )
+    # ===================================================================================
     db.add(db_sentence)
     db.commit()
     db.refresh(db_sentence)
@@ -437,12 +445,16 @@ def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpda
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     
-    if sentence_update.sentence is not None:
-        db_sentence.sentence = sentence_update.sentence
-    if sentence_update.language is not None:
-        db_sentence.language = sentence_update.language
-    if sentence_update.translation is not None:
-        db_sentence.translation = sentence_update.translation
+    # ================= [ZMIANA 4]: Mapowanie nowych pól przy aktualizacji =================
+    if sentence_update.original_text is not None:
+        db_sentence.original_text = sentence_update.original_text
+    if sentence_update.translated_text is not None:
+        db_sentence.translated_text = sentence_update.translated_text
+    if sentence_update.source_language is not None:
+        db_sentence.source_language = sentence_update.source_language
+    if sentence_update.target_language is not None:
+        db_sentence.target_language = sentence_update.target_language
+    # ======================================================================================
     
     db.commit()
     db.refresh(db_sentence)
@@ -478,26 +490,34 @@ def get_community_sentences(db: Session, page: int, per_page: int):
 
 Zawartość pliku:
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
+from src.core.config import settings
 
 class SentenceCreate(BaseModel):
-    sentence: str
-    language: str
-    translation: str
+    # ================= [ZMIANA 2]: Nowe pola w schematach =================
+    original_text: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    translated_text: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    
+    # ISO 639-1 to zazwyczaj 2 litery (np. 'pl', 'en'), ew. 'en-US' (5 znaków). Max 10 to bezpieczny margines.
+    source_language: str = Field(default="en", min_length=2, max_length=10)
+    target_language: str = Field(default="en", min_length=2, max_length=10)
 
 class SentenceUpdate(BaseModel):
-    sentence: Optional[str] = None
-    language: Optional[str] = None
-    translation: Optional[str] = None
+    original_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    translated_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    source_language: Optional[str] = Field(None, min_length=2, max_length=10)
+    target_language: Optional[str] = Field(None, min_length=2, max_length=10)
 
 class Sentence(BaseModel):
     id: int
-    sentence: str
-    language: str
-    translation: str
+    original_text: str
+    translated_text: str
+    source_language: str
+    target_language: str
     created_at: datetime
+    # =====================================================================
 
     class Config:
         from_attributes = True
@@ -517,9 +537,15 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
 
     # ================= ZMIANA: JWT Settings =================
-    # Te same wartości co w Auth Service
     SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    
+    # <=== NOWE: Konfiguracja limitów znaków ===>
+    # Trzymamy tu przyszłe limity, żeby architektura była gotowa
+    MAX_CHARS_FREE: int = 150
+    MAX_CHARS_PREMIUM: int = 569
+    # Na ten moment wymuszamy darmowy limit globalnie
+    CURRENT_MAX_CHARS: int = MAX_CHARS_FREE 
     # ========================================================
 
     class Config:
@@ -528,6 +554,47 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
+
+
+===============================
+Ścieżka do pliku: ./src/core/exceptions.py
+
+Zawartość pliku:
+
+# <=== CAŁKOWICIE NOWY PLIK: Profesjonalna obsługa wyjątków ===>
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from src.core.config import settings
+
+def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    Przechwytuje błędy walidacji (np. gdy ktoś przekroczy 150 znaków) 
+    i formatuje je do czytelnego, biznesowego JSONa dla frontendu.
+    """
+    errors = []
+    for error in exc.errors():
+        field = error.get("loc")[-1] if error.get("loc") else "unknown"
+        message = error.get("msg")
+        
+        # Tłumaczymy techniczne błędy Pydantic na biznesowe komunikaty UI
+        if error.get("type") == "string_too_long":
+            message = f"Tekst w polu '{field}' jest za długi. Obecny limit to {settings.CURRENT_MAX_CHARS} znaków."
+            
+        errors.append({
+            "field": field,
+            "message": message,
+            "type": error.get("type")
+        })
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Validation Error",
+            "message": "Przekazane dane nie spełniają wymagań (np. są zbyt długie).",
+            "details": errors
+        }
+    )
 
 
 ===============================
@@ -583,5 +650,265 @@ class HealthCheckResponse(BaseModel):
                 }
             }
         }
+
+
+===============================
+Ścieżka do pliku: ./migrations/env.py
+
+Zawartość pliku:
+
+from logging.config import fileConfig
+
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
+
+from alembic import context
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+
+
+# ================= ZMIANA =================
+import os
+import sys
+
+# Dodajemy główny katalog projektu do ścieżki Pythona, 
+# żeby Alembic wiedział, skąd importować pliki.
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from database import Base
+# Musisz zaimportować wszystkie modele, żeby Alembic je "zauważył"
+from models.sentence import Sentence
+
+target_metadata = Base.metadata
+# ==========================================
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
+
+
+def run_migrations_offline() -> None:
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection, 
+            target_metadata=target_metadata,
+            render_as_batch=True
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+
+
+===============================
+Ścieżka do pliku: ./migrations/versions/f1635eaa4a21_add_user_id_to_sentences_and_migrate_.py
+
+Zawartość pliku:
+
+"""Add user_id to sentences and migrate data
+
+Revision ID: f1635eaa4a21
+Revises: 
+Create Date: 2026-03-13 18:14:47.952621
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.sql import table, column # Dodane do aktualizacji danych
+
+
+# revision identifiers, used by Alembic.
+revision: str = 'f1635eaa4a21'
+down_revision: Union[str, Sequence[str], None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    # Używamy batch_alter_table, bo SQLite ma ograniczenia dotyczące zmiany kolumn (np. dodawanie NOT NULL)
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        # 1. Dodajemy kolumnę, ale tymczasowo z nullable=True, żeby SQLite nie panikował
+        batch_op.add_column(sa.Column('user_id', sa.String(), nullable=True))
+
+    # 2. Migracja Danych: Aktualizujemy stare wpisy o Twoje ID
+    # Tworzymy tymczasową reprezentację tabeli, by użyć jej w zapytaniu UPDATE
+    sentences_table = table('sentences', column('user_id', sa.String))
+    op.execute(
+        sentences_table.update().values(
+            user_id='839badd4-7ae0-4caa-b55f-9cb47899804c'
+        )
+    )
+
+    # 3. Zmiana na NOT NULL oraz ewentualna poprawka typu created_at
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        # Wymuszamy, by kolumna user_id od tej pory nie przyjmowała wartości NULL
+        batch_op.alter_column('user_id', existing_type=sa.String(), nullable=False)
+        # Przebudowujemy kolumnę created_at na świadomą strefy (nawet w SQLite warto to wymusić na poziomie ORM)
+        batch_op.alter_column('created_at', type_=sa.DateTime(timezone=True), existing_type=sa.DateTime())
+        # Tworzymy indeks na user_id dla szybszego wyszukiwania
+        batch_op.create_index(batch_op.f('ix_sentences_user_id'), ['user_id'], unique=False)
+
+
+def downgrade() -> None:
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_sentences_user_id'))
+        batch_op.drop_column('user_id')
+        batch_op.alter_column('created_at', type_=sa.DateTime(), existing_type=sa.DateTime(timezone=True))
+
+
+===============================
+Ścieżka do pliku: ./migrations/versions/d1bad2db3dce_add_dual_language_support.py
+
+Zawartość pliku:
+
+"""Add dual language support
+
+Revision ID: d1bad2db3dce
+Revises: f1635eaa4a21
+Create Date: 2026-04-13 17:48:33.141121
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = 'd1bad2db3dce'
+down_revision: Union[str, Sequence[str], None] = 'f1635eaa4a21'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema and migrate existing data."""
+    
+    # KROK 1: Dodajemy nowe kolumny. 
+    # UWAGA: Najpierw jako nullable=True, żeby baza nie wywaliła błędu, że dodajemy pustą kolumnę do istniejących wierszy.
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('original_text', sa.String(length=569), nullable=True))
+        batch_op.add_column(sa.Column('translated_text', sa.String(length=569), nullable=True))
+        batch_op.add_column(sa.Column('source_language', sa.String(length=10), nullable=True))
+        batch_op.add_column(sa.Column('target_language', sa.String(length=10), nullable=True))
+
+    # KROK 2: MIGRACJA DANYCH (To ratuje Twoje zdania!)
+    # Tutaj realizujemy Twoje wymaganie: source_language staje się 'pl'.
+    # A stare 'language' (które pewnie było 'en') przechodzi do 'target_language'.
+    op.execute("""
+        UPDATE sentences 
+        SET original_text = sentence,
+            translated_text = translation,
+            source_language = 'pl',
+            target_language = language
+    """)
+
+    # KROK 3: Sprzątanie i rygor bazy danych
+    # Zmieniamy kolumny na NOT NULL, bo teraz już mają przypisane dane, i usuwamy stare kolumny.
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        # Wymuszamy NOT NULL
+        batch_op.alter_column('original_text', existing_type=sa.String(length=569), nullable=False)
+        batch_op.alter_column('translated_text', existing_type=sa.String(length=569), nullable=False)
+        batch_op.alter_column('source_language', existing_type=sa.String(length=10), nullable=False)
+        batch_op.alter_column('target_language', existing_type=sa.String(length=10), nullable=False)
+        
+        # Tworzymy nowe indeksy
+        batch_op.create_index(batch_op.f('ix_sentences_original_text'), ['original_text'], unique=False)
+        batch_op.create_index(batch_op.f('ix_sentences_source_language'), ['source_language'], unique=False)
+        batch_op.create_index(batch_op.f('ix_sentences_target_language'), ['target_language'], unique=False)
+
+        # Usuwamy stare indeksy i kolumny
+        batch_op.drop_index('ix_sentences_language')
+        batch_op.drop_index('ix_sentences_sentence')
+        batch_op.drop_column('translation')
+        batch_op.drop_column('sentence')
+        batch_op.drop_column('language')
+
+
+def downgrade() -> None:
+    """Downgrade schema and restore data."""
+    
+    # KROK 1: Przywracamy stare kolumny (nullable=True)
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('language', sa.VARCHAR(), nullable=True))
+        batch_op.add_column(sa.Column('sentence', sa.VARCHAR(), nullable=True))
+        batch_op.add_column(sa.Column('translation', sa.VARCHAR(), nullable=True))
+
+    # KROK 2: Kopiujemy dane z powrotem, w razie wycofania (rollback) zmian
+    op.execute("""
+        UPDATE sentences 
+        SET sentence = original_text,
+            translation = translated_text,
+            language = target_language
+    """)
+
+    # KROK 3: Usuwamy nowe elementy
+    with op.batch_alter_table('sentences', schema=None) as batch_op:
+        batch_op.create_index('ix_sentences_sentence', ['sentence'], unique=False)
+        batch_op.create_index('ix_sentences_language', ['language'], unique=False)
+        
+        batch_op.drop_index(batch_op.f('ix_sentences_target_language'))
+        batch_op.drop_index(batch_op.f('ix_sentences_source_language'))
+        batch_op.drop_index(batch_op.f('ix_sentences_original_text'))
+        
+        batch_op.drop_column('target_language')
+        batch_op.drop_column('source_language')
+        batch_op.drop_column('translated_text')
+        batch_op.drop_column('original_text')
+
+
 
 

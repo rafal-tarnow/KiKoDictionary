@@ -2170,7 +2170,6 @@ final settingsControllerProvider = StateNotifierProvider.autoDispose<SettingsCon
 
 Zawartość pliku:
 
-// ================= NOWY PLIK =================
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
@@ -2185,16 +2184,12 @@ class UsernameEditor extends ConsumerStatefulWidget {
 
 class _UsernameEditorState extends ConsumerState<UsernameEditor> {
   final _usernameCtrl = TextEditingController();
-  // ================= [ZMIANA 1]: Flaga pomocnicza =================
-  // Dzięki niej wiemy, czy już wpisaliśmy nazwę do kontrolera po raz pierwszy,
-  // żeby nie nadpisywać jej, gdy użytkownik zacznie coś zmieniać.
   bool _isInitialized = false;
-  // ================================================================
 
   @override
   void initState() {
     super.initState();
-    // UX: Czyścimy błędy, gdy użytkownik zaczyna wpisywać nową nazwę
+    // UX: Czyścimy błędy z API (np. "Nazwa zajęta"), gdy użytkownik zaczyna wpisywać nową nazwę
     _usernameCtrl.addListener(() {
       ref.read(settingsControllerProvider.notifier).clearUsernameError();
     });
@@ -2208,9 +2203,8 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
 
   Future<void> _submit() async {
     final newName = _usernameCtrl.text.trim();
-    if (newName.isEmpty) return;
+    if (newName.isEmpty || newName.length < 3) return;
 
-    // UX: Chowamy klawiaturę
     FocusScope.of(context).unfocus();
 
     final success = await ref
@@ -2230,9 +2224,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
 
   @override
   Widget build(BuildContext context) {
-    // Obserwujemy stan globalny (żeby zablokować UI podczas ładowania profilu z neta)
     final userState = ref.watch(userControllerProvider);
-    // Obserwujemy nasz lokalny kontroler ustawień (żeby widzieć błędy, sugestie, loadery)
     final settingsState = ref.watch(settingsControllerProvider);
 
     return Card(
@@ -2261,13 +2253,14 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
 
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text("Nie udało się załadować profilu.", style: TextStyle(color: Colors.red)),
+              error: (_, __) => const Text(
+                "Nie udało się załadować profilu.",
+                style: TextStyle(color: Colors.red),
+              ),
               data: (user) {
                 if (user == null) return const SizedBox.shrink();
 
-                // ================= [ZMIANA 2]: Bezpieczne inicjowanie danych =================
-                // Robimy to tylko raz (po załadowaniu usera).
-                // Schedule microtask zapobiega błędom w cyklu życia widżetów (SetState podczas Builda)
+                // Bezpieczne inicjowanie danych raz (Floating Label działa idealnie)
                 if (!_isInitialized && _usernameCtrl.text.isEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
@@ -2278,44 +2271,87 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                     }
                   });
                 }
-                // ===============================================================================
-
-                // Sprawdzamy czy wpisany tekst w polu jest taki sam jak ten w bazie
-                // Żeby niepotrzebnie nie wysyłać zapytania
-                final isSameAsCurrent = _usernameCtrl.text.trim().toLowerCase() == user.username.toLowerCase();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _usernameCtrl,
-                            enabled: !settingsState.isLoading,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              labelText: "Twoja nazwa",
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Przycisk Zapisz obok pola tekstowego
-                        FilledButton(
-                          onPressed: (settingsState.isLoading || isSameAsCurrent) ? null : _submit,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          ),
-                          child: settingsState.isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text("ZAPISZ"),
-                        ),
-                      ],
-                    ),
+                    // ================= [ZMIANA]: Precyzyjny Reaktywny Formularz =================
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _usernameCtrl,
+                      builder: (context, value, child) {
+                        
+                        final currentInput = value.text.trim();
+                        // ================= ZMIANA: Usunięto toLowerCase()! =================
+                        // Teraz jeśli user w bazie ma "Ania", a w polu wpisze "ania",
+                        // 'isSameAsCurrent' będzie miało wartość FALSE. Przycisk się odblokuje!
+                        final isSameAsCurrent = currentInput == user.username;
+                        // ===================================================================
 
-                    // --- OBSŁUGA BŁĘDÓW I SUGESTII ---
+                        // Dwustopniowa logika błędów UX:
+                        final isEmpty = currentInput.isEmpty;
+                        final isTooShort = !isEmpty && currentInput.length < 3;
+
+                        String? validationError;
+                        if (isEmpty) {
+                          validationError =
+                              "Nazwa użytkownika nie może być pusta";
+                        } else if (isTooShort) {
+                          validationError =
+                              "Nazwa musi mieć co najmniej 3 znaki";
+                        }
+
+                        // Zablokuj przycisk, jeśli ładuje, tekst się nie zmienił LUB jest błąd walidacji
+                        final isDisabled =
+                            settingsState.isLoading ||
+                            isSameAsCurrent ||
+                            validationError != null;
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _usernameCtrl,
+                                enabled: !settingsState.isLoading,
+                                decoration: InputDecoration(
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  labelText: "Twoja nazwa",
+                                  // Wyświetlamy precyzyjny błąd
+                                  errorText: validationError,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton(
+                              onPressed: isDisabled ? null : _submit,
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                              ),
+                              child: settingsState.isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text("ZAPISZ"),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    // =========================================================================
+
+                    // --- BŁĘDY Z SERWERA (Zajęty login + Podpowiedzi z bazy) ---
                     if (settingsState.error != null) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -2328,7 +2364,11 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Column(
@@ -2336,33 +2376,56 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                                 children: [
                                   Text(
                                     settingsState.error!,
-                                    style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.w500),
+                                    style: TextStyle(
+                                      color: Colors.red.shade900,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                  
+
                                   // ====== MAGIA UX: WYŚWIETLANIE SUGESTII (PIGUŁKI) ======
-                                  if (settingsState.usernameSuggestions != null && settingsState.usernameSuggestions!.isNotEmpty) ...[
+                                  if (settingsState.usernameSuggestions !=
+                                          null &&
+                                      settingsState
+                                          .usernameSuggestions!
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
                                       "Dostępne alternatywy:",
-                                      style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Wrap(
                                       spacing: 8.0,
                                       runSpacing: 4.0,
-                                      children: settingsState.usernameSuggestions!.map((suggestion) {
-                                        return ActionChip(
-                                          label: Text(suggestion),
-                                          backgroundColor: Colors.white,
-                                          side: BorderSide(color: Colors.red.shade200),
-                                          labelStyle: TextStyle(color: Colors.red.shade900, fontSize: 13),
-                                          onPressed: () {
-                                            // Gdy user kliknie sugestię, wpisujemy ją w pole!
-                                            _usernameCtrl.text = suggestion;
-                                            ref.read(settingsControllerProvider.notifier).clearUsernameError();
-                                          },
-                                        );
-                                      }).toList(),
+                                      children: settingsState
+                                          .usernameSuggestions!
+                                          .map((suggestion) {
+                                            return ActionChip(
+                                              label: Text(suggestion),
+                                              backgroundColor: Colors.white,
+                                              side: BorderSide(
+                                                color: Colors.red.shade200,
+                                              ),
+                                              labelStyle: TextStyle(
+                                                color: Colors.red.shade900,
+                                                fontSize: 13,
+                                              ),
+                                              onPressed: () {
+                                                // Gdy user kliknie sugestię, wpisujemy ją w pole!
+                                                _usernameCtrl.text = suggestion;
+                                                ref
+                                                    .read(
+                                                      settingsControllerProvider
+                                                          .notifier,
+                                                    )
+                                                    .clearUsernameError();
+                                              },
+                                            );
+                                          })
+                                          .toList(),
                                     ),
                                   ],
                                   // =======================================================
@@ -2383,6 +2446,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
     );
   }
 }
+
 
 
 ===============================
@@ -2687,6 +2751,1351 @@ class UserProfile {
       nativeLanguage: json['native_language'] as String? ?? 'en',
       uiTheme: json['ui_theme'] as String? ?? 'system',
     );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_app_bar.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
+import './presentation/sentences_provider.dart';
+
+class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  const SentencesAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Obserwujemy stan, aby np. pokazać inny spinner na przycisku odświeżania,
+    // jeśli trwa ładowanie (opcjonalny bajer, tutaj prosta wersja).
+    final state = ref.watch(sentencesProvider);
+    final sentencesNotifier = ref.read(sentencesProvider.notifier);
+
+    return AppBar(
+      title: const Text("Sentences"),
+      elevation: 2,
+      actions: [
+        // Przycisk Odśwież
+        IconButton(
+          icon: state.isLoading 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54,)
+                )
+              : const Icon(Icons.refresh),
+          tooltip: "Odśwież listę",
+          onPressed: state.isLoading 
+              ? null // Zablokuj, jeśli już ładuje
+              : () {
+                  // Tu wywołujemy logikę "Backendu"
+                  sentencesNotifier.refreshCurrentPage();
+                },
+        ),
+        // Opcjonalnie inne przyciski, np. sortowanie
+        // IconButton(icon: Icon(Icons.filter_list), onPressed: () {}),
+        const UserAvatarButton(),
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/presentation/controllers/auth_controller.dart';
+import '../../core/navigation_provider.dart';
+import 'presentation/sentences_provider.dart';
+import 'presentation/widgets/sentence_form_dialog.dart';
+import 'presentation/widgets/sentence_tile.dart';
+
+class SentencesPage extends ConsumerWidget {
+  const SentencesPage({super.key});
+
+  // Uniwersalna metoda pokazująca elegancki, wyśrodkowany Dialog dla niezalogowanych
+  void _showLoginPrompt(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            // Ograniczamy szerokość, by wyglądał dobrze na tabletach/desktopie
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisSize: MainAxisSize
+                    .min, // Okienko zajmuje tylko tyle miejsca ile treść
+                children: [
+                  const Icon(
+                    Icons.bookmark_add_outlined,
+                    size: 64,
+                    color: Colors.deepPurple,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Stwórz własny notatnik!",
+                    style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Zaloguj się lub załóż darmowe konto, aby móc zapisywać zwroty, dodawać własne tłumaczenia i synchronizować postępy między urządzeniami.",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Przycisk "ZAŁÓŻ KONTO" (Zwracający największą uwagę)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop(); // Najpierw zamknij dialog
+                        ref.read(navigationIndexProvider.notifier).state =
+                            4; // Index Rejestracji
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      child: const Text("ZAŁÓŻ KONTO"),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Przycisk "ZALOGUJ SIĘ" (Dyskretniejszy, dla powracających)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop(); // Najpierw zamknij dialog
+                        ref.read(navigationIndexProvider.notifier).state =
+                            5; // Index Logowania
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Colors.deepPurple.shade200),
+                        foregroundColor: Colors.deepPurple.shade700,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      child: const Text("ZALOGUJ SIĘ"),
+                    ),
+                  ),
+
+                  // Opcjonalny, subtelny przycisk zamknięcia
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade500,
+                    ),
+                    child: const Text("Może później"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sentencesState = ref.watch(sentencesProvider);
+    final notifier = ref.read(sentencesProvider.notifier);
+
+    // Pobieramy stan logowania z AuthController
+    final authState = ref.watch(authControllerProvider);
+    final isLoggedIn = authState.isAuthenticated;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFFFFF),
+
+      // FAB: Zawsze widoczny. Akcja zależy od tego, czy user jest zalogowany.
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (isLoggedIn) {
+            // Pokaż normalny formularz dodawania
+            showDialog(
+              context: context,
+              builder: (context) => const SentenceFormDialog(),
+            );
+          } else {
+            // Zachęta do logowania w formie okna (Dialog)
+            _showLoginPrompt(context, ref);
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+
+      // Pasek Paginacji: Widoczny tylko dla zalogowanych, jeśli jest więcej niż 1 strona.
+      bottomNavigationBar: isLoggedIn && sentencesState.totalPages > 1
+          ? SafeArea(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed:
+                          sentencesState.currentPage > 1 &&
+                              !sentencesState.isLoading
+                          ? () => notifier.previousPage()
+                          : null,
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text("Poprzednia"),
+                    ),
+                    Text(
+                      "Strona ${sentencesState.currentPage}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed:
+                          !sentencesState.isLastPage &&
+                              !sentencesState.isLoading
+                          ? () => notifier.nextPage()
+                          : null,
+                      label: const Text("Następna"),
+                      icon: const Icon(Icons.arrow_forward),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+
+      body: Column(
+        children: [
+          // Pasek Błędu (Tylko dla zalogowanych)
+          if (isLoggedIn && sentencesState.errorMessage != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.red.shade100,
+              width: double.infinity,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Błąd: ${sentencesState.errorMessage}',
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      notifier.refreshCurrentPage();
+                    },
+                    icon: Icon(Icons.refresh, color: Colors.red.shade900),
+                    label: Text(
+                      "Ponów",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          Expanded(
+            child: (!isLoggedIn)
+                // 1. WIDOK DLA NIEZALOGOWANEGO: "Teaser" (zajawka) bez logowania
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.library_books_outlined,
+                            size: 72,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Twój notatnik jest pusty",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Kliknij przycisk + poniżej, aby dodać swoje pierwsze zdanie lub skopiuj je ze Społeczności.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                // 2. WIDOK DLA ZALOGOWANEGO (Ładowanie, Pusta lista lub Pełna lista)
+                : sentencesState.isLoading && sentencesState.sentences.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : sentencesState.sentences.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.post_add,
+                            size: 72,
+                            color: Colors.deepPurple.shade100,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "Nie masz jeszcze żadnych zdań.",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Dodaj własne zwroty przyciskiem + lub poszukaj inspiracji w zakładce Społeczność.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      ListView.separated(
+                        itemCount: sentencesState.sentences.length,
+                        padding: const EdgeInsets.only(
+                          left: 8,
+                          right: 8,
+                          top: 8,
+                          bottom: 80,
+                        ), // Odstęp na FAB
+                        separatorBuilder: (context, index) {
+                          return Divider(
+                            height: 16,
+                            thickness: 0.5,
+                            color: Colors.grey.shade400,
+                            indent: 8,
+                            endIndent: 8,
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final item = sentencesState.sentences[index];
+                          return SentenceTile(sentence: item);
+                        },
+                      ),
+                      if (sentencesState.isLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(minHeight: 4),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/delete_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+import '../../../core/network/api_error_handler.dart';
+
+// Używamy prostego Providera, a nie StateNotifier, bo ten kontroler
+// nie przechowuje stanu (stateless logic), tylko wykonuje akcję.
+final deleteSentenceControllerProvider = Provider((ref) {
+  return DeleteSentenceController(ref);
+});
+
+class DeleteSentenceController {
+  final Ref _ref;
+
+  DeleteSentenceController(this._ref);
+
+  Future<void> deleteSentence({
+    required BuildContext context,
+    required int sentenceId,
+  }) async {
+    // 1. "Fire and forget" logic from UI perspective (dialog już zamknięty)
+
+    final repo = _ref.read(sentencesRepositoryProvider);
+    final notifier = _ref.read(sentencesProvider.notifier);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Wywołanie API (asynchronicznie)
+      await repo.deleteSentence(sentenceId);
+
+      // Zabezpieczenie przed wyciekiem
+      if (!context.mounted) return;
+      // Jeśli API zwróci 200 OK, usuwamy element z listy w UI
+      notifier.removeSentenceLocally(sentenceId);
+
+      // Feedback dla użytkownika (Snackbar)
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Usunięto zdanie.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      // Obsługa błędu
+
+      if(!context.mounted) return;
+
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(friendlyMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/add_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_create_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart'; // Potrzebne, żeby odświeżyć listę po sukcesie
+import '../../../core/network/api_error_handler.dart';
+
+// Controller zarządza stanem operacji dodawania.
+// AsyncValue<void> oznacza, że operacja nie zwraca wartości, ale śledzimy jej status.
+class AddSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref; // Ref pozwala nam wchodzić w interakcję z innymi providerami
+
+  AddSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
+
+  Future<bool> addSentence({
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
+    state = const AsyncValue.loading();
+
+    try {
+      final dto = SentenceCreate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      await _repository.createSentence(dto);
+
+      // --- ZMIANA ---
+      // Zamiast zabijać providera (invalidate), prosimy go o odświeżenie danych.
+      // Dzięki temu zachowujemy numer strony.
+      await _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+      
+      // Jeśli wolałbyś skakać do ostatniej strony (bo tam dodał się element),
+      // odkomentuj metodę w providerze i użyj tutaj:
+      // await _ref.read(sentencesProvider.notifier).goToLastPage();
+
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      // Jeśli użytkownik zamknął dialog w trakcie wysyłania, kontroler (dzięki .autoDispose)
+      // został zniszczony. Nie możemy przypisywać mu nowego stanu.
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      // ================= ZMIANA: PROFESJONALNA OBSŁUGA BŁĘDU =================
+      // Zamiast wrzucać do stanu surowy DioException (obiekt 'e'),
+      // parsujemy go na przyjazny tekst i wstawiamy jako String.
+      final friendlyErrorMessage = ApiErrorHandler.getErrorMessage(e);
+
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = AsyncValue.error(friendlyErrorMessage, stack);
+      // =======================================================================
+      return false;
+    }
+  }
+}
+
+// ================= ZMIANA: autoDispose =================
+// Zmieniamy StateNotifierProvider na StateNotifierProvider.autoDispose
+// Dzięki temu, gdy okno dialogowe znika, stan (w tym stary błąd) ulega samozniszczeniu.
+final addSentenceControllerProvider = 
+    StateNotifierProvider.autoDispose<AddSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return AddSentenceController(repo, ref);
+});
+// =======================================================
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_controller.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_update_model.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+import '../../../core/network/api_error_handler.dart';
+
+// Używamy StateNotifier do zarządzania stanem asynchronicznym (loading/error/data)
+// AsyncValue<void> informuje UI czy trwa zapisywanie.
+class EditSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref;
+
+  EditSentenceController(this._repository, this._ref) 
+      : super(const AsyncValue.data(null));
+
+  Future<bool> editSentence({
+    required int id,
+    required String sentence,
+    required String language,
+    required String translation,
+  }) async {
+    state = const AsyncValue.loading(); // Pokaż spinner
+
+    try {
+      final dto = SentenceUpdate(
+        sentence: sentence,
+        language: language,
+        translation: translation,
+      );
+
+      // 1. Wywołanie API
+      final updatedSentence = await _repository.updateSentence(id: id, data: dto);
+
+      // 2. Aktualizacja lokalnego stanu listy (nie musimy odświeżać całej strony!)
+      _ref.read(sentencesProvider.notifier).updateSentenceLocally(updatedSentence);
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = const AsyncValue.data(null); // Sukces
+      return true;
+    } catch (e, stack) {
+      // ================= ZMIANA: PROFESJONALNA OBSŁUGA BŁĘDU =================
+      final friendlyErrorMessage = ApiErrorHandler.getErrorMessage(e);
+
+      // ================= ZMIANA: Zabezpieczenie asynchroniczne =================
+      if (!mounted) return false;
+      // =======================================================================
+
+      state = AsyncValue.error(friendlyErrorMessage, stack);
+      // =======================================================================
+      return false;
+    }
+  }
+}
+
+// ================= ZMIANA: autoDispose =================
+// Dodajemy .autoDispose, by zrzucić błędy po zamknięciu okna.
+final editSentenceControllerProvider = 
+    StateNotifierProvider.autoDispose<EditSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return EditSentenceController(repo, ref);
+});
+// =======================================================
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/sentences_provider.dart
+
+Zawartość pliku:
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_model.dart';
+import '../data/sentences_repository.dart';
+import '../../../core/network/api_error_handler.dart';
+
+class SentencesState {
+  final List<Sentence> sentences;
+  final bool isLoading;
+  final String? errorMessage;
+  final int currentPage;
+  final int totalPages;
+
+  const SentencesState({
+    this.sentences = const [],
+    this.isLoading = false,
+    this.errorMessage,
+    this.currentPage = 1,
+    this.totalPages = 1,
+  });
+
+  bool get isLastPage => currentPage >= totalPages;
+
+  SentencesState copyWith({
+    List<Sentence>? sentences,
+    bool? isLoading,
+    String? errorMessage,
+    int? currentPage,
+    int? totalPages,
+  }) {
+    return SentencesState(
+      sentences: sentences ?? this.sentences,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+    );
+  }
+}
+
+class SentencesNotifier extends StateNotifier<SentencesState> {
+  final SentencesRepository _repository;
+  static const int _perPage = 10;
+
+  SentencesNotifier(this._repository) : super(const SentencesState()) {
+    loadSentences(page: 1);
+  }
+
+  Future<void> loadSentences({required int page}) async {
+    if (state.isLoading) return;
+
+    // Resetujemy błąd przy nowej próbie
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final response = await _repository.getSentences(
+        page: page,
+        perPage: _perPage,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        sentences: response.sentences,
+        totalPages: response.totalPages,
+        currentPage: page,
+        errorMessage: null, // Sukces = brak błędu
+      );
+    } catch (e) {
+      // TU JEST ZMIANA: Używamy naszego parsera błędów
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+
+      state = state.copyWith(isLoading: false, errorMessage: friendlyMessage);
+    }
+  }
+
+  // --- NOWA METODA ---
+  // Odświeża aktualną stronę bez resetowania stanu do zera
+  Future<void> refreshCurrentPage() async {
+    // Ładujemy ponownie tę samą stronę, na której jesteśmy
+    await loadSentences(page: state.currentPage);
+  }
+
+  /* 
+  // Opcjonalnie: Jeśli wolałbyś iść na ostatnią stronę po dodaniu:
+  Future<void> goToLastPage() async {
+     // Najpierw pobierzmy info (może doszła nowa strona?)
+     // To uproszczenie, w idealnym świecie API po dodaniu zwraca ID nowej strony
+     await loadSentences(page: state.totalPages);
+  }
+  */
+
+  void nextPage() {
+    if (!state.isLastPage) {
+      loadSentences(page: state.currentPage + 1);
+    }
+  }
+
+  void previousPage() {
+    if (state.currentPage > 1) {
+      loadSentences(page: state.currentPage - 1);
+    }
+  }
+
+  // Usuwa element z lokalnego stanu (UI odświeży się natychmiast)
+  void removeSentenceLocally(int sentenceId) {
+    // std::remove_if w C++ style
+    final updatedList = state.sentences
+        .where((s) => s.id != sentenceId)
+        .toList();
+
+    state = state.copyWith(
+      sentences: updatedList,
+      // Opcjonalnie: można tu obsłużyć zmniejszenie licznika stron itp.
+    );
+  }
+
+  void updateSentenceLocally(Sentence updatedSentence) {
+    // Tworzymy nową listę, mapując starą
+    final newSentences = state.sentences.map((s) {
+      return s.id == updatedSentence.id ? updatedSentence : s;
+    }).toList();
+
+    // Emitujemy nowy stan
+    state = state.copyWith(sentences: newSentences);
+  }
+
+  void clearData(){
+    state = const SentencesState();
+  }
+}
+
+final sentencesProvider =
+    StateNotifierProvider<SentencesNotifier, SentencesState>((ref) {
+      final repository = ref.watch(sentencesRepositoryProvider);
+      return SentencesNotifier(repository);
+    });
+
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_form_dialog.dart
+
+Zawartość pliku:
+
+// ==========================================
+// NOWY PLIK: sentence_form_dialog.dart
+// ==========================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/app_sizes.dart';
+import '../../data/sentence_model.dart';
+import '../add_sentence_controller.dart';
+import '../edit_sentence_controller.dart';
+
+class SentenceFormDialog extends ConsumerStatefulWidget {
+  // Jeśli sentence jest null -> jesteśmy w trybie DODAWANIA
+  // Jeśli sentence nie jest null -> jesteśmy w trybie EDYCJI
+  final Sentence? sentence;
+
+  const SentenceFormDialog({super.key, this.sentence});
+
+  @override
+  ConsumerState<SentenceFormDialog> createState() => _SentenceFormDialogState();
+}
+
+class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
+  final _formKey = GlobalKey<FormState>();
+  
+  late TextEditingController _sentenceController;
+  late TextEditingController _translationController;
+
+  // Właściwość pomocnicza określająca w jakim trybie jesteśmy
+  bool get _isEditMode => widget.sentence != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicjalizujemy kontrolery. Jeśli to edycja - wpisujemy stare dane.
+    _sentenceController = TextEditingController(text: _isEditMode ? widget.sentence!.sentence : '');
+    _translationController = TextEditingController(text: _isEditMode ? widget.sentence!.translation : '');
+  }
+
+  @override
+  void dispose() {
+    _sentenceController.dispose();
+    _translationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    bool success = false;
+
+    if (_isEditMode) {
+      // LOGIKA EDYCJI
+      final controller = ref.read(editSentenceControllerProvider.notifier);
+      success = await controller.editSentence(
+        id: widget.sentence!.id,
+        sentence: _sentenceController.text,
+        translation: _translationController.text,
+        language: widget.sentence!.language, // Zachowujemy obecny język
+      );
+    } else {
+      // LOGIKA DODAWANIA
+      final controller = ref.read(addSentenceControllerProvider.notifier);
+      success = await controller.addSentence(
+        sentence: _sentenceController.text,
+        translation: _translationController.text,
+        language: 'en', // Domyślnie angielski przy dodawaniu
+      );
+    }
+
+    if (success && mounted) {
+      Navigator.of(context).pop(); // Zamykamy dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Obserwujemy stan odpowiedniego kontrolera w zależności od trybu
+    final isLoading = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).isLoading 
+        : ref.watch(addSentenceControllerProvider).isLoading;
+        
+    final hasError = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).hasError 
+        : ref.watch(addSentenceControllerProvider).hasError;
+        
+    final errorText = _isEditMode 
+        ? ref.watch(editSentenceControllerProvider).error?.toString() 
+        : ref.watch(addSentenceControllerProvider).error?.toString();
+
+  debugPrint(errorText);
+
+    // Tytuł zależy od trybu
+    final titleText = _isEditMode ? "Edytuj zdanie #${widget.sentence!.id}" : "Dodaj nowe zdanie";
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth * 0.9),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  titleText,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 24),
+                
+                if (hasError)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      'Błąd: $errorText',
+                      style: TextStyle(color: Colors.red.shade800),
+                    ),
+                  ),
+
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _sentenceController,
+                          decoration: const InputDecoration(
+                            labelText: '🌍 Native Language',
+                            hintText: 'e.g. Meaning in your language',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                          ),
+                          enabled: !isLoading,
+                          minLines: 3,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          validator: (value) {
+                            if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                              return 'Wypełnij zdanie LUB tłumaczenie';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _translationController,
+                          decoration: const InputDecoration(
+                            labelText: '🇬🇧 English',
+                            hintText: 'e.g. The weather is beautiful today.',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                          ),
+                          enabled: !isLoading,
+                          minLines: 2,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          validator: (value) {
+                            if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                              return 'Wypełnij zdanie LUB tłumaczenie';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.language, color: Colors.grey, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Język: ',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.light 
+                                      ? Colors.grey.shade200 
+                                      : Colors.grey.shade700,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _isEditMode ? widget.sentence!.language.toUpperCase() : 'EN',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Anuluj'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(_isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie'),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_tile.dart
+
+Zawartość pliku:
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/sentence_model.dart';
+import '../delete_sentence_controller.dart';
+import 'sentence_form_dialog.dart';
+
+class SentenceTile extends ConsumerWidget {
+  final Sentence sentence;
+
+  const SentenceTile({super.key, required this.sentence});
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Potwierdzenie"),
+        content: const Text("Usunąć to zdanie?"),
+        actions: [
+          // Przycisk "Nie"
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Zamknij dialog
+            },
+            child: const Text("Nie"),
+          ),
+          // Przycisk "Tak" - Czerwony
+          TextButton(
+            onPressed: () {
+              // 1. Najpierw zamykamy dialog
+              Navigator.of(ctx).pop();
+
+              // 2. Delegujemy operację do kontrolera
+              ref
+                  .read(deleteSentenceControllerProvider)
+                  .deleteSentence(context: context, sentenceId: sentence.id);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red, // Czerwony tekst
+            ),
+            child: const Text("Tak"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          child: Text(sentence.id.toString()),
+        ),
+        title: Text(
+          sentence.sentence,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              sentence.translation,
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.language, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  sentence.language,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+        isThreeLine: true,
+
+        // --- SEKCJA TRAILING (POPRAWIONA) ---
+        // Używamy FittedBox, aby uniknąć błędu "Bottom overflowed"
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown, // Skaluje w dół, jeśli brakuje miejsca
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Zajmuje tylko tyle miejsca ile trzeba
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. Ikona USUWANIA (Czerwona)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _showDeleteConfirmation(context, ref),
+                tooltip: 'Usuń zdanie',
+                // Ustawienia kompaktowe:
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32, // Lekko mniejsza ikona dla bezpieczeństwa
+              ),
+              
+              const SizedBox(height: 8), // Mniejszy odstęp (było 12, teraz 8)
+
+              // 2. Ikona EDYCJI (Niebieska)
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                   showDialog(
+                     context: context,
+                     builder: (context) => SentenceFormDialog(sentence: sentence),
+                   );
+                },
+                tooltip: 'Edytuj zdanie',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_create_model.dart
+
+Zawartość pliku:
+
+class SentenceCreate {
+  final String sentence;
+  final String language;
+  final String translation;
+
+  const SentenceCreate({
+    required this.sentence,
+    required this.language,
+    required this.translation,
+  });
+
+  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
+  // W C++ to byłaby metoda serializująca do QJsonObject.
+  Map<String, dynamic> toJson() {
+    return {
+      'sentence': sentence,
+      'language': language,
+      'translation': translation,
+    };
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_model.dart
+
+Zawartość pliku:
+
+import 'package:equatable/equatable.dart';
+
+// Equatable pozwala porównywać obiekty po wartościach pól, a nie referencji w pamięci.
+// To jak przeładowanie operatora == w C++.
+class Sentence extends Equatable {
+  final int id;
+  final String sentence;
+  final String language;
+  final String translation;
+  // created_at przychodzi jako string, w prawdziwym projekcie parsujemy to na DateTime
+  final String createdAt; 
+
+  const Sentence({
+    required this.id,
+    required this.sentence,
+    required this.language,
+    required this.translation,
+    required this.createdAt,
+  });
+
+  // Factory constructor - w C++ to byłaby statyczna metoda "createFromJson"
+  factory Sentence.fromJson(Map<String, dynamic> json) {
+    return Sentence(
+      id: json['id'] as int,
+      sentence: json['sentence'] as String,
+      language: json['language'] as String,
+      translation: json['translation'] as String,
+      createdAt: json['created_at'] as String,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, sentence, language, translation, createdAt];
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentences_repository.dart
+
+Zawartość pliku:
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/dio_provider.dart';
+import 'sentence_model.dart';
+import 'sentence_create_model.dart';
+import 'sentence_update_model.dart';
+
+// Prosta klasa (jak struct w C++) do przekazania danych z API do Providera
+class SentencesResponse {
+  final List<Sentence> sentences;
+  final int totalPages;
+
+  SentencesResponse(this.sentences, this.totalPages);
+}
+
+final sentencesRepositoryProvider = Provider<SentencesRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return SentencesRepository(dio);
+});
+
+class SentencesRepository {
+  final Dio _dio;
+
+  SentencesRepository(this._dio);
+
+  // Zmieniamy typ zwracany na naszą strukturę SentencesResponse
+  Future<SentencesResponse> getSentences({required int page, int perPage = 10}) async {
+    try {
+      final response = await _dio.get(
+        '/api/sentences/me',
+        queryParameters: {
+          'page': page,
+          'per_page': perPage,
+        },
+      );
+
+      // 1. Odbieramy główny obiekt JSON (Map<String, dynamic>)
+      final Map<String, dynamic> json = response.data;
+
+      // 2. Wyciągamy listę z klucza "data"
+      final List<dynamic> rawList = json['data'];
+      
+      // 3. Wyciągamy liczbę stron z klucza "total_pages"
+      final int totalPages = json['total_pages'] ?? 1; // domyślnie 1 jakby api nie dało
+
+      // 4. Mapujemy listę
+      final sentences = rawList.map((e) => Sentence.fromJson(e)).toList();
+
+      // Zwracamy komplet danych
+      return SentencesResponse(sentences, totalPages);
+
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> createSentence(SentenceCreate data) async {
+    try {
+      // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
+      await _dio.post(
+        '/api/sentences/',
+        data: data.toJson(),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSentence(int id) async {
+    try {
+      // Endpoint: DELETE /api/sentences/{sentence_id}
+      await _dio.delete('/api/sentences/$id');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Sentence> updateSentence({
+    required int id,
+    required SentenceUpdate data,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/sentences/$id',
+        data: data.toJson(),
+      );
+      
+      // API zwraca zaktualizowany obiekt Sentence (według dokumnetacji)
+      // Od razu go parsujemy i zwracamy wyżej.
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/data/sentence_update_model.dart
+
+Zawartość pliku:
+
+class SentenceUpdate {
+  // W API te pola są 'anyOf string/null', więc tutaj String?
+  final String? sentence;
+  final String? language;
+  final String? translation;
+
+  const SentenceUpdate({
+    this.sentence,
+    this.language,
+    this.translation,
+  });
+
+  Map<String, dynamic> toJson() {
+    // Serializujemy tylko te pola, które nie są nullem (chociaż w edycji wyślemy wszystkie)
+    return {
+      if (sentence != null) 'sentence': sentence,
+      if (language != null) 'language': language,
+      if (translation != null) 'translation': translation,
+    };
   }
 }
 

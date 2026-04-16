@@ -14,18 +14,20 @@ class AddSentenceController extends StateNotifier<AsyncValue<void>> {
       : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
 
   Future<bool> addSentence({
-    required String sentence,
-    required String language,
-    required String translation,
+    required String originalText,
+    required String translatedText,
+    required String sourceLanguage,
+    required String targetLanguage,
   }) async {
     // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
     state = const AsyncValue.loading();
 
     try {
       final dto = SentenceCreate(
-        sentence: sentence,
-        language: language,
-        translation: translation,
+        originalText: originalText,
+        translatedText: translatedText,
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
       );
 
       await _repository.createSentence(dto);

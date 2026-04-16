@@ -1,21 +1,24 @@
 class SentenceUpdate {
-  // W API te pola są 'anyOf string/null', więc tutaj String?
-  final String? sentence;
-  final String? language;
-  final String? translation;
+  // ================= [ZMIANA]: Zmiana pól w DTO =================
+  final String? originalText;
+  final String? translatedText;
+  final String? sourceLanguage;
+  final String? targetLanguage;
 
   const SentenceUpdate({
-    this.sentence,
-    this.language,
-    this.translation,
+    this.originalText,
+    this.translatedText,
+    this.sourceLanguage,
+    this.targetLanguage,
   });
 
   Map<String, dynamic> toJson() {
-    // Serializujemy tylko te pola, które nie są nullem (chociaż w edycji wyślemy wszystkie)
     return {
-      if (sentence != null) 'sentence': sentence,
-      if (language != null) 'language': language,
-      if (translation != null) 'translation': translation,
+      if (originalText != null) 'original_text': originalText,
+      if (translatedText != null) 'translated_text': translatedText,
+      if (sourceLanguage != null) 'source_language': sourceLanguage,
+      if (targetLanguage != null) 'target_language': targetLanguage,
     };
   }
+  // ==============================================================
 }
