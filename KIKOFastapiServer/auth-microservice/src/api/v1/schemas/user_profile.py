@@ -33,10 +33,19 @@ class UserProfileBase(BaseModel):
         default="system", 
         description="UI theme preference"
     )
+    # ================= [ZMIANA 1]: Dodanie pola wyjściowego =================
+    is_onboarding_completed: bool = Field(
+        default=False,
+        description="Flag indicating whether the user has completed the initial account setup."
+    )
+    # ========================================================================
 
 class UserProfileUpdate(BaseModel):
     native_language: Optional[SupportedLanguages] = Field(None)
     ui_theme: Optional[Literal["light", "dark", "system"]] = Field(None)
+    # ================= [ZMIANA 2]: Umożliwiamy nadpisanie flagi z frontendu =================
+    is_onboarding_completed: Optional[bool] = Field(None)
+    # ========================================================================================
 
 class UserProfilePublic(UserProfileBase):
     model_config = ConfigDict(from_attributes=True)

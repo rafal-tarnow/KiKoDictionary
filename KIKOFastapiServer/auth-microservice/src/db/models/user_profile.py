@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey, DateTime, func
+from sqlalchemy import Column, String, ForeignKey, DateTime, func, Boolean
 from sqlalchemy.orm import relationship
 from src.db.models.user import Base
 
@@ -15,6 +15,11 @@ class UserProfile(Base):
     
     # Miejsce na przyszłe ustawienia (np. cel nauki, motyw ui)
     ui_theme = Column(String, default="system", nullable=False)
+
+    # ================= [ZMIANA 2]: Flaga Onboardingu =================
+    # Domyślnie False, po przejściu ekranu powitalnego we Flutterze ustawiamy na True
+    is_onboarding_completed = Column(Boolean, default=False, nullable=False)
+    # =================================================================
     
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
