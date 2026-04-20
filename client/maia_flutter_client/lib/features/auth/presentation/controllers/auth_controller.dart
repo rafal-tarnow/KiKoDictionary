@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
@@ -30,7 +31,13 @@ class AuthController extends StateNotifier<AuthState> {
     if (token != null) {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
       state = const AuthState(isAuthenticated: true, isAppLoading: false);
-      _ref.read(userControllerProvider.notifier).fetchUser();
+
+      // ================= [ZMIANA 1]: Oczekujemy na załadowanie usera =================
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      // Sprawdzamy status usera i wymuszamy nawigację!
+      _checkOnboardingAndRedirect();
+      // ==================================================================================
 
       // ZMIANA: Pobierz prywatne zdania po wejściu do aplikacji
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
@@ -40,13 +47,27 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   // Metoda wywoływana przez LoginController/RegisterController po sukcesie
-  void setAuthenticated(bool isAuthenticated) {
+  void setAuthenticated(bool isAuthenticated) async{
     state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
     if(isAuthenticated){
-      _ref.read(userControllerProvider.notifier).fetchUser();
-
+      // ================= [ZMIANA 2]: Oczekujemy na załadowanie usera po logowaniu =================
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      _checkOnboardingAndRedirect();
+      // ============================================================================================
       // ZMIANA: Zmuś aplikację do załadowania Zdań NOWEGO użytkownika
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
+    }
+  }
+
+
+  void _checkOnboardingAndRedirect() {
+    final user = _ref.read(userControllerProvider).valueOrNull;
+    if (user != null && user.profile != null) {
+      if (user.profile!.isOnboardingCompleted == false) {
+        // Przekierowanie na Index 11 (OnboardingPage) z ominięciem menu głównego
+        _ref.read(navigationIndexProvider.notifier).state = 11;
+      }
     }
   }
 

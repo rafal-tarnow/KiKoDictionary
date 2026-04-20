@@ -102,6 +102,28 @@ class SettingsController extends StateNotifier<SettingsState> {
     }
   }
 
+// === NOWA FUNKCJA DLA ONBOARDINGU ===
+  Future<bool> completeOnboarding(String newLangCode) async {
+    state = const SettingsState(isLoading: true, error: null);
+    try {
+      // Zapisujemy język ORAZ flagę ukończenia onboardingu
+      await _userRepo.updateProfile(
+        nativeLanguage: newLangCode,
+        isOnboardingCompleted: true, // <--- TO JEST KLUCZOWE
+      );
+      
+      // Odświeżenie globalnego stanu (flaga zmieni się z false na true w pamięci apki)
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      state = const SettingsState(isLoading: false);
+      return true;
+    } catch (e) {
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+
   // === USUNIĘCIE KONTA BEZ ZMIAN ===
   Future<bool> deleteAccount() async {
     state = const SettingsState(isLoading: true, error: null);

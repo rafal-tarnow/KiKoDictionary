@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_languages.dart';
 import '../../data/sentence_model.dart';
 import '../delete_sentence_controller.dart';
 import 'sentence_form_dialog.dart';

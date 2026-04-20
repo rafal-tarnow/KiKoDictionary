@@ -23,6 +23,7 @@ import 'core/app_sizes.dart'; // Import stałych
 import 'features/health/services_health_page.dart';
 import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
+import 'features/auth/presentation/onboarding_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -41,9 +42,10 @@ class MainShell extends ConsumerWidget {
     //Pages not shown in the Drawer
     ForgotPasswordPage(),
     SettingsPage(),
+    OnboardingPage(),
   ];
 
-  static final List<PreferredSizeWidget> _appBars = [
+  static final List<PreferredSizeWidget?> _appBars = [
     const HomeAppBar(),
     AppBar(
       title: const Text("Dictionary"),
@@ -87,6 +89,10 @@ class MainShell extends ConsumerWidget {
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
+    // ================= [ZMIANA 3]: Czysty AppBar dla Onboardingu =================
+    // Onboarding nie powinien pozwalać na nawigację wstecz ani pokazywać menu bocznego
+    null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
+    // ===============================================================================
   ];
 
 
@@ -94,6 +100,9 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(navigationIndexProvider);
+
+    // Sprawdzamy czy to index onboardingu
+    final isFullScreenBinding = selectedIndex == 11;
 
     return Container(
       //szare tło aplikacji
@@ -124,12 +133,8 @@ class MainShell extends ConsumerWidget {
               child: Scaffold(
                 //backgroundColor: Theme.of(context).colorScheme.surface,
                 backgroundColor: const Color(0xFFFFFFFF),
-                appBar: _appBars[selectedIndex],
-                // appBar: AppBar(
-                //   title: Text(_titles[selectedIndex]),
-                //   elevation: 2,
-                // ),
-                drawer: const MainDrawer(),
+                appBar: isFullScreenBinding ? null : _appBars[selectedIndex],
+                drawer: isFullScreenBinding ? null : const MainDrawer(),
                 //body: _pages[selectedIndex],
                 body: IndexedStack(index: selectedIndex, children: _pages),
               ),
@@ -457,6 +462,170 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
+
+
+===============================
+Ścieżka do pliku: ./lib/features/auth/presentation/onboarding_page.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_languages.dart';
+import '../../../core/navigation_provider.dart';
+import '../../settings/presentation/controllers/settings_controller.dart';
+import '../../user/presentation/controllers/user_controller.dart';
+
+class OnboardingPage extends ConsumerStatefulWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends ConsumerState<OnboardingPage> {
+  // Domyślnie proponujemy angielski, ale użytkownik musi to świadomie kliknąć
+  String _selectedLangCode = 'en';
+
+  Future<void> _submitOnboarding() async {
+    final settingsNotifier = ref.read(settingsControllerProvider.notifier);
+
+    // Krok 1: Wysyłamy PATCH do backendu (aktualizuje język)
+    // Zauważ: Twoje obecne API nie wymaga jeszcze wysyłania is_onboarding_completed z frontendu,
+    // jeśli zaktualizujesz profil (np. po stronie bazy), ale upewnijmy się, że SettingsController 
+    // zaktualizuje przynajmniej język.
+    final success = await settingsNotifier.updateLanguage(_selectedLangCode);
+
+    // Zabezpieczamy zmianę flagi w backendzie. (Jeśli API FastAPI pozwala na wysłanie 
+    // is_onboarding_completed: true w PATCH /me/profile, należy to dopisać w UserRepository).
+    // Dla uproszczenia (jeśli nie ruszałeś API), traktujemy udane zapisanie profilu jako ukończenie.
+
+    if (success && mounted) {
+      // Ponownie pobieramy usera z bazy, aby mieć zaktualizowaną flagę (jeśli baza ją zmienia)
+      await ref.read(userControllerProvider.notifier).fetchUser();
+      
+      // Przekierowujemy na stronę główną
+      ref.read(navigationIndexProvider.notifier).state = 0; // HomePage
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Gotowe! Możesz zacząć naukę."),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Nasłuchujemy błędów i ładowania
+    final settingsState = ref.watch(settingsControllerProvider);
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // --- Ikona Powitalna ---
+                    const Icon(
+                      Icons.waving_hand_rounded,
+                      size: 64,
+                      color: Colors.deepPurple,
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // --- Teksty ---
+                    const Text(
+                      "Witaj w aplikacji!",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Twoje konto zostało pomyślnie utworzone.\nZanim zaczniesz, wybierz swój język ojczysty, z którego będziesz się uczyć angielskiego.",
+                      style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+
+                    // --- Wybór języka (Dokładnie jak w ustawieniach) ---
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedLangCode,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Mój język (Native Language)",
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      items: AppLanguages.supported.keys.map((String langCode) {
+                        final flag = AppLanguages.getFlag(langCode);
+                        final name = AppLanguages.getName(langCode);
+                        return DropdownMenuItem(
+                          value: langCode,
+                          child: Text('$flag   $name'),
+                        );
+                      }).toList(),
+                      onChanged: settingsState.isLoading
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _selectedLangCode = value;
+                                });
+                              }
+                            },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- Ewentualny błąd z sieci ---
+                    if (settingsState.error != null) ...[
+                      Text(
+                        settingsState.error!,
+                        style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // --- Przycisk Start ---
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: settingsState.isLoading ? null : _submitOnboarding,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        child: settingsState.isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text("ZACZYNAMY!"),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 
 ===============================
@@ -1192,6 +1361,7 @@ final loginControllerProvider = StateNotifierProvider.autoDispose<LoginControlle
 Zawartość pliku:
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
@@ -1223,7 +1393,13 @@ class AuthController extends StateNotifier<AuthState> {
     if (token != null) {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
       state = const AuthState(isAuthenticated: true, isAppLoading: false);
-      _ref.read(userControllerProvider.notifier).fetchUser();
+
+      // ================= [ZMIANA 1]: Oczekujemy na załadowanie usera =================
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      // Sprawdzamy status usera i wymuszamy nawigację!
+      _checkOnboardingAndRedirect();
+      // ==================================================================================
 
       // ZMIANA: Pobierz prywatne zdania po wejściu do aplikacji
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
@@ -1233,13 +1409,27 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   // Metoda wywoływana przez LoginController/RegisterController po sukcesie
-  void setAuthenticated(bool isAuthenticated) {
+  void setAuthenticated(bool isAuthenticated) async{
     state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
     if(isAuthenticated){
-      _ref.read(userControllerProvider.notifier).fetchUser();
-
+      // ================= [ZMIANA 2]: Oczekujemy na załadowanie usera po logowaniu =================
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      _checkOnboardingAndRedirect();
+      // ============================================================================================
       // ZMIANA: Zmuś aplikację do załadowania Zdań NOWEGO użytkownika
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
+    }
+  }
+
+
+  void _checkOnboardingAndRedirect() {
+    final user = _ref.read(userControllerProvider).valueOrNull;
+    if (user != null && user.profile != null) {
+      if (user.profile!.isOnboardingCompleted == false) {
+        // Przekierowanie na Index 11 (OnboardingPage) z ominięciem menu głównego
+        _ref.read(navigationIndexProvider.notifier).state = 11;
+      }
     }
   }
 
@@ -2253,7 +2443,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
 
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text(
+              error: (_, _) => const Text(
                 "Nie udało się załadować profilu.",
                 style: TextStyle(color: Colors.red),
               ),
@@ -2509,7 +2699,7 @@ class LanguageSelector extends ConsumerWidget {
                 final currentLang = user.profile!.nativeLanguage;
 
                 return DropdownButtonFormField<String>(
-                  value: currentLang,
+                  initialValue: currentLang,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(
@@ -2740,16 +2930,19 @@ Zawartość pliku:
 class UserProfile {
   final String nativeLanguage;
   final String uiTheme;
+  final bool isOnboardingCompleted;
 
   UserProfile({
     required this.nativeLanguage,
     required this.uiTheme,
+    required this.isOnboardingCompleted,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       nativeLanguage: json['native_language'] as String? ?? 'en',
       uiTheme: json['ui_theme'] as String? ?? 'system',
+      isOnboardingCompleted: json['is_onboarding_completed'] as bool? ?? false,
     );
   }
 }
@@ -3233,18 +3426,20 @@ class AddSentenceController extends StateNotifier<AsyncValue<void>> {
       : super(const AsyncValue.data(null)); // Stan początkowy: idle (success null)
 
   Future<bool> addSentence({
-    required String sentence,
-    required String language,
-    required String translation,
+    required String originalText,
+    required String translatedText,
+    required String sourceLanguage,
+    required String targetLanguage,
   }) async {
     // 1. Ustawiamy stan na ładowanie (UI zablokuje przycisk i pokaże spinner)
     state = const AsyncValue.loading();
 
     try {
       final dto = SentenceCreate(
-        sentence: sentence,
-        language: language,
-        translation: translation,
+        originalText: originalText,
+        translatedText: translatedText,
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
       );
 
       await _repository.createSentence(dto);
@@ -3318,17 +3513,19 @@ class EditSentenceController extends StateNotifier<AsyncValue<void>> {
 
   Future<bool> editSentence({
     required int id,
-    required String sentence,
-    required String language,
-    required String translation,
+    required String originalText,
+    required String translatedText,
+    required String sourceLanguage,
+    required String targetLanguage,
   }) async {
     state = const AsyncValue.loading(); // Pokaż spinner
 
     try {
       final dto = SentenceUpdate(
-        sentence: sentence,
-        language: language,
-        translation: translation,
+        originalText: originalText,
+        translatedText: translatedText,
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
       );
 
       // 1. Wywołanie API
@@ -3522,6 +3719,8 @@ Zawartość pliku:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/app_sizes.dart';
+import '../../../../core/constants/app_languages.dart';
+import '../../../user/presentation/controllers/user_controller.dart';
 import '../../data/sentence_model.dart';
 import '../add_sentence_controller.dart';
 import '../edit_sentence_controller.dart';
@@ -3539,9 +3738,9 @@ class SentenceFormDialog extends ConsumerStatefulWidget {
 
 class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  
-  late TextEditingController _sentenceController;
-  late TextEditingController _translationController;
+
+  late TextEditingController _originalTextCtrl;
+  late TextEditingController _translatedTextCtrl;
 
   // Właściwość pomocnicza określająca w jakim trybie jesteśmy
   bool get _isEditMode => widget.sentence != null;
@@ -3550,18 +3749,22 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   void initState() {
     super.initState();
     // Inicjalizujemy kontrolery. Jeśli to edycja - wpisujemy stare dane.
-    _sentenceController = TextEditingController(text: _isEditMode ? widget.sentence!.sentence : '');
-    _translationController = TextEditingController(text: _isEditMode ? widget.sentence!.translation : '');
+    _originalTextCtrl = TextEditingController(
+      text: _isEditMode ? widget.sentence!.originalText : '',
+    );
+    _translatedTextCtrl = TextEditingController(
+      text: _isEditMode ? widget.sentence!.translatedText : '',
+    );
   }
 
   @override
   void dispose() {
-    _sentenceController.dispose();
-    _translationController.dispose();
+    _originalTextCtrl.dispose();
+    _translatedTextCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(String sourceLang, String targetLang) async {
     if (!_formKey.currentState!.validate()) return;
 
     bool success = false;
@@ -3571,17 +3774,19 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       final controller = ref.read(editSentenceControllerProvider.notifier);
       success = await controller.editSentence(
         id: widget.sentence!.id,
-        sentence: _sentenceController.text,
-        translation: _translationController.text,
-        language: widget.sentence!.language, // Zachowujemy obecny język
+        originalText: _originalTextCtrl.text.trim(),
+        translatedText: _translatedTextCtrl.text.trim(),
+        sourceLanguage: sourceLang, // Zachowujemy obecny język
+        targetLanguage: targetLang,
       );
     } else {
       // LOGIKA DODAWANIA
       final controller = ref.read(addSentenceControllerProvider.notifier);
       success = await controller.addSentence(
-        sentence: _sentenceController.text,
-        translation: _translationController.text,
-        language: 'en', // Domyślnie angielski przy dodawaniu
+        originalText: _originalTextCtrl.text.trim(),
+        translatedText: _translatedTextCtrl.text.trim(),
+        sourceLanguage: sourceLang, // Domyślnie angielski przy dodawaniu
+        targetLanguage: targetLang,
       );
     }
 
@@ -3589,7 +3794,9 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       Navigator.of(context).pop(); // Zamykamy dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!'),
+          content: Text(
+            _isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -3599,27 +3806,49 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
   @override
   Widget build(BuildContext context) {
     // Obserwujemy stan odpowiedniego kontrolera w zależności od trybu
-    final isLoading = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).isLoading 
+    final isLoading = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).isLoading
         : ref.watch(addSentenceControllerProvider).isLoading;
-        
-    final hasError = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).hasError 
+
+    final hasError = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).hasError
         : ref.watch(addSentenceControllerProvider).hasError;
-        
-    final errorText = _isEditMode 
-        ? ref.watch(editSentenceControllerProvider).error?.toString() 
+
+    final errorText = _isEditMode
+        ? ref.watch(editSentenceControllerProvider).error?.toString()
         : ref.watch(addSentenceControllerProvider).error?.toString();
 
-  debugPrint(errorText);
+    // ================= [ZMIANA 3]: INTELIGENTNE ROZPOZNAWANIE JĘZYKA =================
+    // Jeśli to edycja -> bierzemy z bazy. Jeśli dodawanie -> wyciągamy profil usera.
+    final userState = ref.watch(userControllerProvider);
+    final profileNativeLang =
+        userState.valueOrNull?.profile?.nativeLanguage ?? 'en';
+
+    final String activeSourceLang = _isEditMode
+        ? widget.sentence!.sourceLanguage
+        : profileNativeLang;
+    final String activeTargetLang = _isEditMode
+        ? widget.sentence!.targetLanguage
+        : 'en';
+
+    // Wyciągamy piękne flagi z naszej klasy AppLanguages
+    final String sourceFlag = AppLanguages.getFlag(activeSourceLang);
+    final String targetFlag = AppLanguages.getFlag(activeTargetLang);
+    // =================================================================================
+
+    debugPrint(errorText);
 
     // Tytuł zależy od trybu
-    final titleText = _isEditMode ? "Edytuj zdanie #${widget.sentence!.id}" : "Dodaj nowe zdanie";
+    final titleText = _isEditMode
+        ? "Edytuj zdanie #${widget.sentence!.id}"
+        : "Dodaj nowe zdanie";
 
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth * 0.9),
+        constraints: const BoxConstraints(
+          maxWidth: AppSizes.maxMobileWidth * 0.9,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -3628,12 +3857,14 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+
+                //MAIN LAYOUT - TITLE 
                 Text(
                   titleText,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 24),
-                
+
                 if (hasError)
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -3653,10 +3884,12 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
+                        //MAIN LAYOUT - Native language text
                         TextFormField(
-                          controller: _sentenceController,
-                          decoration: const InputDecoration(
-                            labelText: '🌍 Native Language',
+                          controller: _originalTextCtrl,
+                          decoration: InputDecoration(
+                            labelText:
+                                '$sourceFlag Native Language (${activeSourceLang.toUpperCase()})',
                             hintText: 'e.g. Meaning in your language',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
@@ -3666,80 +3899,102 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           validator: (value) {
-                            if ((value == null || value.isEmpty) && _translationController.text.isEmpty) {
+                            if ((value == null || value.isEmpty) &&
+                                _translatedTextCtrl.text.isEmpty) {
                               return 'Wypełnij zdanie LUB tłumaczenie';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
+                        //MAIN LAYOUT - Translated text 
                         TextFormField(
-                          controller: _translationController,
-                          decoration: const InputDecoration(
-                            labelText: '🇬🇧 English',
+                          controller: _translatedTextCtrl,
+                          decoration: InputDecoration(
+                            labelText:
+                                '$targetFlag Target Language (${activeTargetLang.toUpperCase()})',
                             hintText: 'e.g. The weather is beautiful today.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
                           enabled: !isLoading,
-                          minLines: 2,
+                          minLines: 3,
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           validator: (value) {
-                            if ((value == null || value.isEmpty) && _sentenceController.text.isEmpty) {
+                            if ((value == null || value.isEmpty) &&
+                                _originalTextCtrl.text.isEmpty) {
                               return 'Wypełnij zdanie LUB tłumaczenie';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4.0),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.language, color: Colors.grey, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Język: ',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.light 
-                                      ? Colors.grey.shade200 
-                                      : Colors.grey.shade700,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _isEditMode ? widget.sentence!.language.toUpperCase() : 'EN',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // const SizedBox(height: 16),
+
+                        // //MAIN LAYOUT - Languages info Row
+                        // Padding(
+                        //   padding: const EdgeInsets.only(left: 4.0),
+                        //   child: Row(
+                        //     children: [
+                        //       const Icon(
+                        //         Icons.language,
+                        //         color: Colors.grey,
+                        //         size: 20,
+                        //       ),
+                        //       const SizedBox(width: 8),
+                        //       Text(
+                        //         'Język: ',
+                        //         style: Theme.of(context).textTheme.bodyMedium
+                        //             ?.copyWith(color: Colors.grey[700]),
+                        //       ),
+                        //       Container(
+                        //         padding: const EdgeInsets.symmetric(
+                        //           horizontal: 8,
+                        //           vertical: 2,
+                        //         ),
+                        //         decoration: BoxDecoration(
+                        //           color:
+                        //               Theme.of(context).brightness ==
+                        //                   Brightness.light
+                        //               ? Colors.grey.shade200
+                        //               : Colors.grey.shade700,
+                        //           borderRadius: BorderRadius.circular(4),
+                        //         ),
+                        //         // child: Text(
+                        //         //   _isEditMode
+                        //         //       ? widget.sentence!.language.toUpperCase()
+                        //         //       : 'EN',
+                        //         //   style: const TextStyle(
+                        //         //     fontWeight: FontWeight.bold,
+                        //         //   ),
+                        //         // ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
+                //MAIN LAYOUT - BUTTONS AT BOTTOM
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                      onPressed: isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('Anuluj'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: isLoading ? null : _submit,
+                      onPressed: isLoading
+                          ? null
+                          : () => _submit(activeSourceLang, activeTargetLang),
                       child: isLoading
                           ? const SizedBox(
                               width: 20,
@@ -3749,10 +4004,12 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(_isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie'),
+                          : Text(
+                              _isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie',
+                            ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -3761,6 +4018,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
     );
   }
 }
+
 
 
 ===============================
@@ -3826,7 +4084,7 @@ class SentenceTile extends ConsumerWidget {
           child: Text(sentence.id.toString()),
         ),
         title: Text(
-          sentence.sentence,
+          sentence.originalText,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
@@ -3834,7 +4092,7 @@ class SentenceTile extends ConsumerWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              sentence.translation,
+              sentence.translatedText,
               style: const TextStyle(
                 fontStyle: FontStyle.italic,
                 color: Colors.black87,
@@ -3846,7 +4104,7 @@ class SentenceTile extends ConsumerWidget {
                 Icon(Icons.language, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  sentence.language,
+                  '${sentence.sourceLanguage}:${sentence.targetLanguage}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
@@ -3906,25 +4164,28 @@ class SentenceTile extends ConsumerWidget {
 Zawartość pliku:
 
 class SentenceCreate {
-  final String sentence;
-  final String language;
-  final String translation;
+  // ================= [ZMIANA]: Zmiana pól w DTO =================
+  final String originalText;
+  final String translatedText;
+  final String sourceLanguage;
+  final String targetLanguage;
 
   const SentenceCreate({
-    required this.sentence,
-    required this.language,
-    required this.translation,
+    required this.originalText,
+    required this.translatedText,
+    required this.sourceLanguage,
+    required this.targetLanguage,
   });
 
-  // Metoda toJson konwertuje obiekt na Mapę, którą Dio zamieni na JSON.
-  // W C++ to byłaby metoda serializująca do QJsonObject.
   Map<String, dynamic> toJson() {
     return {
-      'sentence': sentence,
-      'language': language,
-      'translation': translation,
+      'original_text': originalText,
+      'translated_text': translatedText,
+      'source_language': sourceLanguage,
+      'target_language': targetLanguage,
     };
   }
+  // ==============================================================
 }
 
 
@@ -3939,33 +4200,37 @@ import 'package:equatable/equatable.dart';
 // To jak przeładowanie operatora == w C++.
 class Sentence extends Equatable {
   final int id;
-  final String sentence;
-  final String language;
-  final String translation;
+  final String originalText;
+  final String translatedText;
+  final String sourceLanguage;
+  final String targetLanguage;
   // created_at przychodzi jako string, w prawdziwym projekcie parsujemy to na DateTime
   final String createdAt; 
 
   const Sentence({
     required this.id,
-    required this.sentence,
-    required this.language,
-    required this.translation,
+    required this.originalText,
+    required this.translatedText,
+    required this.sourceLanguage,
+    required this.targetLanguage,
     required this.createdAt,
   });
 
-  // Factory constructor - w C++ to byłaby statyczna metoda "createFromJson"
   factory Sentence.fromJson(Map<String, dynamic> json) {
     return Sentence(
       id: json['id'] as int,
-      sentence: json['sentence'] as String,
-      language: json['language'] as String,
-      translation: json['translation'] as String,
+      // ================= [ZMIANA 2]: Mapowanie nowych kluczy z JSON =================
+      originalText: json['original_text'] as String,
+      translatedText: json['translated_text'] as String,
+      sourceLanguage: json['source_language'] as String,
+      targetLanguage: json['target_language'] as String,
+      // ==============================================================================
       createdAt: json['created_at'] as String,
     );
   }
 
   @override
-  List<Object?> get props => [id, sentence, language, translation, createdAt];
+  List<Object?> get props => [id, originalText, translatedText, sourceLanguage, targetLanguage, createdAt];
 }
 
 
@@ -4078,25 +4343,28 @@ class SentencesRepository {
 Zawartość pliku:
 
 class SentenceUpdate {
-  // W API te pola są 'anyOf string/null', więc tutaj String?
-  final String? sentence;
-  final String? language;
-  final String? translation;
+  // ================= [ZMIANA]: Zmiana pól w DTO =================
+  final String? originalText;
+  final String? translatedText;
+  final String? sourceLanguage;
+  final String? targetLanguage;
 
   const SentenceUpdate({
-    this.sentence,
-    this.language,
-    this.translation,
+    this.originalText,
+    this.translatedText,
+    this.sourceLanguage,
+    this.targetLanguage,
   });
 
   Map<String, dynamic> toJson() {
-    // Serializujemy tylko te pola, które nie są nullem (chociaż w edycji wyślemy wszystkie)
     return {
-      if (sentence != null) 'sentence': sentence,
-      if (language != null) 'language': language,
-      if (translation != null) 'translation': translation,
+      if (originalText != null) 'original_text': originalText,
+      if (translatedText != null) 'translated_text': translatedText,
+      if (sourceLanguage != null) 'source_language': sourceLanguage,
+      if (targetLanguage != null) 'target_language': targetLanguage,
     };
   }
+  // ==============================================================
 }
 
 

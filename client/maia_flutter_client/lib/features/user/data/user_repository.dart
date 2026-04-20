@@ -25,15 +25,19 @@ class UserRepository {
     }
   }
 
-  // Zaktualizowanie profilu (PATCH)
-  Future<UserProfile> updateProfile({required String nativeLanguage}) async {
+Future<UserProfile> updateProfile({
+    String? nativeLanguage, 
+    bool? isOnboardingCompleted
+  }) async {
     try {
+      // Budujemy dynamicznie mapę danych
+      final data = <String, dynamic>{};
+      if (nativeLanguage != null) data['native_language'] = nativeLanguage;
+      if (isOnboardingCompleted != null) data['is_onboarding_completed'] = isOnboardingCompleted;
+
       final response = await _dio.patch(
         '/api/v1/users/me/profile',
-        data: {
-          'native_language': nativeLanguage,
-          // ui_theme narazie nie wysyłamy, backend je pominie
-        },
+        data: data, // Wysyłamy zbudowaną mapę
       );
       return UserProfile.fromJson(response.data);
     } catch (e) {

@@ -53,7 +53,7 @@ class LanguageSelector extends ConsumerWidget {
                 final currentLang = user.profile!.nativeLanguage;
 
                 return DropdownButtonFormField<String>(
-                  value: currentLang,
+                  initialValue: currentLang,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(

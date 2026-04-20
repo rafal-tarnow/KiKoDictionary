@@ -18,6 +18,7 @@ import 'core/app_sizes.dart'; // Import stałych
 import 'features/health/services_health_page.dart';
 import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
+import 'features/auth/presentation/onboarding_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -36,9 +37,10 @@ class MainShell extends ConsumerWidget {
     //Pages not shown in the Drawer
     ForgotPasswordPage(),
     SettingsPage(),
+    OnboardingPage(),
   ];
 
-  static final List<PreferredSizeWidget> _appBars = [
+  static final List<PreferredSizeWidget?> _appBars = [
     const HomeAppBar(),
     AppBar(
       title: const Text("Dictionary"),
@@ -82,6 +84,10 @@ class MainShell extends ConsumerWidget {
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
+    // ================= [ZMIANA 3]: Czysty AppBar dla Onboardingu =================
+    // Onboarding nie powinien pozwalać na nawigację wstecz ani pokazywać menu bocznego
+    null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
+    // ===============================================================================
   ];
 
 
@@ -89,6 +95,9 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(navigationIndexProvider);
+
+    // Sprawdzamy czy to index onboardingu
+    final isFullScreenBinding = selectedIndex == 11;
 
     return Container(
       //szare tło aplikacji
@@ -119,12 +128,8 @@ class MainShell extends ConsumerWidget {
               child: Scaffold(
                 //backgroundColor: Theme.of(context).colorScheme.surface,
                 backgroundColor: const Color(0xFFFFFFFF),
-                appBar: _appBars[selectedIndex],
-                // appBar: AppBar(
-                //   title: Text(_titles[selectedIndex]),
-                //   elevation: 2,
-                // ),
-                drawer: const MainDrawer(),
+                appBar: isFullScreenBinding ? null : _appBars[selectedIndex],
+                drawer: isFullScreenBinding ? null : const MainDrawer(),
                 //body: _pages[selectedIndex],
                 body: IndexedStack(index: selectedIndex, children: _pages),
               ),

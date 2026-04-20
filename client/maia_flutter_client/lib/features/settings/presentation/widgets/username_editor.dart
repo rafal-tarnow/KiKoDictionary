@@ -81,7 +81,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
 
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text(
+              error: (_, _) => const Text(
                 "Nie udało się załadować profilu.",
                 style: TextStyle(color: Colors.red),
               ),
