@@ -42,7 +42,7 @@ class UserAvatarButton extends ConsumerWidget {
             
             // Tworzymy cień i padding dla flagi
             label: Text(
-              AppLanguages.getFlag(langCode ?? 'en'), // Zabezpieczenie na null
+              AppLanguages.getFlag(langCode ?? '--'), // Zabezpieczenie na null
               style: const TextStyle(fontSize: 10, height: 1.1),
             ),
             child: CircleAvatar(

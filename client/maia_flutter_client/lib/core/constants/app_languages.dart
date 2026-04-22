@@ -23,6 +23,7 @@ class AppLanguages {
       case 'de': return '🇩🇪';
       case 'fr': return '🇫🇷';
       case 'uk': return '🇺🇦';
+      case '--': return ' ';
       default: return '🌍'; // Fallback
     }
   }

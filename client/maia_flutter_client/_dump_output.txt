@@ -491,11 +491,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _submitOnboarding() async {
     final settingsNotifier = ref.read(settingsControllerProvider.notifier);
 
-    // Krok 1: Wysyłamy PATCH do backendu (aktualizuje język)
-    // Zauważ: Twoje obecne API nie wymaga jeszcze wysyłania is_onboarding_completed z frontendu,
-    // jeśli zaktualizujesz profil (np. po stronie bazy), ale upewnijmy się, że SettingsController 
-    // zaktualizuje przynajmniej język.
-    final success = await settingsNotifier.updateLanguage(_selectedLangCode);
+    final success = await settingsNotifier.completeOnboarding(_selectedLangCode);
 
     // Zabezpieczamy zmianę flagi w backendzie. (Jeśli API FastAPI pozwala na wysłanie 
     // is_onboarding_completed: true w PATCH /me/profile, należy to dopisać w UserRepository).
@@ -1514,7 +1510,7 @@ class UserAvatarButton extends ConsumerWidget {
             
             // Tworzymy cień i padding dla flagi
             label: Text(
-              AppLanguages.getFlag(langCode ?? 'en'), // Zabezpieczenie na null
+              AppLanguages.getFlag(langCode ?? '--'), // Zabezpieczenie na null
               style: const TextStyle(fontSize: 10, height: 1.1),
             ),
             child: CircleAvatar(
@@ -2329,6 +2325,28 @@ class SettingsController extends StateNotifier<SettingsState> {
     }
   }
 
+// === NOWA FUNKCJA DLA ONBOARDINGU ===
+  Future<bool> completeOnboarding(String newLangCode) async {
+    state = const SettingsState(isLoading: true, error: null);
+    try {
+      // Zapisujemy język ORAZ flagę ukończenia onboardingu
+      await _userRepo.updateProfile(
+        nativeLanguage: newLangCode,
+        isOnboardingCompleted: true, // <--- TO JEST KLUCZOWE
+      );
+      
+      // Odświeżenie globalnego stanu (flaga zmieni się z false na true w pamięci apki)
+      await _ref.read(userControllerProvider.notifier).fetchUser();
+      
+      state = const SettingsState(isLoading: false);
+      return true;
+    } catch (e) {
+      final msg = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+
   // === USUNIĘCIE KONTA BEZ ZMIAN ===
   Future<bool> deleteAccount() async {
     state = const SettingsState(isLoading: true, error: null);
@@ -2876,15 +2894,19 @@ class UserRepository {
     }
   }
 
-  // Zaktualizowanie profilu (PATCH)
-  Future<UserProfile> updateProfile({required String nativeLanguage}) async {
+Future<UserProfile> updateProfile({
+    String? nativeLanguage, 
+    bool? isOnboardingCompleted
+  }) async {
     try {
+      // Budujemy dynamicznie mapę danych
+      final data = <String, dynamic>{};
+      if (nativeLanguage != null) data['native_language'] = nativeLanguage;
+      if (isOnboardingCompleted != null) data['is_onboarding_completed'] = isOnboardingCompleted;
+
       final response = await _dio.patch(
         '/api/v1/users/me/profile',
-        data: {
-          'native_language': nativeLanguage,
-          // ui_theme narazie nie wysyłamy, backend je pominie
-        },
+        data: data, // Wysyłamy zbudowaną mapę
       );
       return UserProfile.fromJson(response.data);
     } catch (e) {
@@ -4914,6 +4936,7 @@ class AppLanguages {
       case 'de': return '🇩🇪';
       case 'fr': return '🇫🇷';
       case 'uk': return '🇺🇦';
+      case '--': return ' ';
       default: return '🌍'; // Fallback
     }
   }
