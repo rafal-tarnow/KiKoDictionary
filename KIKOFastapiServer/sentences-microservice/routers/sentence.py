@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate
+from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, PaginatedSentences
 
 # ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
 from crud.sentence import (
@@ -12,68 +12,83 @@ from crud.sentence import (
     get_community_sentences, 
     get_sentence, 
     update_sentence, 
-    delete_sentence
+    delete_sentence,
+    clone_sentence
 )
 from database import get_db
 
 # ================= ZMIANA: Importujemy naszą zależność =================
-from dependencies import get_current_user_id
+from dependencies import get_current_user_id, get_optional_user_id
 import math
 
 router = APIRouter(prefix="/api/sentences", tags=["sentences"])
 
 # ================= 1. PRZESTRZEŃ PUBLICZNA =================
 
-# [ZMIANA]: Nowy, otwarty endpoint. 
-# Zwróć uwagę na brak "user_id = Depends(...)". To pozwala przeglądać gościom.
-@router.get("/community", response_model=List[Sentence])
+# ================= [NOWE - PRODUKCJA 8]: Mądry endpoint Community =================
+@router.get("/community", response_model=PaginatedSentences) # <--- ZMIANA
 def read_community_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db)
+    source_lang: Optional[str] = Query(None, description="Filtruj po języku źródłowym, np. 'en'"),
+    target_lang: Optional[str] = Query(None, description="Filtruj po języku docelowym, np. 'pl'"),
+    db: Session = Depends(get_db),
+    user_id: Optional[str] = Depends(get_optional_user_id) 
 ):
-    sentences, total = get_community_sentences(db, page, per_page)
+    sentences, total = get_community_sentences(
+        db=db, 
+        page=page, 
+        per_page=per_page, 
+        source_language=source_lang,
+        target_language=target_lang
+    )
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
-    items = [Sentence.from_orm(s) for s in sentences]
-    encoded_items = jsonable_encoder(items)
+    # [ZMIANA]: FastAPI samo zamieni to na JSON i zwaliduje!
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "is_authenticated": user_id is not None 
+    }
     
-    return JSONResponse(
-        content={
-            "data": encoded_items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    )
+
+
+# ================= [NOWE - PRODUKCJA 9]: Akcja kopiowania =================
+# Używamy POST, a status odpowiedzi to 201 Created (standard REST API)
+@router.post("/{sentence_id}/clone", response_model=Sentence, status_code=status.HTTP_201_CREATED)
+def clone_sentence_endpoint(
+    sentence_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # UWAGA: Tutaj autoryzacja jest WYMAGANA
+):
+    """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
+    return clone_sentence(db, sentence_id, user_id)
+# ==============================================================================
+
 
 # ================= 2. PRZESTRZEŃ PRYWATNA =================
 
-# [ZMIANA]: Przepinamy pobieranie prywatnej listy na ścieżkę /me
-@router.get("/me", response_model=List[Sentence])
+@router.get("/me", response_model=PaginatedSentences) # <--- ZMIANA
 def read_my_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+    user_id: str = Depends(get_current_user_id)
 ):
-    sentences, total = get_my_sentences(db, page, per_page, user_id) # [ZMIANA]: Nowa funkcja
+    sentences, total = get_my_sentences(db, page, per_page, user_id)
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
-    # Użyj jsonable_encoder do konwersji listy obiektów Sentence
-    items = [Sentence.from_orm(s) for s in sentences]
-    encoded_items = jsonable_encoder(items)
-    
-    return JSONResponse(
-        content={
-            "data": encoded_items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    )
+    # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages
+    }
 
 # CZYSTA KOLEKCJA (DODAWANIE)
 @router.post("/", response_model=Sentence)

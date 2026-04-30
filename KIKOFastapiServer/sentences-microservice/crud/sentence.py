@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 # ================= 1. PRZESTRZEŃ PRYWATNA (Wymaga user_id) =================
 
@@ -77,16 +77,74 @@ def delete_sentence(db: Session, sentence_id: int, user_id: str):
     return {"message": "Sentence deleted successfully"}
 
 
+# ================= [NOWE - PRODUKCJA 4]: Akcja Klonowania (Mądry Backend) =================
+def clone_sentence(db: Session, original_sentence_id: int, new_user_id: str):
+    """Kopiuje cudze zdanie ze społeczności i przypisuje je do zalogowanego usera"""
+    
+    # 1. Pobieramy oryginał (bez względu na to kto jest właścicielem)
+    original = db.query(Sentence).filter(Sentence.id == original_sentence_id).first()
+    
+    if original is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original sentence not found")
+        
+    # 2. Business Logic: Ochrona przed sklonowaniem własnego zdania
+    if original.user_id == new_user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already own this sentence")
+
+    # ================= [NOWE - Zabezpieczenie przed Spamem/Podwójnym klonowaniem] =================
+    # 3. Business Logic: Sprawdzamy, czy użytkownik już wcześniej nie sklonował tego zdania
+    already_saved = db.query(Sentence).filter(
+        Sentence.user_id == new_user_id,
+        Sentence.original_text == original.original_text,
+        Sentence.translated_text == original.translated_text,
+        Sentence.source_language == original.source_language,
+        Sentence.target_language == original.target_language
+    ).first()
+
+    if already_saved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="You have already saved this sentence to your list."
+        )
+    # ==============================================================================================
+
+    # 4. Klonowanie: Tworzymy nowy obiekt przypisany do usera, NIE KOPIUJEMY starego 'id' ani 'created_at'
+    cloned_sentence = Sentence(
+        user_id=new_user_id,
+        original_text=original.original_text,
+        translated_text=original.translated_text,
+        source_language=original.source_language,
+        target_language=original.target_language
+    )
+    
+    db.add(cloned_sentence)
+    db.commit()
+    db.refresh(cloned_sentence)
+    return cloned_sentence
+# =========================================================================================
+
 # ================= 2. PRZESTRZEŃ PUBLICZNA (Społeczność) =================
 
-# [ZMIANA]: CAŁKIEM NOWA FUNKCJA pobierająca wszystko od wszystkich
-def get_community_sentences(db: Session, page: int, per_page: int):
-    """Pobiera wszystkie zdania w systemie (Feed Społecznościowy) bez względu na to czyje są."""
+# ================= [NOWE - PRODUKCJA 5]: Filtrowanie po językach =================
+def get_community_sentences(
+    db: Session, 
+    page: int, 
+    per_page: int, 
+    source_language: str = None, 
+    target_language: str = None
+):
     offset = (page - 1) * per_page
+    query = db.query(Sentence)
     
-    # Sortujemy najnowsze na górze (brak filtra na user_id!)
-    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    # Aplikujemy filtry tylko wtedy, gdy frontend je przesłał
+    if source_language:
+        query = query.filter(Sentence.source_language == source_language)
+    if target_language:
+        query = query.filter(Sentence.target_language == target_language)
+        
+    query = query.order_by(desc(Sentence.created_at))
     sentences = query.offset(offset).limit(per_page).all()
     total = query.count()
     
     return sentences, total
+# =================================================================================

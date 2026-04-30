@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Index
 from database import Base
 from datetime import datetime, timezone
 from src.core.config import settings
@@ -20,4 +20,13 @@ class Sentence(Base):
     target_language = Column(String(10), index=True, nullable=False, default="en")
     # ====================================================================
     
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # [ZMIANA]: Dodałem index=True dla pojedynczego sortowania
+    created_at = Column(DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc))
+
+    # ================= [NOWE - PRODUKCJA]: Indeks Złożony =================
+    # Baza danych stworzy specjalne drzewo zoptymalizowane dokładnie pod zapytanie:
+    # "daj mi zdania z angielskiego na polski, posortowane od najnowszego"
+    __table_args__ = (
+        Index('ix_sentences_lang_date', 'source_language', 'target_language', 'created_at'),
+    )
+    # =======================================================================

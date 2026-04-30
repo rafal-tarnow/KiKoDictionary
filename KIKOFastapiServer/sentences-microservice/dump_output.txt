@@ -49,6 +49,37 @@ from src.core.config import settings
 # tokenUrl nie ma tu znaczenia dla walidacji, służy tylko dokumentacji Swagger UI
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://127.0.0.1:8002/api/v1/auth/login")
 
+
+# ================= [NOWE - PRODUKCJA 1]: Opcjonalna Autoryzacja =================
+# auto_error=False sprawia, że brak tokena nie rzuca od razu błędu 401.
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="http://127.0.0.1:8002/api/v1/auth/login", 
+    auto_error=False
+)
+
+def get_optional_user_id(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
+    """
+    Sprawdza token, jeśli istnieje. Używane dla endpointów publicznych (np. Community),
+    które chcą wiedzieć CZY ktoś jest zalogowany, ale nie WYMUSZAJĄ tego.
+    Zwraca user_id (str) lub None.
+    """
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: Optional[str] = payload.get("sub")
+        token_type: Optional[str] = payload.get("type")
+        
+        if user_id is None or token_type != "access":
+            return None
+            
+        return user_id
+    except JWTError:
+        return None
+# ===================================================================================
+
+
 def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     """
     Weryfikuje token JWT i wyciąga z niego 'sub' (czyli user_id).
@@ -124,7 +155,7 @@ app.mount("/img/faces", StaticFiles(directory="assets/img"), name="img")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -243,7 +274,7 @@ if __name__ == "__main__":
 
 Zawartość pliku:
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Index
 from database import Base
 from datetime import datetime, timezone
 from src.core.config import settings
@@ -265,7 +296,16 @@ class Sentence(Base):
     target_language = Column(String(10), index=True, nullable=False, default="en")
     # ====================================================================
     
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # [ZMIANA]: Dodałem index=True dla pojedynczego sortowania
+    created_at = Column(DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc))
+
+    # ================= [NOWE - PRODUKCJA]: Indeks Złożony =================
+    # Baza danych stworzy specjalne drzewo zoptymalizowane dokładnie pod zapytanie:
+    # "daj mi zdania z angielskiego na polski, posortowane od najnowszego"
+    __table_args__ = (
+        Index('ix_sentences_lang_date', 'source_language', 'target_language', 'created_at'),
+    )
+    # =======================================================================
 
 
 ===============================
@@ -273,12 +313,12 @@ class Sentence(Base):
 
 Zawartość pliku:
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate
+from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, PaginatedSentences
 
 # ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
 from crud.sentence import (
@@ -287,68 +327,83 @@ from crud.sentence import (
     get_community_sentences, 
     get_sentence, 
     update_sentence, 
-    delete_sentence
+    delete_sentence,
+    clone_sentence
 )
 from database import get_db
 
 # ================= ZMIANA: Importujemy naszą zależność =================
-from dependencies import get_current_user_id
+from dependencies import get_current_user_id, get_optional_user_id
 import math
 
 router = APIRouter(prefix="/api/sentences", tags=["sentences"])
 
 # ================= 1. PRZESTRZEŃ PUBLICZNA =================
 
-# [ZMIANA]: Nowy, otwarty endpoint. 
-# Zwróć uwagę na brak "user_id = Depends(...)". To pozwala przeglądać gościom.
-@router.get("/community", response_model=List[Sentence])
+# ================= [NOWE - PRODUKCJA 8]: Mądry endpoint Community =================
+@router.get("/community", response_model=PaginatedSentences) # <--- ZMIANA
 def read_community_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db)
+    source_lang: Optional[str] = Query(None, description="Filtruj po języku źródłowym, np. 'en'"),
+    target_lang: Optional[str] = Query(None, description="Filtruj po języku docelowym, np. 'pl'"),
+    db: Session = Depends(get_db),
+    user_id: Optional[str] = Depends(get_optional_user_id) 
 ):
-    sentences, total = get_community_sentences(db, page, per_page)
+    sentences, total = get_community_sentences(
+        db=db, 
+        page=page, 
+        per_page=per_page, 
+        source_language=source_lang,
+        target_language=target_lang
+    )
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
-    items = [Sentence.from_orm(s) for s in sentences]
-    encoded_items = jsonable_encoder(items)
+    # [ZMIANA]: FastAPI samo zamieni to na JSON i zwaliduje!
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "is_authenticated": user_id is not None 
+    }
     
-    return JSONResponse(
-        content={
-            "data": encoded_items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    )
+
+
+# ================= [NOWE - PRODUKCJA 9]: Akcja kopiowania =================
+# Używamy POST, a status odpowiedzi to 201 Created (standard REST API)
+@router.post("/{sentence_id}/clone", response_model=Sentence, status_code=status.HTTP_201_CREATED)
+def clone_sentence_endpoint(
+    sentence_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id) # UWAGA: Tutaj autoryzacja jest WYMAGANA
+):
+    """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
+    return clone_sentence(db, sentence_id, user_id)
+# ==============================================================================
+
 
 # ================= 2. PRZESTRZEŃ PRYWATNA =================
 
-# [ZMIANA]: Przepinamy pobieranie prywatnej listy na ścieżkę /me
-@router.get("/me", response_model=List[Sentence])
+@router.get("/me", response_model=PaginatedSentences) # <--- ZMIANA
 def read_my_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+    user_id: str = Depends(get_current_user_id)
 ):
-    sentences, total = get_my_sentences(db, page, per_page, user_id) # [ZMIANA]: Nowa funkcja
+    sentences, total = get_my_sentences(db, page, per_page, user_id)
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
-    # Użyj jsonable_encoder do konwersji listy obiektów Sentence
-    items = [Sentence.from_orm(s) for s in sentences]
-    encoded_items = jsonable_encoder(items)
-    
-    return JSONResponse(
-        content={
-            "data": encoded_items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    )
+    # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages
+    }
 
 # CZYSTA KOLEKCJA (DODAWANIE)
 @router.post("/", response_model=Sentence)
@@ -395,7 +450,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 # ================= 1. PRZESTRZEŃ PRYWATNA (Wymaga user_id) =================
 
@@ -470,19 +525,77 @@ def delete_sentence(db: Session, sentence_id: int, user_id: str):
     return {"message": "Sentence deleted successfully"}
 
 
+# ================= [NOWE - PRODUKCJA 4]: Akcja Klonowania (Mądry Backend) =================
+def clone_sentence(db: Session, original_sentence_id: int, new_user_id: str):
+    """Kopiuje cudze zdanie ze społeczności i przypisuje je do zalogowanego usera"""
+    
+    # 1. Pobieramy oryginał (bez względu na to kto jest właścicielem)
+    original = db.query(Sentence).filter(Sentence.id == original_sentence_id).first()
+    
+    if original is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original sentence not found")
+        
+    # 2. Business Logic: Ochrona przed sklonowaniem własnego zdania
+    if original.user_id == new_user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already own this sentence")
+
+    # ================= [NOWE - Zabezpieczenie przed Spamem/Podwójnym klonowaniem] =================
+    # 3. Business Logic: Sprawdzamy, czy użytkownik już wcześniej nie sklonował tego zdania
+    already_saved = db.query(Sentence).filter(
+        Sentence.user_id == new_user_id,
+        Sentence.original_text == original.original_text,
+        Sentence.translated_text == original.translated_text,
+        Sentence.source_language == original.source_language,
+        Sentence.target_language == original.target_language
+    ).first()
+
+    if already_saved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="You have already saved this sentence to your list."
+        )
+    # ==============================================================================================
+
+    # 4. Klonowanie: Tworzymy nowy obiekt przypisany do usera, NIE KOPIUJEMY starego 'id' ani 'created_at'
+    cloned_sentence = Sentence(
+        user_id=new_user_id,
+        original_text=original.original_text,
+        translated_text=original.translated_text,
+        source_language=original.source_language,
+        target_language=original.target_language
+    )
+    
+    db.add(cloned_sentence)
+    db.commit()
+    db.refresh(cloned_sentence)
+    return cloned_sentence
+# =========================================================================================
+
 # ================= 2. PRZESTRZEŃ PUBLICZNA (Społeczność) =================
 
-# [ZMIANA]: CAŁKIEM NOWA FUNKCJA pobierająca wszystko od wszystkich
-def get_community_sentences(db: Session, page: int, per_page: int):
-    """Pobiera wszystkie zdania w systemie (Feed Społecznościowy) bez względu na to czyje są."""
+# ================= [NOWE - PRODUKCJA 5]: Filtrowanie po językach =================
+def get_community_sentences(
+    db: Session, 
+    page: int, 
+    per_page: int, 
+    source_language: str = None, 
+    target_language: str = None
+):
     offset = (page - 1) * per_page
+    query = db.query(Sentence)
     
-    # Sortujemy najnowsze na górze (brak filtra na user_id!)
-    query = db.query(Sentence).order_by(desc(Sentence.created_at))
+    # Aplikujemy filtry tylko wtedy, gdy frontend je przesłał
+    if source_language:
+        query = query.filter(Sentence.source_language == source_language)
+    if target_language:
+        query = query.filter(Sentence.target_language == target_language)
+        
+    query = query.order_by(desc(Sentence.created_at))
     sentences = query.offset(offset).limit(per_page).all()
     total = query.count()
     
     return sentences, total
+# =================================================================================
 
 
 ===============================
@@ -490,9 +603,9 @@ def get_community_sentences(db: Session, page: int, per_page: int):
 
 Zawartość pliku:
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from src.core.config import settings
 
 class SentenceCreate(BaseModel):
@@ -504,11 +617,13 @@ class SentenceCreate(BaseModel):
     source_language: str = Field(default="en", min_length=2, max_length=10)
     target_language: str = Field(default="en", min_length=2, max_length=10)
 
+
 class SentenceUpdate(BaseModel):
     original_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
     translated_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
     source_language: Optional[str] = Field(None, min_length=2, max_length=10)
     target_language: Optional[str] = Field(None, min_length=2, max_length=10)
+
 
 class Sentence(BaseModel):
     id: int
@@ -517,10 +632,23 @@ class Sentence(BaseModel):
     source_language: str
     target_language: str
     created_at: datetime
-    # =====================================================================
+    
+    # ================= [NOWE - PRODUKCJA 3]: Pydantic V2 Standard =================
+    model_config = ConfigDict(from_attributes=True)
+    # Zastąpiło to stare "class Config: from_attributes = True"
+    # ==============================================================================
 
-    class Config:
-        from_attributes = True
+
+# ================= [NOWE - PRODUKCJA]: Schematy Paginacji =================
+class PaginatedSentences(BaseModel):
+    data: List[Sentence]
+    page: int
+    per_page: int
+    total: int
+    total_pages: int
+    is_authenticated: Optional[bool] = None # Zwracane tylko na /community
+# ==========================================================================
+
 
 
 ===============================
@@ -650,265 +778,5 @@ class HealthCheckResponse(BaseModel):
                 }
             }
         }
-
-
-===============================
-Ścieżka do pliku: ./migrations/env.py
-
-Zawartość pliku:
-
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
-
-
-# ================= ZMIANA =================
-import os
-import sys
-
-# Dodajemy główny katalog projektu do ścieżki Pythona, 
-# żeby Alembic wiedział, skąd importować pliki.
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-from database import Base
-# Musisz zaimportować wszystkie modele, żeby Alembic je "zauważył"
-from models.sentence import Sentence
-
-target_metadata = Base.metadata
-# ==========================================
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
-
-def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, 
-            target_metadata=target_metadata,
-            render_as_batch=True
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
-
-
-
-===============================
-Ścieżka do pliku: ./migrations/versions/f1635eaa4a21_add_user_id_to_sentences_and_migrate_.py
-
-Zawartość pliku:
-
-"""Add user_id to sentences and migrate data
-
-Revision ID: f1635eaa4a21
-Revises: 
-Create Date: 2026-03-13 18:14:47.952621
-
-"""
-from typing import Sequence, Union
-
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import table, column # Dodane do aktualizacji danych
-
-
-# revision identifiers, used by Alembic.
-revision: str = 'f1635eaa4a21'
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-
-def upgrade() -> None:
-    # Używamy batch_alter_table, bo SQLite ma ograniczenia dotyczące zmiany kolumn (np. dodawanie NOT NULL)
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        # 1. Dodajemy kolumnę, ale tymczasowo z nullable=True, żeby SQLite nie panikował
-        batch_op.add_column(sa.Column('user_id', sa.String(), nullable=True))
-
-    # 2. Migracja Danych: Aktualizujemy stare wpisy o Twoje ID
-    # Tworzymy tymczasową reprezentację tabeli, by użyć jej w zapytaniu UPDATE
-    sentences_table = table('sentences', column('user_id', sa.String))
-    op.execute(
-        sentences_table.update().values(
-            user_id='839badd4-7ae0-4caa-b55f-9cb47899804c'
-        )
-    )
-
-    # 3. Zmiana na NOT NULL oraz ewentualna poprawka typu created_at
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        # Wymuszamy, by kolumna user_id od tej pory nie przyjmowała wartości NULL
-        batch_op.alter_column('user_id', existing_type=sa.String(), nullable=False)
-        # Przebudowujemy kolumnę created_at na świadomą strefy (nawet w SQLite warto to wymusić na poziomie ORM)
-        batch_op.alter_column('created_at', type_=sa.DateTime(timezone=True), existing_type=sa.DateTime())
-        # Tworzymy indeks na user_id dla szybszego wyszukiwania
-        batch_op.create_index(batch_op.f('ix_sentences_user_id'), ['user_id'], unique=False)
-
-
-def downgrade() -> None:
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_sentences_user_id'))
-        batch_op.drop_column('user_id')
-        batch_op.alter_column('created_at', type_=sa.DateTime(), existing_type=sa.DateTime(timezone=True))
-
-
-===============================
-Ścieżka do pliku: ./migrations/versions/d1bad2db3dce_add_dual_language_support.py
-
-Zawartość pliku:
-
-"""Add dual language support
-
-Revision ID: d1bad2db3dce
-Revises: f1635eaa4a21
-Create Date: 2026-04-13 17:48:33.141121
-
-"""
-from typing import Sequence, Union
-
-from alembic import op
-import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
-revision: str = 'd1bad2db3dce'
-down_revision: Union[str, Sequence[str], None] = 'f1635eaa4a21'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-
-def upgrade() -> None:
-    """Upgrade schema and migrate existing data."""
-    
-    # KROK 1: Dodajemy nowe kolumny. 
-    # UWAGA: Najpierw jako nullable=True, żeby baza nie wywaliła błędu, że dodajemy pustą kolumnę do istniejących wierszy.
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('original_text', sa.String(length=569), nullable=True))
-        batch_op.add_column(sa.Column('translated_text', sa.String(length=569), nullable=True))
-        batch_op.add_column(sa.Column('source_language', sa.String(length=10), nullable=True))
-        batch_op.add_column(sa.Column('target_language', sa.String(length=10), nullable=True))
-
-    # KROK 2: MIGRACJA DANYCH (To ratuje Twoje zdania!)
-    # Tutaj realizujemy Twoje wymaganie: source_language staje się 'pl'.
-    # A stare 'language' (które pewnie było 'en') przechodzi do 'target_language'.
-    op.execute("""
-        UPDATE sentences 
-        SET original_text = sentence,
-            translated_text = translation,
-            source_language = 'pl',
-            target_language = language
-    """)
-
-    # KROK 3: Sprzątanie i rygor bazy danych
-    # Zmieniamy kolumny na NOT NULL, bo teraz już mają przypisane dane, i usuwamy stare kolumny.
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        # Wymuszamy NOT NULL
-        batch_op.alter_column('original_text', existing_type=sa.String(length=569), nullable=False)
-        batch_op.alter_column('translated_text', existing_type=sa.String(length=569), nullable=False)
-        batch_op.alter_column('source_language', existing_type=sa.String(length=10), nullable=False)
-        batch_op.alter_column('target_language', existing_type=sa.String(length=10), nullable=False)
-        
-        # Tworzymy nowe indeksy
-        batch_op.create_index(batch_op.f('ix_sentences_original_text'), ['original_text'], unique=False)
-        batch_op.create_index(batch_op.f('ix_sentences_source_language'), ['source_language'], unique=False)
-        batch_op.create_index(batch_op.f('ix_sentences_target_language'), ['target_language'], unique=False)
-
-        # Usuwamy stare indeksy i kolumny
-        batch_op.drop_index('ix_sentences_language')
-        batch_op.drop_index('ix_sentences_sentence')
-        batch_op.drop_column('translation')
-        batch_op.drop_column('sentence')
-        batch_op.drop_column('language')
-
-
-def downgrade() -> None:
-    """Downgrade schema and restore data."""
-    
-    # KROK 1: Przywracamy stare kolumny (nullable=True)
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('language', sa.VARCHAR(), nullable=True))
-        batch_op.add_column(sa.Column('sentence', sa.VARCHAR(), nullable=True))
-        batch_op.add_column(sa.Column('translation', sa.VARCHAR(), nullable=True))
-
-    # KROK 2: Kopiujemy dane z powrotem, w razie wycofania (rollback) zmian
-    op.execute("""
-        UPDATE sentences 
-        SET sentence = original_text,
-            translation = translated_text,
-            language = target_language
-    """)
-
-    # KROK 3: Usuwamy nowe elementy
-    with op.batch_alter_table('sentences', schema=None) as batch_op:
-        batch_op.create_index('ix_sentences_sentence', ['sentence'], unique=False)
-        batch_op.create_index('ix_sentences_language', ['language'], unique=False)
-        
-        batch_op.drop_index(batch_op.f('ix_sentences_target_language'))
-        batch_op.drop_index(batch_op.f('ix_sentences_source_language'))
-        batch_op.drop_index(batch_op.f('ix_sentences_original_text'))
-        
-        batch_op.drop_column('target_language')
-        batch_op.drop_column('source_language')
-        batch_op.drop_column('translated_text')
-        batch_op.drop_column('original_text')
-
-
 
 
