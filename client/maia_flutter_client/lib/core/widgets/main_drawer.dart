@@ -61,12 +61,31 @@ class MainDrawer extends ConsumerWidget {
             index: 2,
             isSelected: selectedIndex == 2,
           ),
+          // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
+          const Divider(height: 32),
+          const Padding(
+            padding: EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              "TWOJA BAZA ZDAŃ",
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+          ),
+          
           _DrawerTile(
-            title: 'Zwroty',
-            icon: Icons.chat,
+            title: 'Mój Notatnik', // Zmiana nazwy dla jasności
+            icon: Icons.book,
             index: 3,
             isSelected: selectedIndex == 3,
           ),
+          
+          _DrawerTile(
+            title: 'Społeczność', // Dodanie nowej strony
+            icon: Icons.public,
+            index: 12, // Odnosi się do nowej strony dodanej w app.dart
+            isSelected: selectedIndex == 12,
+          ),
+          const Divider(height: 32),
+          // ===================================================================================
           // _DrawerTile(
           //   title: 'Rejestracja',
           //   icon: Icons.chat,

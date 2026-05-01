@@ -9,8 +9,9 @@ import 'sentence_update_model.dart';
 class SentencesResponse {
   final List<Sentence> sentences;
   final int totalPages;
+  final bool isAuthenticated; // NOWE POLE (opcjonalne, ale przydatne)
 
-  SentencesResponse(this.sentences, this.totalPages);
+  SentencesResponse(this.sentences, this.totalPages, {this.isAuthenticated = false});
 }
 
 final sentencesRepositoryProvider = Provider<SentencesRepository>((ref) {
@@ -54,6 +55,42 @@ class SentencesRepository {
     }
   }
 
+  // ================= [ZMIANA 1]: Pobieranie Społeczności =================
+  Future<SentencesResponse> getCommunitySentences({
+    required int page, 
+    int perPage = 10,
+    String? sourceLang,
+    String? targetLang,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'per_page': perPage,
+      };
+      
+      // Dodajemy filtry tylko wtedy, gdy są wybrane
+      if (sourceLang != null) queryParams['source_lang'] = sourceLang;
+      if (targetLang != null) queryParams['target_lang'] = targetLang;
+
+      final response = await _dio.get(
+        '/api/sentences/community',
+        queryParameters: queryParams,
+      );
+
+      final Map<String, dynamic> json = response.data;
+      final List<dynamic> rawList = json['data'];
+      final int totalPages = json['total_pages'] ?? 1;
+      final bool isAuth = json['is_authenticated'] ?? false;
+      
+      final sentences = rawList.map((e) => Sentence.fromJson(e)).toList();
+
+      return SentencesResponse(sentences, totalPages, isAuthenticated: isAuth);
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // =======================================================================
+
   Future<void> createSentence(SentenceCreate data) async {
     try {
       // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
@@ -92,5 +129,17 @@ class SentencesRepository {
       rethrow;
     }
   }
+
+  // ================= [ZMIANA 2]: Endpoint Klonowania =================
+  Future<Sentence> cloneSentence(int originalId) async {
+    try {
+      // Puste body, używamy POST
+      final response = await _dio.post('/api/sentences/$originalId/clone');
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // ===================================================================
 
 }

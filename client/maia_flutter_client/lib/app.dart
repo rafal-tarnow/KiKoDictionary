@@ -19,6 +19,7 @@ import 'features/health/services_health_page.dart';
 import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
 import 'features/auth/presentation/onboarding_page.dart';
+import 'package:maia_flutter_client/features/sentences/community_sentences_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -38,6 +39,7 @@ class MainShell extends ConsumerWidget {
     ForgotPasswordPage(),
     SettingsPage(),
     OnboardingPage(),
+    CommunitySentencesPage(),
   ];
 
   static final List<PreferredSizeWidget?> _appBars = [
@@ -88,6 +90,11 @@ class MainShell extends ConsumerWidget {
     // Onboarding nie powinien pozwalać na nawigację wstecz ani pokazywać menu bocznego
     null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
     // ===============================================================================
+    AppBar(
+      title: const Text("Społeczność"), 
+      elevation: 2, 
+      actions: const [UserAvatarButton()]
+    ),
   ];
 
 
