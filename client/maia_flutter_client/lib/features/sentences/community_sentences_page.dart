@@ -1,4 +1,4 @@
-// ================= NOWY PLIK =================
+// ================= ZAKTUALIZOWANY PLIK =================
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/navigation_provider.dart';
@@ -9,7 +9,6 @@ import '../../core/constants/app_languages.dart';
 class CommunitySentencesPage extends ConsumerWidget {
   const CommunitySentencesPage({super.key});
 
-  // Ten sam piękny dialog co w prywatnych zadaniach
   void _showLoginPrompt(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -96,6 +95,121 @@ class CommunitySentencesPage extends ConsumerWidget {
     );
   }
 
+  // ================= [ZMIANA 1]: Nowoczesny Bottom Sheet filtru =================
+  void _showFilterModal(
+    BuildContext context,
+    WidgetRef ref,
+    String? currentSourceLang,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Pozwala na lepsze dopasowanie wysokości
+      showDragHandle:
+          true, // Automatyczny, natywny uchwyt "pigułka" u góry panelu (Material 3)
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Column(
+              mainAxisSize:
+                  MainAxisSize.min, // Zajmuje tylko tyle miejsca ile potrzebuje
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_list),
+                      SizedBox(width: 12),
+                      Text(
+                        "Filtruj po języku źródłowym",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Flexible pozwala liście scrollować się, jeśli ekran jest za mały
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true, // Dopasowuje wysokość do ilości elementów
+                    itemCount: AppLanguages.supported.length,
+                    itemBuilder: (context, index) {
+                      final langCode = AppLanguages.supported.keys.elementAt(
+                        index,
+                      );
+                      final langName = AppLanguages.supported.values.elementAt(
+                        index,
+                      );
+                      final flag = AppLanguages.getFlag(langCode);
+
+                      final isSelected = langCode == currentSourceLang;
+
+                      return ListTile(
+                        leading: Text(
+                          flag,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        title: Text(
+                          langName,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        // Pokazujemy ładnego checkmarka jeśli wybrano dany język
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : null,
+                        tileColor: isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer
+                                  .withValues(alpha: 0.3)
+                            : null,
+                        onTap: () {
+                          ref
+                              .read(communitySentencesProvider.notifier)
+                              .updateFilters(sourceLang: langCode);
+                          Navigator.of(ctx).pop(); // Zamykamy panel
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                const Divider(),
+                // Przycisk usunięcia filtrów
+                TextButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(communitySentencesProvider.notifier)
+                        .updateFilters(sourceLang: null);
+                    Navigator.of(ctx).pop();
+                  },
+                  icon: const Icon(Icons.public),
+                  label: const Text("Pokaż wszystkie języki świata"),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  // ==============================================================================
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(communitySentencesProvider);
@@ -103,6 +217,21 @@ class CommunitySentencesPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
+
+      // ================= [ZMIANA 2]: Floating Action Button =================
+      // Korzystamy z FAB.extended bez twardo wpisanego koloru.
+      // Odziedziczy on ten sam kolor motywu, co zwykły okrągły FAB w sekcji prywatnej.
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showFilterModal(context, ref, state.sourceLang),
+        icon: const Icon(Icons.filter_list),
+        label: Text(
+          state.sourceLang != null
+              ? 'Filtr: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
+              : 'Filtruj',
+        ),
+      ),
+      // ======================================================================
+
       // --- PASEK PAGINACJI ---
       bottomNavigationBar: state.totalPages > 1
           ? SafeArea(
@@ -145,46 +274,8 @@ class CommunitySentencesPage extends ConsumerWidget {
 
       body: Column(
         children: [
-          // --- PASEK FILTROWANIA (Przyklejony do góry) ---
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.filter_list, color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      hint: const Text("Język źródłowy"),
-                      value: state.sourceLang,
-                      items: AppLanguages.supported.keys.map((code) {
-                        return DropdownMenuItem(
-                          value: code,
-                          child: Text(
-                            '${AppLanguages.getFlag(code)} ${AppLanguages.getName(code)}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) =>
-                          notifier.updateFilters(sourceLang: val),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // ================= [ZMIANA 3]: Usunięto górny pasek z filtrem =================
+          // Dzięki temu cała strona to czysta lista i nie ma duplikacji akcji.
 
           // Pasek Błędu
           if (state.errorMessage != null)
@@ -250,7 +341,15 @@ class CommunitySentencesPage extends ConsumerWidget {
                     children: [
                       ListView.separated(
                         itemCount: state.sentences.length,
-                        padding: const EdgeInsets.all(8),
+                        // ================= [ZMIANA 4]: Poprawiony padding =================
+                        // bottom: 80 zapewnia, że ostatni wpis na liście da się przescrollować
+                        // powyżej przycisku Floating Action Button i nie jest on zasłonięty.
+                        padding: const EdgeInsets.only(
+                          left: 8,
+                          right: 8,
+                          top: 8,
+                          bottom: 80,
+                        ),
                         separatorBuilder: (context, index) => Divider(
                           height: 16,
                           thickness: 0.5,
@@ -261,10 +360,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           return CommunitySentenceTile(
                             sentence: state.sentences[index],
-                            onLoginPrompt: () => _showLoginPrompt(
-                              context,
-                              ref,
-                            ), // Przekazujemy funkcję dialogu!
+                            onLoginPrompt: () => _showLoginPrompt(context, ref),
                           );
                         },
                       ),
