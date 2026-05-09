@@ -141,6 +141,8 @@ class SentencesPage extends ConsumerWidget {
             _showLoginPrompt(context, ref);
           }
         },
+        //backgroundColor: Colors.deepPurple, // DODAJ TO
+        //foregroundColor: Colors.white, 
         child: const Icon(Icons.add),
       ),
 

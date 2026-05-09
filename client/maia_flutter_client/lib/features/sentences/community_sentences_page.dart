@@ -224,6 +224,8 @@ class CommunitySentencesPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFilterModal(context, ref, state.sourceLang),
         icon: const Icon(Icons.filter_list),
+        //backgroundColor: Colors.deepPurple, // DODAJ TO
+        //foregroundColor: Colors.white, 
         label: Text(
           state.sourceLang != null
               ? 'Filtr: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
