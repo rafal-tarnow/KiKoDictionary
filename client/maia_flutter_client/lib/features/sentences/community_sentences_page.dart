@@ -181,7 +181,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                         onTap: () {
                           ref
                               .read(communitySentencesProvider.notifier)
-                              .updateFilters(sourceLang: langCode);
+                              .setSourceLanguage(langCode);
                           Navigator.of(ctx).pop(); // Zamykamy panel
                         },
                       );
@@ -195,7 +195,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                   onPressed: () {
                     ref
                         .read(communitySentencesProvider.notifier)
-                        .updateFilters(sourceLang: null);
+                        .clearFilters();
                     Navigator.of(ctx).pop();
                   },
                   icon: const Icon(Icons.public),

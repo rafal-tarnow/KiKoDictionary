@@ -24,6 +24,7 @@ import 'features/health/services_health_page.dart';
 import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
 import 'features/auth/presentation/onboarding_page.dart';
+import 'package:maia_flutter_client/features/sentences/community_sentences_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -43,6 +44,7 @@ class MainShell extends ConsumerWidget {
     ForgotPasswordPage(),
     SettingsPage(),
     OnboardingPage(),
+    CommunitySentencesPage(),
   ];
 
   static final List<PreferredSizeWidget?> _appBars = [
@@ -93,6 +95,11 @@ class MainShell extends ConsumerWidget {
     // Onboarding nie powinien pozwalać na nawigację wstecz ani pokazywać menu bocznego
     null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
     // ===============================================================================
+    AppBar(
+      title: const Text("Społeczność"), 
+      elevation: 2, 
+      actions: const [UserAvatarButton()]
+    ),
   ];
 
 
@@ -3024,6 +3031,397 @@ class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/sentences/community_sentences_page.dart
+
+Zawartość pliku:
+
+// ================= ZAKTUALIZOWANY PLIK =================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/navigation_provider.dart';
+import 'presentation/community_sentences_provider.dart';
+import 'presentation/widgets/community_sentence_tile.dart';
+import '../../core/constants/app_languages.dart';
+
+class CommunitySentencesPage extends ConsumerWidget {
+  const CommunitySentencesPage({super.key});
+
+  void _showLoginPrompt(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.group_add_outlined,
+                    size: 64,
+                    color: Colors.deepPurple,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Dołącz do społeczności!",
+                    style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Zaloguj się, aby zapisywać zdania od innych użytkowników w swoim prywatnym notatniku.",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        ref.read(navigationIndexProvider.notifier).state =
+                            4; // Rejestracja
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text("ZAŁÓŻ KONTO"),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        ref.read(navigationIndexProvider.notifier).state =
+                            5; // Logowanie
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text("ZALOGUJ SIĘ"),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text(
+                      "Może później",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ================= [ZMIANA 1]: Nowoczesny Bottom Sheet filtru =================
+  void _showFilterModal(
+    BuildContext context,
+    WidgetRef ref,
+    String? currentSourceLang,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Pozwala na lepsze dopasowanie wysokości
+      showDragHandle:
+          true, // Automatyczny, natywny uchwyt "pigułka" u góry panelu (Material 3)
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Column(
+              mainAxisSize:
+                  MainAxisSize.min, // Zajmuje tylko tyle miejsca ile potrzebuje
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_list),
+                      SizedBox(width: 12),
+                      Text(
+                        "Filtruj po języku źródłowym",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Flexible pozwala liście scrollować się, jeśli ekran jest za mały
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true, // Dopasowuje wysokość do ilości elementów
+                    itemCount: AppLanguages.supported.length,
+                    itemBuilder: (context, index) {
+                      final langCode = AppLanguages.supported.keys.elementAt(
+                        index,
+                      );
+                      final langName = AppLanguages.supported.values.elementAt(
+                        index,
+                      );
+                      final flag = AppLanguages.getFlag(langCode);
+
+                      final isSelected = langCode == currentSourceLang;
+
+                      return ListTile(
+                        leading: Text(
+                          flag,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        title: Text(
+                          langName,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        // Pokazujemy ładnego checkmarka jeśli wybrano dany język
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : null,
+                        tileColor: isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer
+                                  .withValues(alpha: 0.3)
+                            : null,
+                        onTap: () {
+                          ref
+                              .read(communitySentencesProvider.notifier)
+                              .updateFilters(sourceLang: langCode);
+                          Navigator.of(ctx).pop(); // Zamykamy panel
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                const Divider(),
+                // Przycisk usunięcia filtrów
+                TextButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(communitySentencesProvider.notifier)
+                        .updateFilters(sourceLang: null);
+                    Navigator.of(ctx).pop();
+                  },
+                  icon: const Icon(Icons.public),
+                  label: const Text("Pokaż wszystkie języki świata"),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  // ==============================================================================
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(communitySentencesProvider);
+    final notifier = ref.read(communitySentencesProvider.notifier);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFFFFF),
+
+      // ================= [ZMIANA 2]: Floating Action Button =================
+      // Korzystamy z FAB.extended bez twardo wpisanego koloru.
+      // Odziedziczy on ten sam kolor motywu, co zwykły okrągły FAB w sekcji prywatnej.
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showFilterModal(context, ref, state.sourceLang),
+        icon: const Icon(Icons.filter_list),
+        //backgroundColor: Colors.deepPurple, // DODAJ TO
+        //foregroundColor: Colors.white, 
+        label: Text(
+          state.sourceLang != null
+              ? 'Filtr: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
+              : 'Filtruj',
+        ),
+      ),
+      // ======================================================================
+
+      // --- PASEK PAGINACJI ---
+      bottomNavigationBar: state.totalPages > 1
+          ? SafeArea(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: state.currentPage > 1 && !state.isLoading
+                          ? () => notifier.previousPage()
+                          : null,
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text("Poprzednia"),
+                    ),
+                    Text(
+                      "Strona ${state.currentPage} z ${state.totalPages}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: !state.isLastPage && !state.isLoading
+                          ? () => notifier.nextPage()
+                          : null,
+                      label: const Text("Następna"),
+                      icon: const Icon(Icons.arrow_forward),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+
+      body: Column(
+        children: [
+          // ================= [ZMIANA 3]: Usunięto górny pasek z filtrem =================
+          // Dzięki temu cała strona to czysta lista i nie ma duplikacji akcji.
+
+          // Pasek Błędu
+          if (state.errorMessage != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.red.shade100,
+              width: double.infinity,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Błąd: ${state.errorMessage}',
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => notifier.refreshCurrentPage(),
+                    icon: Icon(Icons.refresh, color: Colors.red.shade900),
+                    label: Text(
+                      "Ponów",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // --- LISTA ---
+          Expanded(
+            child: state.isLoading && state.sentences.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : state.sentences.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 72,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Brak zdań w tym języku",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Zmień filtry lub wróć później.",
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      ListView.separated(
+                        itemCount: state.sentences.length,
+                        // ================= [ZMIANA 4]: Poprawiony padding =================
+                        // bottom: 80 zapewnia, że ostatni wpis na liście da się przescrollować
+                        // powyżej przycisku Floating Action Button i nie jest on zasłonięty.
+                        padding: const EdgeInsets.only(
+                          left: 8,
+                          right: 8,
+                          top: 8,
+                          bottom: 80,
+                        ),
+                        separatorBuilder: (context, index) => Divider(
+                          height: 16,
+                          thickness: 0.5,
+                          color: Colors.grey.shade300,
+                          indent: 8,
+                          endIndent: 8,
+                        ),
+                        itemBuilder: (context, index) {
+                          return CommunitySentenceTile(
+                            sentence: state.sentences[index],
+                            onLoginPrompt: () => _showLoginPrompt(context, ref),
+                          );
+                        },
+                      ),
+                      if (state.isLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(minHeight: 3),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+===============================
 Ścieżka do pliku: ./lib/features/sentences/sentences_page.dart
 
 Zawartość pliku:
@@ -3171,6 +3569,8 @@ class SentencesPage extends ConsumerWidget {
             _showLoginPrompt(context, ref);
           }
         },
+        //backgroundColor: Colors.deepPurple, // DODAJ TO
+        //foregroundColor: Colors.white, 
         child: const Icon(Icons.add),
       ),
 
@@ -3514,6 +3914,136 @@ final addSentenceControllerProvider =
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/community_sentences_provider.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentence_model.dart';
+import '../data/sentences_repository.dart';
+import '../../../core/network/api_error_handler.dart';
+import '../../user/presentation/controllers/user_controller.dart';
+
+class CommunitySentencesState {
+  final List<Sentence> sentences;
+  final bool isLoading;
+  final String? errorMessage;
+  final int currentPage;
+  final int totalPages;
+  // Filtry językowe
+  final String? sourceLang;
+  final String? targetLang;
+
+  const CommunitySentencesState({
+    this.sentences = const [],
+    this.isLoading = false,
+    this.errorMessage,
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.sourceLang,
+    this.targetLang,
+  });
+
+  bool get isLastPage => currentPage >= totalPages;
+
+  CommunitySentencesState copyWith({
+    List<Sentence>? sentences,
+    bool? isLoading,
+    String? errorMessage,
+    int? currentPage,
+    int? totalPages,
+    String? sourceLang,
+    String? targetLang,
+  }) {
+    // Uwaga na hack z usuwaniem filtra: jeśli chcesz wyczyścić filtr, wyślij np. pusty string, 
+    // który na backendzie zostanie zignorowany. Tu dla uproszczenia zawsze podmieniamy.
+    return CommunitySentencesState(
+      sentences: sentences ?? this.sentences,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      sourceLang: sourceLang ?? this.sourceLang,
+      targetLang: targetLang ?? this.targetLang,
+    );
+  }
+}
+
+class CommunitySentencesNotifier extends StateNotifier<CommunitySentencesState> {
+  final SentencesRepository _repository;
+  final Ref _ref;
+  static const int _perPage = 10;
+
+  CommunitySentencesNotifier(this._repository, this._ref) : super(const CommunitySentencesState()) {
+    // Od razu przy tworzeniu providera odpalamy ładowanie
+    _initFiltersAndLoad();
+  }
+
+  // Funkcja wyciąga język usera jako domyślny język źródłowy
+  void _initFiltersAndLoad() {
+    final user = _ref.read(userControllerProvider).valueOrNull;
+    final defaultSourceLang = user?.profile?.nativeLanguage;
+    // Ustawiamy filtr i ładujemy
+    state = state.copyWith(sourceLang: defaultSourceLang);
+    loadSentences(page: 1);
+  }
+
+  Future<void> loadSentences({required int page}) async {
+    if (state.isLoading) return;
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final response = await _repository.getCommunitySentences(
+        page: page,
+        perPage: _perPage,
+        sourceLang: state.sourceLang,
+        targetLang: state.targetLang,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        sentences: response.sentences,
+        totalPages: response.totalPages,
+        currentPage: page,
+        errorMessage: null,
+      );
+    } catch (e) {
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+      state = state.copyWith(isLoading: false, errorMessage: friendlyMessage);
+    }
+  }
+
+  // Zmiana filtrów resetuje paginację do strony 1
+  void updateFilters({String? sourceLang, String? targetLang}) {
+    state = CommunitySentencesState(
+      sourceLang: sourceLang ?? state.sourceLang,
+      targetLang: targetLang ?? state.targetLang,
+    ); // Reset state, ale trzymamy filtry
+    loadSentences(page: 1);
+  }
+
+  void refreshCurrentPage() {
+    loadSentences(page: state.currentPage);
+  }
+
+  void nextPage() {
+    if (!state.isLastPage) loadSentences(page: state.currentPage + 1);
+  }
+
+  void previousPage() {
+    if (state.currentPage > 1) loadSentences(page: state.currentPage - 1);
+  }
+}
+
+final communitySentencesProvider =
+    StateNotifierProvider<CommunitySentencesNotifier, CommunitySentencesState>((ref) {
+  final repository = ref.watch(sentencesRepositoryProvider);
+  return CommunitySentencesNotifier(repository, ref);
+});
+
+
+===============================
 Ścieżka do pliku: ./lib/features/sentences/presentation/edit_sentence_controller.dart
 
 Zawartość pliku:
@@ -3728,6 +4258,55 @@ final sentencesProvider =
       return SentencesNotifier(repository);
     });
 
+
+
+===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/clone_sentence_controller.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/sentences_repository.dart';
+import 'sentences_provider.dart';
+import '../../../core/network/api_error_handler.dart';
+
+class CloneSentenceController extends StateNotifier<AsyncValue<void>> {
+  final SentencesRepository _repository;
+  final Ref _ref;
+
+  CloneSentenceController(this._repository, this._ref) : super(const AsyncValue.data(null));
+
+  Future<bool> cloneSentence(int originalSentenceId) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.cloneSentence(originalSentenceId);
+
+      // MAGIA: Odświeżamy w tle listę prywatnych zdań użytkownika!
+      // Dzięki temu po przejściu na zakładkę "Moje Zwroty", sklonowane zdanie już tam będzie.
+      _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+
+      if (!mounted) return false;
+      state = const AsyncValue.data(null);
+      return true;
+      
+    } catch (e, stack) {
+      if (!mounted) return false;
+      
+      // Specjalna obsługa błędu 400 z backendu (własne zdanie)
+      // ApiErrorHandler to wyłapie jako standardowy string.
+      final friendlyMessage = ApiErrorHandler.getErrorMessage(e);
+      state = AsyncValue.error(friendlyMessage, stack);
+      return false;
+    }
+  }
+}
+
+final cloneSentenceControllerProvider = 
+    StateNotifierProvider.autoDispose<CloneSentenceController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(sentencesRepositoryProvider);
+  return CloneSentenceController(repo, ref);
+});
 
 
 ===============================
@@ -4044,6 +4623,137 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
 
 
 ===============================
+Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/community_sentence_tile.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/sentence_model.dart';
+import '../clone_sentence_controller.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+
+class CommunitySentenceTile extends ConsumerStatefulWidget {
+  final Sentence sentence;
+  // Funkcja callback, żeby otworzyć dialog logowania przekazany ze strony głównej
+  final VoidCallback onLoginPrompt; 
+
+  const CommunitySentenceTile({
+    super.key, 
+    required this.sentence,
+    required this.onLoginPrompt,
+  });
+
+  @override
+  ConsumerState<CommunitySentenceTile> createState() => _CommunitySentenceTileState();
+}
+
+class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
+  // Lokalny stan optymistyczny (zabezpiecza przed podwójnym kliknięciem i daje natychmiastowy feedback)
+  bool _isSaved = false; 
+
+  Future<void> _handleClone() async {
+    final authState = ref.read(authControllerProvider);
+    
+    // 1. Jeśli nie zalogowany -> Pokaż zachętę do logowania
+    if (!authState.isAuthenticated) {
+      widget.onLoginPrompt();
+      return;
+    }
+
+    // 2. Optymistyczny UI - od razu zaznaczamy jako zapisane (UI responsywność)
+    setState(() => _isSaved = true);
+
+    // 3. Wywołujemy API
+    final success = await ref
+        .read(cloneSentenceControllerProvider.notifier)
+        .cloneSentence(widget.sentence.id);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Zdanie skopiowane do Twojego notatnika!"),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (!success && mounted) {
+      // 4. Jeśli błąd (np. brak sieci, albo "Już masz to zdanie") - cofamy optymistyczne UI
+      setState(() => _isSaved = false);
+      
+      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Błąd klonowania";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.red.shade800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Jeśli controller ładuje to konkretne id, pokazujemy mały spinner (można uprościć)
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        // Subtelne obramowanie, żeby odróżnić od "Moich Zdań"
+        side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.1)), 
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
+        title: Text(
+          widget.sentence.originalText,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 6),
+            Text(
+              widget.sentence.translatedText,
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${widget.sentence.sourceLanguage.toUpperCase()} ➔ ${widget.sentence.targetLanguage.toUpperCase()}',
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        isThreeLine: true,
+        trailing: IconButton(
+          onPressed: _isSaved ? null : _handleClone, // Wyłącz jeśli już zapisane
+          tooltip: "Zapisz do moich",
+          icon: Icon(
+            _isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,
+            color: _isSaved ? Colors.green : Colors.deepPurple,
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+===============================
 Ścieżka do pliku: ./lib/features/sentences/presentation/widgets/sentence_tile.dart
 
 Zawartość pliku:
@@ -4272,8 +4982,9 @@ import 'sentence_update_model.dart';
 class SentencesResponse {
   final List<Sentence> sentences;
   final int totalPages;
+  final bool isAuthenticated; // NOWE POLE (opcjonalne, ale przydatne)
 
-  SentencesResponse(this.sentences, this.totalPages);
+  SentencesResponse(this.sentences, this.totalPages, {this.isAuthenticated = false});
 }
 
 final sentencesRepositoryProvider = Provider<SentencesRepository>((ref) {
@@ -4317,6 +5028,42 @@ class SentencesRepository {
     }
   }
 
+  // ================= [ZMIANA 1]: Pobieranie Społeczności =================
+  Future<SentencesResponse> getCommunitySentences({
+    required int page, 
+    int perPage = 10,
+    String? sourceLang,
+    String? targetLang,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'per_page': perPage,
+      };
+      
+      // Dodajemy filtry tylko wtedy, gdy są wybrane
+      if (sourceLang != null) queryParams['source_lang'] = sourceLang;
+      if (targetLang != null) queryParams['target_lang'] = targetLang;
+
+      final response = await _dio.get(
+        '/api/sentences/community',
+        queryParameters: queryParams,
+      );
+
+      final Map<String, dynamic> json = response.data;
+      final List<dynamic> rawList = json['data'];
+      final int totalPages = json['total_pages'] ?? 1;
+      final bool isAuth = json['is_authenticated'] ?? false;
+      
+      final sentences = rawList.map((e) => Sentence.fromJson(e)).toList();
+
+      return SentencesResponse(sentences, totalPages, isAuthenticated: isAuth);
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // =======================================================================
+
   Future<void> createSentence(SentenceCreate data) async {
     try {
       // Dio automatycznie zserializuje Mapę zwróconą przez data.toJson()
@@ -4355,6 +5102,18 @@ class SentencesRepository {
       rethrow;
     }
   }
+
+  // ================= [ZMIANA 2]: Endpoint Klonowania =================
+  Future<Sentence> cloneSentence(int originalId) async {
+    try {
+      // Puste body, używamy POST
+      final response = await _dio.post('/api/sentences/$originalId/clone');
+      return Sentence.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+  // ===================================================================
 
 }
 
@@ -4499,12 +5258,31 @@ class MainDrawer extends ConsumerWidget {
             index: 2,
             isSelected: selectedIndex == 2,
           ),
+          // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
+          const Divider(height: 32),
+          const Padding(
+            padding: EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              "TWOJA BAZA ZDAŃ",
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+          ),
+          
           _DrawerTile(
-            title: 'Zwroty',
-            icon: Icons.chat,
+            title: 'Mój Notatnik', // Zmiana nazwy dla jasności
+            icon: Icons.book,
             index: 3,
             isSelected: selectedIndex == 3,
           ),
+          
+          _DrawerTile(
+            title: 'Społeczność', // Dodanie nowej strony
+            icon: Icons.public,
+            index: 12, // Odnosi się do nowej strony dodanej w app.dart
+            isSelected: selectedIndex == 12,
+          ),
+          const Divider(height: 32),
+          // ===================================================================================
           // _DrawerTile(
           //   title: 'Rejestracja',
           //   icon: Icons.chat,

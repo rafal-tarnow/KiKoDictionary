@@ -94,14 +94,22 @@ class CommunitySentencesNotifier extends StateNotifier<CommunitySentencesState> 
     }
   }
 
-  // Zmiana filtrów resetuje paginację do strony 1
-  void updateFilters({String? sourceLang, String? targetLang}) {
+  // Ustawienie filtru językowego
+  void setSourceLanguage(String langCode) {
     state = CommunitySentencesState(
-      sourceLang: sourceLang ?? state.sourceLang,
-      targetLang: targetLang ?? state.targetLang,
-    ); // Reset state, ale trzymamy filtry
+      sourceLang: langCode,
+      targetLang: state.targetLang,
+    ); 
     loadSentences(page: 1);
   }
+
+  // ================= [ZMIANA]: CZYSTE CZYSZCZENIE FILTRÓW =================
+  // Ta metoda zawsze ustawia filtry na null i resetuje paginację.
+  void clearFilters() {
+    state = const CommunitySentencesState(); // Pusty, świeży stan startowy
+    loadSentences(page: 1);
+  }
+  // ========================================================================
 
   void refreshCurrentPage() {
     loadSentences(page: state.currentPage);
