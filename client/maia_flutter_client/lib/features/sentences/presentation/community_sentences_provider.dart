@@ -4,6 +4,7 @@ import '../data/sentence_model.dart';
 import '../data/sentences_repository.dart';
 import '../../../core/network/api_error_handler.dart';
 import '../../user/presentation/controllers/user_controller.dart';
+import '../../auth/data/models/user_model.dart';
 
 class CommunitySentencesState {
   final List<Sentence> sentences;
@@ -58,6 +59,7 @@ class CommunitySentencesNotifier extends StateNotifier<CommunitySentencesState> 
   CommunitySentencesNotifier(this._repository, this._ref) : super(const CommunitySentencesState()) {
     // Od razu przy tworzeniu providera odpalamy ładowanie
     _initFiltersAndLoad();
+    _setupUserListener(); // [ZMIANA 2]: Wywołanie rejestracji nasłuchiwacza
   }
 
   // Funkcja wyciąga język usera jako domyślny język źródłowy
@@ -69,6 +71,31 @@ class CommunitySentencesNotifier extends StateNotifier<CommunitySentencesState> 
     loadSentences(page: 1);
   }
 
+  // ================= [ZMIANA 3]: Profesjonalny nasłuchiwacz (Listener) =================
+  // Ta funkcja jest sercem reaktywnej architektury. Obserwuje ona zmiany w profilu usera w tle.
+  void _setupUserListener() {
+    _ref.listen<AsyncValue<User?>>(userControllerProvider, (previous, next) {
+      
+      // Wyciągamy język z poprzedniego stanu i z nowego stanu
+      final prevLang = previous?.valueOrNull?.profile?.nativeLanguage;
+      final newLang = next.valueOrNull?.profile?.nativeLanguage;
+
+      // Reagujemy TYLKO wtedy, gdy język faktycznie uległ zmianie
+      // (np. udane logowanie, przelogowanie na inne konto, wylogowanie)
+      if (newLang != prevLang) {
+        if (newLang != null) {
+          // Ktoś się zalogował i ma konkretny język -> ustawiamy filtr na jego język
+          setSourceLanguage(newLang);
+        } else {
+          // Ktoś się wylogował (newLang == null) -> czyścimy filtry, żeby pokazać cały świat
+          clearFilters();
+        }
+      }
+    });
+  }
+  // =====================================================================================
+
+  
   Future<void> loadSentences({required int page}) async {
     if (state.isLoading) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
