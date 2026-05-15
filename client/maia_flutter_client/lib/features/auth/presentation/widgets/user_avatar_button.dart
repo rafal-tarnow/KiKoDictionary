@@ -28,8 +28,10 @@ class UserAvatarButton extends ConsumerWidget {
         padding: const EdgeInsets.only(right: 8.0),
         child: PopupMenuButton<String>(
           offset: const Offset(0, 50),
-          tooltip: 'Menu użytkownika',
+          tooltip: 'User menu',
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+          constraints: const BoxConstraints(minWidth: 170),
           
           // ================= ZMIANA: WIDGET BADGE Z FLAGĄ =================
           icon: Badge(
@@ -66,7 +68,7 @@ class UserAvatarButton extends ConsumerWidget {
               enabled: false,
               child: Text(
                 // Wyświetlamy też login użytkownika w menu dla lepszego UX!
-                userState.valueOrNull?.username ?? "Moje Konto", 
+                userState.valueOrNull?.username ?? "My Account", 
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
               ),
             ),
@@ -77,7 +79,7 @@ class UserAvatarButton extends ConsumerWidget {
                 children: [
                   Icon(Icons.settings, color: Colors.black87, size: 20),
                   SizedBox(width: 12),
-                  Text('Ustawienia', style: TextStyle(color: Colors.black87)),
+                  Text('Settings', style: TextStyle(color: Colors.black87)),
                 ],
               ),
             ),
@@ -89,7 +91,7 @@ class UserAvatarButton extends ConsumerWidget {
                 children: [
                   Icon(Icons.logout, color: Colors.red, size: 20),
                   SizedBox(width: 12),
-                  Text('Wyloguj się', style: TextStyle(color: Colors.black87)),
+                  Text('Log out', style: TextStyle(color: Colors.black87)),
                 ],
               ),
             ),
@@ -102,7 +104,7 @@ class UserAvatarButton extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
       child: IconButton(
-        tooltip: "Zaloguj się",
+        tooltip: "Log in",
         icon: CircleAvatar(
           radius: 18,
           backgroundColor: Colors.grey.shade200,
@@ -121,7 +123,7 @@ class UserAvatarButton extends ConsumerWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Wylogowano pomyślnie"),
+          content: Text("Logged out successfully"),
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
