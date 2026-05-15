@@ -49,7 +49,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Zalogowano pomyślnie!'),
+          content: Text('Logged in successfully!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -87,7 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Witaj ponownie!",
+                    "Welcome back!",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -96,7 +96,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Zaloguj się, aby kontynuować naukę.",
+                    "Log in to continue learning.",
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -112,20 +112,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
-                      labelText: "Adres email",
+                      labelText: "Email address",
                       prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
-                      hintText: "np. tom@example.com",
+                      hintText: "e.g. tom@example.com",
                     ),
                     textInputAction: TextInputAction.next, // Przycisk "Dalej"
                     enabled: !loginState.isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Wpisz adres email';
+                        return 'Enter your email address';
                       }
                       // Walidacja formatu
                       if (!value.contains('@') || !value.contains('.')) {
-                        return 'Niepoprawny format email';
+                        return 'Invalid email format';
                       }
                       return null;
                     },
@@ -137,7 +137,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     controller: _passCtrl,
                     obscureText: !_isPasswordVisible,
                     decoration: InputDecoration(
-                      labelText: "Hasło",
+                      labelText: "Password",
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -158,7 +158,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     enabled: !loginState.isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Wpisz hasło';
+                        return 'Enter your password';
                       }
                       return null;
                     },
@@ -190,7 +190,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Colors.deepPurple, // Spójność z motywem
                       ),
                       child: const Text(
-                        "Zapomniałeś hasła?",
+                        "Forgot password?",
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -241,7 +241,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text("ZALOGUJ SIĘ"),
+                        : const Text("LOG IN"),
                   ),
 
                   const SizedBox(height: 16),
@@ -250,7 +250,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Nie masz konta?"),
+                      const Text("Don't have an account?"),
                       TextButton(
                         onPressed: loginState.isLoading
                             ? null
@@ -261,7 +261,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                         .state =
                                     4;
                               },
-                        child: const Text("Zarejestruj się"),
+                        child: const Text("Register"),
                       ),
                     ],
                   ),
