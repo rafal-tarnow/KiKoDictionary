@@ -33,18 +33,18 @@ class MainDrawer extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isLoggedIn ? 'Witaj, użytkowniku!' : 'Tryb Gościa',
+                  isLoggedIn ? 'Welcome!' : 'Guest Mode',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 Text(
-                  'Twój postęp: 45%',
+                  'Your progress: 45%',
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
           ),
           _DrawerTile(
-            title: 'Ogłoszenia parafialne',
+            title: 'Home',
             icon: Icons.home,
             index: 0,
             isSelected: selectedIndex == 0,
@@ -56,7 +56,7 @@ class MainDrawer extends ConsumerWidget {
           //   isSelected: selectedIndex == 1,
           // ),
           _DrawerTile(
-            title: 'Slowka',
+            title: 'Words',
             icon: Icons.school,
             index: 2,
             isSelected: selectedIndex == 2,
@@ -66,20 +66,20 @@ class MainDrawer extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.only(left: 16, bottom: 8),
             child: Text(
-              "TWOJA BAZA ZDAŃ",
+              "YOUR SENTENCES",
               style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
             ),
           ),
           
           _DrawerTile(
-            title: 'Mój Notatnik', // Zmiana nazwy dla jasności
+            title: 'My Notebook', // Zmiana nazwy dla jasności
             icon: Icons.book,
             index: 3,
             isSelected: selectedIndex == 3,
           ),
           
           _DrawerTile(
-            title: 'Społeczność', // Dodanie nowej strony
+            title: 'Community', // Dodanie nowej strony
             icon: Icons.public,
             index: 12, // Odnosi się do nowej strony dodanej w app.dart
             isSelected: selectedIndex == 12,

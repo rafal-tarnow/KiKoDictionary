@@ -26,14 +26,14 @@ class LanguageSelector extends ConsumerWidget {
                 Icon(Icons.language, color: Colors.deepPurple),
                 SizedBox(width: 8),
                 Text(
-                  "Twój język (Native Language)",
+                  "Native Language",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              "Wybierz język, z którego będziesz uczył się angielskiego. W tym języku będą wyświetlane tłumaczenia.",
+              "Select the language from which you will be learning English. Translations will be displayed in this language.",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -42,12 +42,12 @@ class LanguageSelector extends ConsumerWidget {
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Text(
-                'Błąd pobierania profilu: $err',
+                'Error loading profile: $err',
                 style: const TextStyle(color: Colors.red),
               ),
               data: (user) {
                 if (user == null || user.profile == null) {
-                  return const Text("Brak danych profilu.");
+                  return const Text("No profile data available.");
                 }
 
                 final currentLang = user.profile!.nativeLanguage;
@@ -89,7 +89,7 @@ class LanguageSelector extends ConsumerWidget {
                             if (success && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("Język został zaktualizowany!"),
+                                  content: Text("Language updated successfully!"),
                                   backgroundColor: Colors.green,
                                   duration: Duration(seconds: 2),
                                 ),

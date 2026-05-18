@@ -41,7 +41,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Twoje konto zostało usunięte. Przykro nam, że odchodzisz!',
+            "Your account has been deleted. We're sorry to see you go!",
           ),
           backgroundColor: Colors.blueGrey,
           behavior: SnackBarBehavior.floating,
@@ -72,7 +72,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Icon(Icons.settings, size: 32, color: Colors.deepPurple),
                   SizedBox(width: 12),
                   Text(
-                    "Ustawienia konta",
+                    "Account Settings",
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -116,7 +116,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
               // ================= DANGER ZONE =================
               const Text(
-                "Strefa niebezpieczna",
+                "Danger Zone",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -145,7 +145,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          "Usunięcie konta",
+                          "Delete Account",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -156,8 +156,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Usunięcie konta spowoduje bezpowrotną utratę wszystkich danych związanych z Twoim profilem. "
-                      "Tej operacji nie można cofnąć.",
+"Deleting your account will result in the irreversible loss of all data associated with your profile."
+                      "This action cannot be undone.",
                       style: TextStyle(color: Colors.red.shade900, height: 1.5),
                     ),
                     const SizedBox(height: 24),
@@ -215,7 +215,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text("TRWALE USUŃ KONTO"),
+                            : const Text("PERMANENTLY DELETE ACCOUNT"),
                       ),
                     ),
                   ],
@@ -250,8 +250,8 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   }
 
   void _onTextChanged(String value) {
-    // ZMIANA: Zmieniono wymaganą frazę na "usuń konto"
-    final isValid = value.trim().toLowerCase() == 'usuń konto';
+    // ZMIANA: Zmieniono wymaganą frazę na "delete account"
+    final isValid = value.trim().toLowerCase() == 'delete account';
     
     if (isValid != _isButtonEnabled) {
       setState(() {
@@ -278,14 +278,14 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                   Icon(Icons.warning_amber_rounded, color: Colors.red, size: 32),
                   SizedBox(width: 12),
                   Text(
-                    "Trwałe usunięcie konta",
+                    "Permanent Account Deletion",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               const Text(
-                "Ta operacja jest nieodwracalna. Stracisz dostęp do wszystkich swoich zwrotów, słówek i statystyk nauki.",
+                "This operation is irreversible. You will lose access to all your phrases, vocabulary, and learning statistics.",
                 style: TextStyle(fontSize: 15, height: 1.4),
               ),
               const SizedBox(height: 24),
@@ -295,9 +295,9 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 text: TextSpan(
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
                   children: const [
-                    TextSpan(text: "Aby potwierdzić, przepisz poniżej słowa: "),
+                    TextSpan(text: "To confirm, please type the words below: "),
                     TextSpan(
-                      text: "USUŃ KONTO",
+                      text: "DELETE ACCOUNT",
                       style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
                     ),
                   ],
@@ -311,7 +311,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 onChanged: _onTextChanged,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: "Wpisz 'USUŃ KONTO'",
+                  hintText: "Type 'DELETE ACCOUNT'",
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
@@ -324,7 +324,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text("ANULUJ"),
+                    child: const Text("CANCEL"),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -337,7 +337,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                       disabledBackgroundColor: Colors.red.shade300, // Lekko wyblakły czerwony dla nieaktywnego
                       disabledForegroundColor: Colors.white, // Wymuszenie białego tekstu dla nieaktywnego!
                     ),
-                    child: const Text("TAK, USUŃ KONTO"),
+                    child: const Text("YES, DELETE ACCOUNT"),
                   ),
                 ],
               ),

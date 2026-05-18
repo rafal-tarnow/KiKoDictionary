@@ -42,7 +42,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Nazwa użytkownika została zmieniona!"),
+          content: Text("Username updated successfully!"),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -67,14 +67,14 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                 Icon(Icons.badge_outlined, color: Colors.deepPurple),
                 SizedBox(width: 8),
                 Text(
-                  "Nazwa Użytkownika",
+                  "Username",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              "Ta nazwa widnieje w przestrzeni publicznej. Możesz w każdej chwili zmienić losowo wygenerowany identyfikator na swój własny.",
+"This name is visible to the public. You can change your randomly generated identifier to a custom one at any time.",
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -82,7 +82,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => const Text(
-                "Nie udało się załadować profilu.",
+                "Failed to load profile.",
                 style: TextStyle(color: Colors.red),
               ),
               data: (user) {
@@ -122,10 +122,10 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                         String? validationError;
                         if (isEmpty) {
                           validationError =
-                              "Nazwa użytkownika nie może być pusta";
+                              "Username cannot be empty";
                         } else if (isTooShort) {
                           validationError =
-                              "Nazwa musi mieć co najmniej 3 znaki";
+                              "Username must be at least 3 characters long";
                         }
 
                         // Zablokuj przycisk, jeśli ładuje, tekst się nie zmienił LUB jest błąd walidacji
@@ -147,7 +147,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                                     horizontal: 16,
                                     vertical: 14,
                                   ),
-                                  labelText: "Twoja nazwa",
+                                  labelText: "Your username",
                                   // Wyświetlamy precyzyjny błąd
                                   errorText: validationError,
                                 ),
@@ -171,7 +171,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Text("ZAPISZ"),
+                                  : const Text("SAVE"),
                             ),
                           ],
                         );
@@ -218,7 +218,7 @@ class _UsernameEditorState extends ConsumerState<UsernameEditor> {
                                           .isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text(
-                                      "Dostępne alternatywy:",
+                                      "Available alternatives:",
                                       style: TextStyle(
                                         color: Colors.red.shade700,
                                         fontSize: 12,

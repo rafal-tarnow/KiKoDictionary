@@ -82,7 +82,7 @@ class MainShell extends ConsumerWidget {
       actions: const [UserAvatarButton()],
     ),
     AppBar(
-      title: const Text("Ustawienia"),
+      title: const Text("Settings"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
