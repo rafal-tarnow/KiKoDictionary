@@ -54,7 +54,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
       // 4. Jeśli błąd (np. brak sieci, albo "Już masz to zdanie") - cofamy optymistyczne UI
       setState(() => _isSaved = false);
       
-      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Błąd klonowania";
+      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Failed to copy sentence";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMsg),

@@ -61,12 +61,12 @@ class MainShell extends ConsumerWidget {
     ),
     const SentencesAppBar(),
     AppBar(
-      title: const Text("Rejestracja"),
+      title: const Text("Register"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
     AppBar(
-      title: const Text("Logowanie"),
+      title: const Text("Log in"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
@@ -82,7 +82,7 @@ class MainShell extends ConsumerWidget {
       actions: const [UserAvatarButton()],
     ),
     AppBar(
-      title: const Text("Reset hasła"),
+      title: const Text("Reset Password"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
@@ -96,7 +96,7 @@ class MainShell extends ConsumerWidget {
     null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
     // ===============================================================================
     AppBar(
-      title: const Text("Społeczność"), 
+      title: const Text("Community"), 
       elevation: 2, 
       actions: const [UserAvatarButton()]
     ),
@@ -218,7 +218,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(child: Text('Strona Główna - Nauka Angielskiego')),
+      body: Center(child: Text('Home Page - Learning English')),
     );
   }
 }
@@ -238,7 +238,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text("Ogłoszenia parafialne"),
+      title: const Text("Home"),
       elevation: 2,
       // Nie musisz dodawać leading/hamburgera - Flutter doda go sam!
       actions: [
@@ -332,14 +332,14 @@ class TestPage extends ConsumerWidget {
         children: [
           SpeedDialChild(
             child: Icon(Icons.refresh),
-            label: 'Odśwież',
+            label: 'Refresh',
             onTap: (){
-              _showShackBar(context, 'Odświeżono');
+              _showShackBar(context, 'Refreshed');
             }
           ),
           SpeedDialChild(
             child: Icon(Icons.add),
-            label: 'Dodaj zwrot',
+            label: 'Add phrase',
           ),
         ],
       ),
@@ -735,7 +735,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Gotowe! Możesz zacząć naukę."),
+          content: Text("All set! You can start learning."),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -773,13 +773,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     
                     // --- Teksty ---
                     const Text(
-                      "Witaj w aplikacji!",
+                      "Welcome to the app!",
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Twoje konto zostało pomyślnie utworzone.\nZanim zaczniesz, wybierz swój język ojczysty, z którego będziesz się uczyć angielskiego.",
+                      "Your account has been created successfully.\nBefore you start, please select the native language you will be learning English from.",
                       style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.4),
                       textAlign: TextAlign.center,
                     ),
@@ -790,7 +790,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       initialValue: _selectedLangCode,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: "Mój język (Native Language)",
+                        labelText: "Native Language",
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       items: AppLanguages.supported.keys.map((String langCode) {
@@ -838,7 +838,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                 height: 24,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
-                            : const Text("ZACZYNAMY!"),
+                            : const Text("GET STARTED"),
                       ),
                     ),
                   ],
@@ -901,7 +901,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       // SnackBar jako dodatkowe potwierdzenie
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Link został wysłany! Sprawdź skrzynkę e-mail.'),
+          content: Text('Link sent! Please check your inbox.'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -940,7 +940,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     child: TextButton.icon(
                       onPressed: state.isLoading ? null : _navigateToLogin,
                       icon: const Icon(Icons.arrow_back, size: 20),
-                      label: const Text("Powrót do logowania"),
+                      label: const Text("Back to login"),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero, // Zmniejsza padding, by wyrównać do lewej
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -962,7 +962,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
                   // --- 3. Nagłówek ---
                   Text(
-                    state.isSuccess ? "Sprawdź skrzynkę" : "Przypomnij hasło",
+                    state.isSuccess ? "Check your inbox" : "Reset password",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -975,8 +975,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   // --- 4. Podtytuł (Instrukcja) ---
                   Text(
                     state.isSuccess 
-                      ? "Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do resetowania hasła."
-                      : "Podaj adres email, na który wyślemy link do\nresetowania hasła.",
+                      ? "If an account exists for this email, you will receive a password reset link shortly."
+                      : "Enter your email address and we'll send you a link to\nreset your password.",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                       height: 1.5,
@@ -996,17 +996,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       onFieldSubmitted: (_) => _submit(),
                       enabled: !state.isLoading,
                       decoration: const InputDecoration(
-                        labelText: "Adres email",
+                        labelText: "Email address",
                         prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
-                        hintText: "np. tom@example.com",
+                        hintText: "e.g. tom@example.com",
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Wpisz adres email';
+                          return 'Enter your email address';
                         }
                         if (!value.contains('@') || !value.contains('.')) {
-                          return 'Niepoprawny format email';
+                          return 'Invalid email format';
                         }
                         return null;
                       },
@@ -1057,7 +1057,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text("WYŚLIJ LINK RESETUJĄCY"),
+                          : const Text("SEND RESET LINK"),
                     )
                   else
                     // Przycisk powrotu do logowania po sukcesie
@@ -1069,7 +1069,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         textStyle: const TextStyle(fontSize: 16),
                       ),
                       icon: const Icon(Icons.login),
-                      label: const Text("WRÓĆ DO LOGOWANIA"),
+                      label: const Text("BACK TO LOGIN"),
                     ),
                 ],
               ),
@@ -1128,7 +1128,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final captchaState = ref.read(captchaControllerProvider);
     if (captchaState.captcha == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Błąd Captchy. Odśwież obrazek.')),
+        const SnackBar(content: Text('Captcha error. Please refresh the image.')),
       );
       return;
     }
@@ -1150,7 +1150,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Konto założone! Możesz się zalogować.'),
+          content: Text('Account created! You can now log in.'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1202,7 +1202,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Utwórz konto",
+                    "Create an account",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -1211,7 +1211,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Dołącz do nas i zacznij naukę.",
+                    "Join us and start learning.",
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -1223,7 +1223,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   TextFormField(
                     controller: _emailCtrl,
                     decoration: const InputDecoration(
-                      labelText: "Adres email",
+                      labelText: "Email address",
                       prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
                     ),
@@ -1231,8 +1231,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz email';
-                      if (!v.contains('@')) return 'Niepoprawny format email';
+                      if (v == null || v.isEmpty) return 'Enter your email address';
+                      if (!v.contains('@')) return 'Invalid email format';
                       return null;
                     },
                   ),
@@ -1244,7 +1244,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     controller: _passCtrl,
                     obscureText: !_isPasswordVisible, // Logika ukrywania
                     decoration: InputDecoration(
-                      labelText: "Hasło",
+                      labelText: "Password",
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       // Ikona oka
@@ -1264,7 +1264,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz hasło';
+                      if (v == null || v.isEmpty) return 'Enter your password';
 
                       // Sprawdzamy wszystkie warunki naraz
                       bool hasMinLength = v.length >= 8;
@@ -1275,7 +1275,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
                       // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
                       if (!hasMinLength || !hasDigit || !hasLetter) {
-                        return 'Hasło musi mieć min. 8 znaków, literę i cyfrę';
+                        return 'Password must be at least 8 characters long and contain a letter and a digit';
                       }
 
                       return null;
@@ -1285,7 +1285,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   // --- CAPTCHA ---
                   const Text(
-                    "Weryfikacja bezpieczeństwa",
+                    "Security verification",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -1335,7 +1335,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text("UTWÓRZ KONTO"),
+                        : const Text("REGISTER"),
                   ),
 
                   const SizedBox(height: 16),
@@ -1344,7 +1344,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Masz już konto?"),
+                      const Text("Already have an account?"),
                       TextButton(
                         onPressed: regState.isLoading
                             ? null
@@ -1355,7 +1355,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                         .state =
                                     5;
                               },
-                        child: const Text("Zaloguj się"),
+                        child: const Text("Log in"),
                       ),
                     ],
                   ),
@@ -2123,7 +2123,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     final answer = _captchaInputController.text;
     if (answer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Wpisz kod!")),
+        const SnackBar(content: Text("Enter the code!")),
       );
       return;
     }
@@ -2135,7 +2135,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Captcha zweryfikowana pomyślnie!"),
+          content: Text("Captcha verified successfully!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -2159,12 +2159,12 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Demonstracja modułu Captcha",
+              "Captcha Module Demonstration",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              "Poniższy komponent jest niezależny i gotowy do użycia na ekranach logowania/rejestracji.",
+              "The component below is independent and ready to use on login/registration screens.",
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
@@ -2174,7 +2174,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
               answerController: _captchaInputController,
               onRefresh: () {
                 // Opcjonalny callback, np. logowanie zdarzenia
-                debugPrint("Użytkownik odświeżył captchę");
+                debugPrint("User refreshed the captcha");
               },
             ),
             // ---------------------------------
@@ -2193,7 +2193,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
                         height: 20, 
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                       )
-                    : const Text("ZWERYFIKUJ CAPTCHĘ"),
+                    : const Text("VERIFY CAPTCHA"),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -2395,12 +2395,12 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                             base64Decode(_cleanBase64(state.captcha!.image)), 
                             fit: BoxFit.contain, // Zmienione na contain, żeby nie ucinało tekstu captchy
                             errorBuilder: (context, error, stackTrace) {
-                              debugPrint('Błąd wyświetlania obrazka: $error');
+                              debugPrint('Error displaying image: $error');
                               return const Center(child: Icon(Icons.broken_image));
                             },
                           ),
                         )
-                      : const Center(child: Text("Brak Captchy")),
+                      : const Center(child: Text("No CAPTCHA")),
             ),
 
             const SizedBox(height: 12),
@@ -2412,7 +2412,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                   child: TextFormField(
                     controller: widget.answerController,
                     decoration: InputDecoration(
-                      labelText: 'Wpisz kod z obrazka',
+                      labelText: 'Enter the code from the image',
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                       enabledBorder: state.isVerified == false
@@ -2440,7 +2440,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                           child: CircularProgressIndicator(strokeWidth: 2)
                         )
                       : const Icon(Icons.refresh),
-                  tooltip: "Nowy kod",
+                  tooltip: "Refresh code",
                 ),
               ],
             ),
@@ -2459,7 +2459,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
               const Padding(
                 padding: EdgeInsets.only(top: 8.0),
                 child: Text(
-                  "Niepoprawny kod. Spróbuj ponownie.",
+                  "Invalid code. Please try again.",
                   style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -2468,7 +2468,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
               const Padding(
                 padding: EdgeInsets.only(top: 8.0),
                 child: Text(
-                  "Kod poprawny!",
+                  "Code verified!",
                   style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -4002,7 +4002,7 @@ class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54,)
                 )
               : const Icon(Icons.refresh),
-          tooltip: "Odśwież listę",
+          tooltip: "Refresh",
           onPressed: state.isLoading 
               ? null // Zablokuj, jeśli już ładuje
               : () {
@@ -4061,7 +4061,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Dołącz do społeczności!",
+                    "Join the community!",
                     style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -4069,7 +4069,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "Zaloguj się, aby zapisywać zdania od innych użytkowników w swoim prywatnym notatniku.",
+                    "Log in to save sentences from other users to your personal notebook.",
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -4089,7 +4089,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text("ZAŁÓŻ KONTO"),
+                      child: const Text("SIGN UP"),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -4104,14 +4104,14 @@ class CommunitySentencesPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text("ZALOGUJ SIĘ"),
+                      child: const Text("LOG IN"),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
                     child: const Text(
-                      "Może później",
+                      "Maybe later",
                       style: TextStyle(color: Colors.grey),
                     ),
                   ),
@@ -4156,7 +4156,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                       Icon(Icons.filter_list),
                       SizedBox(width: 12),
                       Text(
-                        "Filtruj po języku źródłowym",
+                        "Filter by source language",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -4228,7 +4228,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     Navigator.of(ctx).pop();
                   },
                   icon: const Icon(Icons.public),
-                  label: const Text("Pokaż wszystkie języki świata"),
+                  label: const Text("Show all languages"),
                 ),
               ],
             ),
@@ -4257,8 +4257,8 @@ class CommunitySentencesPage extends ConsumerWidget {
         //foregroundColor: Colors.white, 
         label: Text(
           state.sourceLang != null
-              ? 'Filtr: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
-              : 'Filtruj',
+              ? 'Filter: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
+              : 'Filter',
         ),
       ),
       // ======================================================================
@@ -4284,17 +4284,17 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ? () => notifier.previousPage()
                           : null,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text("Poprzednia"),
+                      label: const Text("Previous"),
                     ),
                     Text(
-                      "Strona ${state.currentPage} z ${state.totalPages}",
+                      "Page ${state.currentPage} of ${state.totalPages}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton.icon(
                       onPressed: !state.isLastPage && !state.isLoading
                           ? () => notifier.nextPage()
                           : null,
-                      label: const Text("Następna"),
+                      label: const Text("Next"),
                       icon: const Icon(Icons.arrow_forward),
                     ),
                   ],
@@ -4318,7 +4318,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Błąd: ${state.errorMessage}',
+                      'Error: ${state.errorMessage}',
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -4326,7 +4326,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     onPressed: () => notifier.refreshCurrentPage(),
                     icon: Icon(Icons.refresh, color: Colors.red.shade900),
                     label: Text(
-                      "Ponów",
+                      "Retry",
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -4352,7 +4352,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Brak zdań w tym języku",
+                            "No sentences in this language",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -4361,7 +4361,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Zmień filtry lub wróć później.",
+                            "Change your filters or check back later.",
                             style: TextStyle(color: Colors.grey.shade500),
                           ),
                         ],
@@ -4455,7 +4455,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Stwórz własny notatnik!",
+                    "Create your own notebook!",
                     style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -4464,7 +4464,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "Zaloguj się lub załóż darmowe konto, aby móc zapisywać zwroty, dodawać własne tłumaczenia i synchronizować postępy między urządzeniami.",
+                    "Log in or create a free account to save phrases, add your own translations, and sync your progress across devices.",
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -4474,7 +4474,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Przycisk "ZAŁÓŻ KONTO" (Zwracający największą uwagę)
+                  // Przycisk "CREATE ACCOUNT" (Zwracający największą uwagę)
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -4490,12 +4490,12 @@ class SentencesPage extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text("ZAŁÓŻ KONTO"),
+                      child: const Text("CREATE ACCOUNT"),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Przycisk "ZALOGUJ SIĘ" (Dyskretniejszy, dla powracających)
+                  // Przycisk "LOG IN" (Dyskretniejszy, dla powracających)
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -4513,7 +4513,7 @@ class SentencesPage extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text("ZALOGUJ SIĘ"),
+                      child: const Text("LOG IN"),
                     ),
                   ),
 
@@ -4524,7 +4524,7 @@ class SentencesPage extends ConsumerWidget {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey.shade500,
                     ),
-                    child: const Text("Może później"),
+                    child: const Text("Maybe later"),
                   ),
                 ],
               ),
@@ -4562,7 +4562,7 @@ class SentencesPage extends ConsumerWidget {
           }
         },
         //backgroundColor: Colors.deepPurple, // DODAJ TO
-        //foregroundColor: Colors.white, 
+        //foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
 
@@ -4622,7 +4622,7 @@ class SentencesPage extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Błąd: ${sentencesState.errorMessage}',
+                      'Error: ${sentencesState.errorMessage}',
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -4632,7 +4632,7 @@ class SentencesPage extends ConsumerWidget {
                     },
                     icon: Icon(Icons.refresh, color: Colors.red.shade900),
                     label: Text(
-                      "Ponów",
+                      "Retry",
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -4656,7 +4656,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Twój notatnik jest pusty",
+                            "Your notebook is empty",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -4665,7 +4665,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Kliknij przycisk + poniżej, aby dodać swoje pierwsze zdanie lub skopiuj je ze Społeczności.",
+                            "Click the + button below to add your first sentence, or save one from the Community tab.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey.shade500,
@@ -4693,7 +4693,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            "Nie masz jeszcze żadnych zdań.",
+                            "You don't have any sentences yet.",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -4701,7 +4701,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Dodaj własne zwroty przyciskiem + lub poszukaj inspiracji w zakładce Społeczność.",
+                            "Add your own phrases using the + button, or look for inspiration in the Community tab.",
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.grey.shade600),
                           ),
@@ -4795,7 +4795,7 @@ class DeleteSentenceController {
       // Feedback dla użytkownika (Snackbar)
       scaffoldMessenger.showSnackBar(
         const SnackBar(
-          content: Text('Usunięto zdanie.'),
+          content: Text('Sentence deleted.'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),
@@ -5423,7 +5423,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!',
+            _isEditMode ? 'Sentence updated successfully' : 'New sentence added!',
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -5468,8 +5468,8 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
 
     // Tytuł zależy od trybu
     final titleText = _isEditMode
-        ? "Edytuj zdanie #${widget.sentence!.id}"
-        : "Dodaj nowe zdanie";
+        ? "Edit sentence #${widget.sentence!.id}"
+        : "Add new sentence";
 
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
@@ -5503,7 +5503,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                       border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Text(
-                      'Błąd: $errorText',
+                      'Error: $errorText',
                       style: TextStyle(color: Colors.red.shade800),
                     ),
                   ),
@@ -5529,7 +5529,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           validator: (value) {
                             if ((value == null || value.isEmpty) &&
                                 _translatedTextCtrl.text.isEmpty) {
-                              return 'Wypełnij zdanie LUB tłumaczenie';
+                              return 'Fill in the sentence OR the translation';
                             }
                             return null;
                           },
@@ -5553,7 +5553,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           validator: (value) {
                             if ((value == null || value.isEmpty) &&
                                 _originalTextCtrl.text.isEmpty) {
-                              return 'Wypełnij zdanie LUB tłumaczenie';
+                              return 'Fill in the sentence OR the translation';
                             }
                             return null;
                           },
@@ -5616,7 +5616,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                       onPressed: isLoading
                           ? null
                           : () => Navigator.of(context).pop(),
-                      child: const Text('Anuluj'),
+                      child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
@@ -5633,7 +5633,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                               ),
                             )
                           : Text(
-                              _isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie',
+                              _isEditMode ? 'Save changes' : 'Add sentence',
                             ),
                     ),
                   ],
@@ -5700,7 +5700,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Zdanie skopiowane do Twojego notatnika!"),
+          content: Text("Sentence copied to your notebook!"),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -5767,7 +5767,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
         isThreeLine: true,
         trailing: IconButton(
           onPressed: _isSaved ? null : _handleClone, // Wyłącz jeśli już zapisane
-          tooltip: "Zapisz do moich",
+          tooltip: "Save to my notebook",
           icon: Icon(
             _isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,
             color: _isSaved ? Colors.green : Colors.deepPurple,
@@ -5800,17 +5800,17 @@ class SentenceTile extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Potwierdzenie"),
-        content: const Text("Usunąć to zdanie?"),
+        title: const Text("Delete Sentence"),
+        content: const Text("Are you sure you want to delete this sentence?"),
         actions: [
-          // Przycisk "Nie"
+          // Przycisk "CANCEL"
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop(); // Zamknij dialog
             },
-            child: const Text("Nie"),
+            child: const Text("CANCEL"),
           ),
-          // Przycisk "Tak" - Czerwony
+          // Przycisk "DELETE" - Czerwony
           TextButton(
             onPressed: () {
               // 1. Najpierw zamykamy dialog
@@ -5824,7 +5824,7 @@ class SentenceTile extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: Colors.red, // Czerwony tekst
             ),
-            child: const Text("Tak"),
+            child: const Text("DELETE"),
           ),
         ],
       ),
@@ -5885,7 +5885,7 @@ class SentenceTile extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: () => _showDeleteConfirmation(context, ref),
-                tooltip: 'Usuń zdanie',
+                tooltip: 'Delete',
                 // Ustawienia kompaktowe:
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -5903,7 +5903,7 @@ class SentenceTile extends ConsumerWidget {
                      builder: (context) => SentenceFormDialog(sentence: sentence),
                    );
                 },
-                tooltip: 'Edytuj zdanie',
+                tooltip: 'Edit',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 32,
@@ -6189,7 +6189,7 @@ class WordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      body: Center(child: Text('Nauka slowek - niebawem')),
+      body: Center(child: Text('Vocabulary Learning - Coming Soon')),
     );
   }
 }
@@ -6564,27 +6564,27 @@ class ApiErrorHandler {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          return "Upłynął limit czasu połączenia. Sprawdź internet.";
+          return "Connection timed out. Please check your internet connection.";
 
         case DioExceptionType.badResponse:
           return _handleBadResponse(error.response);
 
         case DioExceptionType.connectionError:
-          return "Brak połączenia z serwerem. Sprawdź internet.";
+          return "Unable to connect to the server. Please check your internet connection.";
 
         case DioExceptionType.cancel:
-          return "Żądanie zostało anulowane.";
+          return "Request was canceled.";
 
         default:
-          return "Wystąpił nieznany błąd sieciowy.";
+          return "An unknown network error occurred.";
       }
     } else {
-      return "Wystąpił niespodziewany błąd: ${error.toString()}";
+      return "An unexpected error occurred: ${error.toString()}";
     }
   }
 
   static String _handleBadResponse(Response? response) {
-    if (response == null) return "Nieznany błąd serwera.";
+    if (response == null) return "Unknown server error.";
 
     final dynamic data = response.data;
     final int? statusCode = response.statusCode;
@@ -6600,7 +6600,7 @@ class ApiErrorHandler {
         if (list.isNotEmpty && list.first is Map) {
           // Pobieramy wiadomość prosto z backendu (np. "Tekst w polu 'sentence' jest za długi. Obecny limit to 150 znaków.")
           final backendMsg =
-              list.first['message']?.toString() ?? "Błąd walidacji danych.";
+              list.first['message']?.toString() ?? "Data validation error.";
           return backendMsg;
         }
       }
@@ -6616,7 +6616,7 @@ class ApiErrorHandler {
           // Musimy przetłumaczyć wiadomość wyciągniętą z listy!
           final translatedMsg = _translateMessage(firstMsg.toString());
 
-          return "Błąd walidacji: $translatedMsg";
+          return "Validation error: $translatedMsg";
         }
       }
 
@@ -6629,24 +6629,24 @@ class ApiErrorHandler {
     // KROK 2: Fallback (Estymacja po kodzie)
     switch (statusCode) {
       case 400:
-        return "Nieprawidłowe żądanie (400).";
+        return "Bad request (400).";
       case 401:
-        return "Błąd autentykacji. Zaloguj się ponownie.";
+        return "Authentication failed. Please log in again.";
       case 403:
-        return "Brak dostępu do zasobu.";
+        return "Access denied.";
       case 404:
-        return "Nie znaleziono zasobu (404).";
+        return "Resource not found (404).";
       case 409:
-        return "Konflikt danych (409).";
+        return "Data conflict (409).";
       case 429:
-        return "Zbyt wiele zapytań. Zwolnij chwilę.";
+        return "Too many requests. Please slow down.";
       case 500:
       case 502:
-        return "Błąd serwera ($statusCode). Spróbuj później.";
+        return "Server error ($statusCode). Please try again later.";
       case 503:
-        return "Serwer jest niedostępny (Trwają prace techniczne lub przeciążenie).";
+        return "Service unavailable (maintenance or overload).";
       default:
-        return "Wystąpił błąd ($statusCode).";
+        return "An error occurred ($statusCode).";
     }
   }
 
@@ -6655,73 +6655,73 @@ class ApiErrorHandler {
 
     // --- NOWE TŁUMACZENIA DLA USERNAME (Auth Service) ---
     if (msg.contains("Username must be at least 3 characters long")) {
-      return "Nazwa użytkownika musi mieć co najmniej 3 znaki.";
+      return "Username must be at least 3 characters long.";
     }
     if (msg.contains("Username cannot be longer than 30 characters")) {
-      return "Nazwa użytkownika nie może mieć więcej niż 30 znaków.";
+      return "Username cannot exceed 30 characters.";
     }
     if (msg.contains("Username can only contain letters, numbers")) {
-      return "Nazwa użytkownika może zawierać tylko litery, cyfry, podkreślenia (_) i myślniki (-).";
+      return "Username can only contain letters, numbers, underscores (_), and hyphens (-).";
     }
     if (msg.contains("This username is reserved")) {
-      return "Ta nazwa użytkownika jest zastrzeżona i nie może zostać użyta.";
+      return "This username is reserved and cannot be used.";
     }
     if (msg.contains("Username cannot contain '@' symbol")) {
-      return "Nazwa użytkownika nie może zawierać znaku '@'.";
+      return "Username cannot contain the '@' symbol.";
     }
     if (msg.contains("consecutive underscores or hyphens")) {
-      return "Nazwa użytkownika nie może zawierać podwójnych podkreśleń lub myślników.";
+      return "Username cannot contain consecutive underscores or hyphens.";
     }
     // ----------------------------------------------------
 
     if (msg.contains("User with this email already exists")) {
-      return "Użytkownik o tym adresie email już istnieje.";
+      return "A user with this email address already exists.";
     }
     if (msg.contains("User with this username already exists")) {
-      return "Ta nazwa użytkownika jest już zajęta.";
+      return "This username is already taken.";
     }
     if (msg.contains("Username already taken")) {
-      return "Ta nazwa użytkownika jest już zajęta.";
+      return "This username is already taken.";
     }
     if (msg.contains("Incorrect email or password")) {
-      return "Niepoprawny email lub hasło.";
+      return "Incorrect email or password.";
     }
     if (msg.contains("Inactive user")) {
-      return "Konto jest nieaktywne.";
+      return "This account is currently inactive.";
     }
     if (msg.contains("Invalid captcha")) {
-      return "Niepoprawny kod Captcha.";
+      return "Invalid Captcha code. Please try again.";
     }
     if (msg.contains("Invalid CAPTCHA answer")) {
-      return "Niepoprawny kod Captcha.";
+      return "Invalid Captcha code. Please try again.";
     }
     if (msg.contains("Email already registered")) {
-      return "Ten adres email jest już zarejestrowany.";
+      return "This email address is already registered.";
     }
     if (msg.contains("value is not a valid email address")) {
-      return "Niepoprawny format adresu email.";
+      return "Invalid email format.";
     }
     if (msg.contains("Password must be at least 8 characters long")) {
-      return "Hasło musi mieć co najmniej 8 znaków.";
+      return "Password must be at least 8 characters long.";
     }
     if (msg.contains("Password must contain at least one digit")) {
-      return "Hasło musi zawierać co najmniej jedną cyfrę.";
+      return "Password must contain at least one number.";
     }
     if (msg.contains("Password must contain at least one letter")) {
-      return "Hasło musi zawierać co najmniej jedną literę.";
+      return "Password must contain at least one letter.";
     }
     if (msg.contains("String should have at least 8 characters")) {
-      return "Wartość jest za krótka (wymagane min. 8 znaków).";
+      return "Value is too short (minimum 8 characters required).";
     }
     //auth service error
     if (msg.contains(
       "Database error: Resource is locked. Service temporarily unavailable.",
     )) {
-      return "Serwis jest chwilowo zajęty (baza danych zablokowana). Spróbuj ponownie za chwilę.";
+      return "The service is temporarily busy. Please try again in a moment.";
     }
     //auth service error
     if (msg.contains("Database error: Internal operation failed.")) {
-      return "Wystąpił wewnętrzny błąd bazy danych. Spróbuj ponownie.";
+      return "An internal server error occurred. Please try again.";
     }
 
     // Jeśli nie mamy tłumaczenia, zwracamy oryginał (np. "Password is too short")
@@ -6740,16 +6740,16 @@ class AppLanguages {
   AppLanguages._();
 
   static const Map<String, String> supported = {
-    'en': 'English (Angielski)',
-    'pl': 'Polski',
-    'es': 'Español (Hiszpański)',
-    'de': 'Deutsch (Niemiecki)',
-    'fr': 'Français (Francuski)',
-    'uk': 'Українська (Ukraiński)',
+    'en': 'English',
+    'pl': 'Polski (Polish)',
+    'es': 'Español (Spanish)',
+    'de': 'Deutsch (German)',
+    'fr': 'Français (French)',
+    'uk': 'Українська (Ukrainian)',
   };
 
   static String getName(String code) {
-    return supported[code] ?? 'Nieznany ($code)';
+    return supported[code] ?? 'Unknown ($code)';
   }
 
   // ================= ZMIANA: NOWA FUNKCJA DO FLAG =================

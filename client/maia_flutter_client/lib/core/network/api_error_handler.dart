@@ -7,27 +7,27 @@ class ApiErrorHandler {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          return "Upłynął limit czasu połączenia. Sprawdź internet.";
+          return "Connection timed out. Please check your internet connection.";
 
         case DioExceptionType.badResponse:
           return _handleBadResponse(error.response);
 
         case DioExceptionType.connectionError:
-          return "Brak połączenia z serwerem. Sprawdź internet.";
+          return "Unable to connect to the server. Please check your internet connection.";
 
         case DioExceptionType.cancel:
-          return "Żądanie zostało anulowane.";
+          return "Request was canceled.";
 
         default:
-          return "Wystąpił nieznany błąd sieciowy.";
+          return "An unknown network error occurred.";
       }
     } else {
-      return "Wystąpił niespodziewany błąd: ${error.toString()}";
+      return "An unexpected error occurred: ${error.toString()}";
     }
   }
 
   static String _handleBadResponse(Response? response) {
-    if (response == null) return "Nieznany błąd serwera.";
+    if (response == null) return "Unknown server error.";
 
     final dynamic data = response.data;
     final int? statusCode = response.statusCode;
@@ -43,7 +43,7 @@ class ApiErrorHandler {
         if (list.isNotEmpty && list.first is Map) {
           // Pobieramy wiadomość prosto z backendu (np. "Tekst w polu 'sentence' jest za długi. Obecny limit to 150 znaków.")
           final backendMsg =
-              list.first['message']?.toString() ?? "Błąd walidacji danych.";
+              list.first['message']?.toString() ?? "Data validation error.";
           return backendMsg;
         }
       }
@@ -59,7 +59,7 @@ class ApiErrorHandler {
           // Musimy przetłumaczyć wiadomość wyciągniętą z listy!
           final translatedMsg = _translateMessage(firstMsg.toString());
 
-          return "Błąd walidacji: $translatedMsg";
+          return "Validation error: $translatedMsg";
         }
       }
 
@@ -72,24 +72,24 @@ class ApiErrorHandler {
     // KROK 2: Fallback (Estymacja po kodzie)
     switch (statusCode) {
       case 400:
-        return "Nieprawidłowe żądanie (400).";
+        return "Bad request (400).";
       case 401:
-        return "Błąd autentykacji. Zaloguj się ponownie.";
+        return "Authentication failed. Please log in again.";
       case 403:
-        return "Brak dostępu do zasobu.";
+        return "Access denied.";
       case 404:
-        return "Nie znaleziono zasobu (404).";
+        return "Resource not found (404).";
       case 409:
-        return "Konflikt danych (409).";
+        return "Data conflict (409).";
       case 429:
-        return "Zbyt wiele zapytań. Zwolnij chwilę.";
+        return "Too many requests. Please slow down.";
       case 500:
       case 502:
-        return "Błąd serwera ($statusCode). Spróbuj później.";
+        return "Server error ($statusCode). Please try again later.";
       case 503:
-        return "Serwer jest niedostępny (Trwają prace techniczne lub przeciążenie).";
+        return "Service unavailable (maintenance or overload).";
       default:
-        return "Wystąpił błąd ($statusCode).";
+        return "An error occurred ($statusCode).";
     }
   }
 
@@ -98,73 +98,73 @@ class ApiErrorHandler {
 
     // --- NOWE TŁUMACZENIA DLA USERNAME (Auth Service) ---
     if (msg.contains("Username must be at least 3 characters long")) {
-      return "Nazwa użytkownika musi mieć co najmniej 3 znaki.";
+      return "Username must be at least 3 characters long.";
     }
     if (msg.contains("Username cannot be longer than 30 characters")) {
-      return "Nazwa użytkownika nie może mieć więcej niż 30 znaków.";
+      return "Username cannot exceed 30 characters.";
     }
     if (msg.contains("Username can only contain letters, numbers")) {
-      return "Nazwa użytkownika może zawierać tylko litery, cyfry, podkreślenia (_) i myślniki (-).";
+      return "Username can only contain letters, numbers, underscores (_), and hyphens (-).";
     }
     if (msg.contains("This username is reserved")) {
-      return "Ta nazwa użytkownika jest zastrzeżona i nie może zostać użyta.";
+      return "This username is reserved and cannot be used.";
     }
     if (msg.contains("Username cannot contain '@' symbol")) {
-      return "Nazwa użytkownika nie może zawierać znaku '@'.";
+      return "Username cannot contain the '@' symbol.";
     }
     if (msg.contains("consecutive underscores or hyphens")) {
-      return "Nazwa użytkownika nie może zawierać podwójnych podkreśleń lub myślników.";
+      return "Username cannot contain consecutive underscores or hyphens.";
     }
     // ----------------------------------------------------
 
     if (msg.contains("User with this email already exists")) {
-      return "Użytkownik o tym adresie email już istnieje.";
+      return "A user with this email address already exists.";
     }
     if (msg.contains("User with this username already exists")) {
-      return "Ta nazwa użytkownika jest już zajęta.";
+      return "This username is already taken.";
     }
     if (msg.contains("Username already taken")) {
-      return "Ta nazwa użytkownika jest już zajęta.";
+      return "This username is already taken.";
     }
     if (msg.contains("Incorrect email or password")) {
-      return "Niepoprawny email lub hasło.";
+      return "Incorrect email or password.";
     }
     if (msg.contains("Inactive user")) {
-      return "Konto jest nieaktywne.";
+      return "This account is currently inactive.";
     }
     if (msg.contains("Invalid captcha")) {
-      return "Niepoprawny kod Captcha.";
+      return "Invalid Captcha code. Please try again.";
     }
     if (msg.contains("Invalid CAPTCHA answer")) {
-      return "Niepoprawny kod Captcha.";
+      return "Invalid Captcha code. Please try again.";
     }
     if (msg.contains("Email already registered")) {
-      return "Ten adres email jest już zarejestrowany.";
+      return "This email address is already registered.";
     }
     if (msg.contains("value is not a valid email address")) {
-      return "Niepoprawny format adresu email.";
+      return "Invalid email format.";
     }
     if (msg.contains("Password must be at least 8 characters long")) {
-      return "Hasło musi mieć co najmniej 8 znaków.";
+      return "Password must be at least 8 characters long.";
     }
     if (msg.contains("Password must contain at least one digit")) {
-      return "Hasło musi zawierać co najmniej jedną cyfrę.";
+      return "Password must contain at least one number.";
     }
     if (msg.contains("Password must contain at least one letter")) {
-      return "Hasło musi zawierać co najmniej jedną literę.";
+      return "Password must contain at least one letter.";
     }
     if (msg.contains("String should have at least 8 characters")) {
-      return "Wartość jest za krótka (wymagane min. 8 znaków).";
+      return "Value is too short (minimum 8 characters required).";
     }
     //auth service error
     if (msg.contains(
       "Database error: Resource is locked. Service temporarily unavailable.",
     )) {
-      return "Serwis jest chwilowo zajęty (baza danych zablokowana). Spróbuj ponownie za chwilę.";
+      return "The service is temporarily busy. Please try again in a moment.";
     }
     //auth service error
     if (msg.contains("Database error: Internal operation failed.")) {
-      return "Wystąpił wewnętrzny błąd bazy danych. Spróbuj ponownie.";
+      return "An internal server error occurred. Please try again.";
     }
 
     // Jeśli nie mamy tłumaczenia, zwracamy oryginał (np. "Password is too short")

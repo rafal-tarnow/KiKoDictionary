@@ -169,10 +169,10 @@ class SentencesPage extends ConsumerWidget {
                           ? () => notifier.previousPage()
                           : null,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text("Poprzednia"),
+                      label: const Text("Previous"),
                     ),
                     Text(
-                      "Strona ${sentencesState.currentPage}",
+                      "Page ${sentencesState.currentPage}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton.icon(
@@ -181,7 +181,7 @@ class SentencesPage extends ConsumerWidget {
                               !sentencesState.isLoading
                           ? () => notifier.nextPage()
                           : null,
-                      label: const Text("Następna"),
+                      label: const Text("Next"),
                       icon: const Icon(Icons.arrow_forward),
                     ),
                   ],
