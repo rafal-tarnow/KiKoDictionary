@@ -6,7 +6,7 @@ class WordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      body: Center(child: Text('Nauka slowek - niebawem')),
+      body: Center(child: Text('Vocabulary Learning - Coming Soon')),
     );
   }
 }

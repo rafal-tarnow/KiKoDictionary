@@ -37,7 +37,7 @@ class DeleteSentenceController {
       // Feedback dla użytkownika (Snackbar)
       scaffoldMessenger.showSnackBar(
         const SnackBar(
-          content: Text('Usunięto zdanie.'),
+          content: Text('Sentence deleted.'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),

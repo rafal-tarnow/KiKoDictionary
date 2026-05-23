@@ -13,17 +13,17 @@ class SentenceTile extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Potwierdzenie"),
-        content: const Text("Usunąć to zdanie?"),
+        title: const Text("Delete Sentence"),
+        content: const Text("Are you sure you want to delete this sentence?"),
         actions: [
-          // Przycisk "Nie"
+          // Przycisk "CANCEL"
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop(); // Zamknij dialog
             },
-            child: const Text("Nie"),
+            child: const Text("CANCEL"),
           ),
-          // Przycisk "Tak" - Czerwony
+          // Przycisk "DELETE" - Czerwony
           TextButton(
             onPressed: () {
               // 1. Najpierw zamykamy dialog
@@ -37,7 +37,7 @@ class SentenceTile extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: Colors.red, // Czerwony tekst
             ),
-            child: const Text("Tak"),
+            child: const Text("DELETE"),
           ),
         ],
       ),
@@ -98,7 +98,7 @@ class SentenceTile extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: () => _showDeleteConfirmation(context, ref),
-                tooltip: 'Usuń zdanie',
+                tooltip: 'Delete',
                 // Ustawienia kompaktowe:
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -116,7 +116,7 @@ class SentenceTile extends ConsumerWidget {
                      builder: (context) => SentenceFormDialog(sentence: sentence),
                    );
                 },
-                tooltip: 'Edytuj zdanie',
+                tooltip: 'Edit',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 32,

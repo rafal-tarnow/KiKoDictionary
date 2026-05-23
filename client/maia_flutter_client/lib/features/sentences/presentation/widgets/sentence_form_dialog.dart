@@ -80,7 +80,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isEditMode ? 'Zaktualizowano zdanie' : 'Dodano nowe zdanie!',
+            _isEditMode ? 'Sentence updated successfully' : 'New sentence added!',
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -125,8 +125,8 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
 
     // Tytuł zależy od trybu
     final titleText = _isEditMode
-        ? "Edytuj zdanie #${widget.sentence!.id}"
-        : "Dodaj nowe zdanie";
+        ? "Edit sentence #${widget.sentence!.id}"
+        : "Add new sentence";
 
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
@@ -160,7 +160,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                       border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Text(
-                      'Błąd: $errorText',
+                      'Error: $errorText',
                       style: TextStyle(color: Colors.red.shade800),
                     ),
                   ),
@@ -186,7 +186,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           validator: (value) {
                             if ((value == null || value.isEmpty) &&
                                 _translatedTextCtrl.text.isEmpty) {
-                              return 'Wypełnij zdanie LUB tłumaczenie';
+                              return 'Fill in the sentence OR the translation';
                             }
                             return null;
                           },
@@ -210,7 +210,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                           validator: (value) {
                             if ((value == null || value.isEmpty) &&
                                 _originalTextCtrl.text.isEmpty) {
-                              return 'Wypełnij zdanie LUB tłumaczenie';
+                              return 'Fill in the sentence OR the translation';
                             }
                             return null;
                           },
@@ -273,7 +273,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                       onPressed: isLoading
                           ? null
                           : () => Navigator.of(context).pop(),
-                      child: const Text('Anuluj'),
+                      child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
@@ -290,7 +290,7 @@ class _SentenceFormDialogState extends ConsumerState<SentenceFormDialog> {
                               ),
                             )
                           : Text(
-                              _isEditMode ? 'Zapisz zmiany' : 'Dodaj zdanie',
+                              _isEditMode ? 'Save changes' : 'Add sentence',
                             ),
                     ),
                   ],

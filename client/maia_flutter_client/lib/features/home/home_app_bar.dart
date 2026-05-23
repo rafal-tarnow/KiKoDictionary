@@ -7,7 +7,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text("Ogłoszenia parafialne"),
+      title: const Text("Home"),
       elevation: 2,
       // Nie musisz dodawać leading/hamburgera - Flutter doda go sam!
       actions: [

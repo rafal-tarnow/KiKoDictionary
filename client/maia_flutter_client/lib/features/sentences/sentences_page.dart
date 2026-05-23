@@ -35,7 +35,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Stwórz własny notatnik!",
+                    "Create your own notebook!",
                     style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -44,7 +44,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "Zaloguj się lub załóż darmowe konto, aby móc zapisywać zwroty, dodawać własne tłumaczenia i synchronizować postępy między urządzeniami.",
+                    "Log in or create a free account to save phrases, add your own translations, and sync your progress across devices.",
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -54,7 +54,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Przycisk "ZAŁÓŻ KONTO" (Zwracający największą uwagę)
+                  // Przycisk "CREATE ACCOUNT" (Zwracający największą uwagę)
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -70,12 +70,12 @@ class SentencesPage extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text("ZAŁÓŻ KONTO"),
+                      child: const Text("CREATE ACCOUNT"),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Przycisk "ZALOGUJ SIĘ" (Dyskretniejszy, dla powracających)
+                  // Przycisk "LOG IN" (Dyskretniejszy, dla powracających)
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -93,7 +93,7 @@ class SentencesPage extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text("ZALOGUJ SIĘ"),
+                      child: const Text("LOG IN"),
                     ),
                   ),
 
@@ -104,7 +104,7 @@ class SentencesPage extends ConsumerWidget {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey.shade500,
                     ),
-                    child: const Text("Może później"),
+                    child: const Text("Maybe later"),
                   ),
                 ],
               ),
@@ -142,7 +142,7 @@ class SentencesPage extends ConsumerWidget {
           }
         },
         //backgroundColor: Colors.deepPurple, // DODAJ TO
-        //foregroundColor: Colors.white, 
+        //foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
 
@@ -202,7 +202,7 @@ class SentencesPage extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Błąd: ${sentencesState.errorMessage}',
+                      'Error: ${sentencesState.errorMessage}',
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -212,7 +212,7 @@ class SentencesPage extends ConsumerWidget {
                     },
                     icon: Icon(Icons.refresh, color: Colors.red.shade900),
                     label: Text(
-                      "Ponów",
+                      "Retry",
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -236,7 +236,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Twój notatnik jest pusty",
+                            "Your notebook is empty",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -245,7 +245,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Kliknij przycisk + poniżej, aby dodać swoje pierwsze zdanie lub skopiuj je ze Społeczności.",
+                            "Click the + button below to add your first sentence, or save one from the Community tab.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey.shade500,
@@ -273,7 +273,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            "Nie masz jeszcze żadnych zdań.",
+                            "You don't have any sentences yet.",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -281,7 +281,7 @@ class SentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Dodaj własne zwroty przyciskiem + lub poszukaj inspiracji w zakładce Społeczność.",
+                            "Add your own phrases using the + button, or look for inspiration in the Community tab.",
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.grey.shade600),
                           ),

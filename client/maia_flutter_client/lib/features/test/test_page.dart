@@ -41,14 +41,14 @@ class TestPage extends ConsumerWidget {
         children: [
           SpeedDialChild(
             child: Icon(Icons.refresh),
-            label: 'Odśwież',
+            label: 'Refresh',
             onTap: (){
-              _showShackBar(context, 'Odświeżono');
+              _showShackBar(context, 'Refreshed');
             }
           ),
           SpeedDialChild(
             child: Icon(Icons.add),
-            label: 'Dodaj zwrot',
+            label: 'Add phrase',
           ),
         ],
       ),

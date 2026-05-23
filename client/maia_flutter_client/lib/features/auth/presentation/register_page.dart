@@ -39,7 +39,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final captchaState = ref.read(captchaControllerProvider);
     if (captchaState.captcha == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Błąd Captchy. Odśwież obrazek.')),
+        const SnackBar(content: Text('Captcha error. Please refresh the image.')),
       );
       return;
     }
@@ -61,7 +61,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Konto założone! Możesz się zalogować.'),
+          content: Text('Account created! You can now log in.'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -113,7 +113,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Utwórz konto",
+                    "Create an account",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -122,7 +122,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Dołącz do nas i zacznij naukę.",
+                    "Join us and start learning.",
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -134,7 +134,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   TextFormField(
                     controller: _emailCtrl,
                     decoration: const InputDecoration(
-                      labelText: "Adres email",
+                      labelText: "Email address",
                       prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
                     ),
@@ -142,8 +142,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz email';
-                      if (!v.contains('@')) return 'Niepoprawny format email';
+                      if (v == null || v.isEmpty) return 'Enter your email address';
+                      if (!v.contains('@')) return 'Invalid email format';
                       return null;
                     },
                   ),
@@ -155,7 +155,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     controller: _passCtrl,
                     obscureText: !_isPasswordVisible, // Logika ukrywania
                     decoration: InputDecoration(
-                      labelText: "Hasło",
+                      labelText: "Password",
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       // Ikona oka
@@ -175,7 +175,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.next,
                     enabled: !regState.isLoading,
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wpisz hasło';
+                      if (v == null || v.isEmpty) return 'Enter your password';
 
                       // Sprawdzamy wszystkie warunki naraz
                       bool hasMinLength = v.length >= 8;
@@ -186,7 +186,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       // Zwracamy odrazu bład na wszystkie warunki, żeby użytkownik miał
                       // lepsze UI/UX experience, i zeby odrazu znał wszystkie warunki prawidlowego hasla - nie usuwac tego komentarza
                       if (!hasMinLength || !hasDigit || !hasLetter) {
-                        return 'Hasło musi mieć min. 8 znaków, literę i cyfrę';
+                        return 'Password must be at least 8 characters long and contain a letter and a digit';
                       }
 
                       return null;
@@ -196,7 +196,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   // --- CAPTCHA ---
                   const Text(
-                    "Weryfikacja bezpieczeństwa",
+                    "Security verification",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -246,7 +246,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text("UTWÓRZ KONTO"),
+                        : const Text("REGISTER"),
                   ),
 
                   const SizedBox(height: 16),
@@ -255,7 +255,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Masz już konto?"),
+                      const Text("Already have an account?"),
                       TextButton(
                         onPressed: regState.isLoading
                             ? null
@@ -266,7 +266,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                         .state =
                                     5;
                               },
-                        child: const Text("Zaloguj się"),
+                        child: const Text("Log in"),
                       ),
                     ],
                   ),

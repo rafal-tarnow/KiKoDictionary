@@ -35,7 +35,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Gotowe! Możesz zacząć naukę."),
+          content: Text("All set! You can start learning."),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -73,13 +73,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     
                     // --- Teksty ---
                     const Text(
-                      "Witaj w aplikacji!",
+                      "Welcome to the app!",
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Twoje konto zostało pomyślnie utworzone.\nZanim zaczniesz, wybierz swój język ojczysty, z którego będziesz się uczyć angielskiego.",
+                      "Your account has been created successfully.\nBefore you start, please select the native language you will be learning English from.",
                       style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.4),
                       textAlign: TextAlign.center,
                     ),
@@ -90,7 +90,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       initialValue: _selectedLangCode,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: "Mój język (Native Language)",
+                        labelText: "Native Language",
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       items: AppLanguages.supported.keys.map((String langCode) {
@@ -138,7 +138,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                 height: 24,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
-                            : const Text("ZACZYNAMY!"),
+                            : const Text("GET STARTED"),
                       ),
                     ),
                   ],

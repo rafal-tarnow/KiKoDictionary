@@ -68,12 +68,12 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                             base64Decode(_cleanBase64(state.captcha!.image)), 
                             fit: BoxFit.contain, // Zmienione na contain, żeby nie ucinało tekstu captchy
                             errorBuilder: (context, error, stackTrace) {
-                              debugPrint('Błąd wyświetlania obrazka: $error');
+                              debugPrint('Error displaying image: $error');
                               return const Center(child: Icon(Icons.broken_image));
                             },
                           ),
                         )
-                      : const Center(child: Text("Brak Captchy")),
+                      : const Center(child: Text("No CAPTCHA")),
             ),
 
             const SizedBox(height: 12),
@@ -85,7 +85,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                   child: TextFormField(
                     controller: widget.answerController,
                     decoration: InputDecoration(
-                      labelText: 'Wpisz kod z obrazka',
+                      labelText: 'Enter the code from the image',
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                       enabledBorder: state.isVerified == false
@@ -113,7 +113,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
                           child: CircularProgressIndicator(strokeWidth: 2)
                         )
                       : const Icon(Icons.refresh),
-                  tooltip: "Nowy kod",
+                  tooltip: "Refresh code",
                 ),
               ],
             ),
@@ -132,7 +132,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
               const Padding(
                 padding: EdgeInsets.only(top: 8.0),
                 child: Text(
-                  "Niepoprawny kod. Spróbuj ponownie.",
+                  "Invalid code. Please try again.",
                   style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -141,7 +141,7 @@ class _CaptchaBoxState extends ConsumerState<CaptchaBox> {
               const Padding(
                 padding: EdgeInsets.only(top: 8.0),
                 child: Text(
-                  "Kod poprawny!",
+                  "Code verified!",
                   style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),

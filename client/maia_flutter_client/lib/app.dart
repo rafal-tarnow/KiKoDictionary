@@ -56,12 +56,12 @@ class MainShell extends ConsumerWidget {
     ),
     const SentencesAppBar(),
     AppBar(
-      title: const Text("Rejestracja"),
+      title: const Text("Register"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
     AppBar(
-      title: const Text("Logowanie"),
+      title: const Text("Log in"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
@@ -77,7 +77,7 @@ class MainShell extends ConsumerWidget {
       actions: const [UserAvatarButton()],
     ),
     AppBar(
-      title: const Text("Reset hasła"),
+      title: const Text("Reset Password"),
       elevation: 2,
       actions: const [UserAvatarButton()],
     ),
@@ -91,7 +91,7 @@ class MainShell extends ConsumerWidget {
     null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
     // ===============================================================================
     AppBar(
-      title: const Text("Społeczność"), 
+      title: const Text("Community"), 
       elevation: 2, 
       actions: const [UserAvatarButton()]
     ),

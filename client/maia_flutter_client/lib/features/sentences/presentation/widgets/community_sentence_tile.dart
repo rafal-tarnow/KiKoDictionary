@@ -44,7 +44,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Zdanie skopiowane do Twojego notatnika!"),
+          content: Text("Sentence copied to your notebook!"),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -111,7 +111,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
         isThreeLine: true,
         trailing: IconButton(
           onPressed: _isSaved ? null : _handleClone, // Wyłącz jeśli już zapisane
-          tooltip: "Zapisz do moich",
+          tooltip: "Save to my notebook",
           icon: Icon(
             _isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,
             color: _isSaved ? Colors.green : Colors.deepPurple,

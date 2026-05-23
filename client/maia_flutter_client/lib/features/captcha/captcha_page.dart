@@ -27,7 +27,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     final answer = _captchaInputController.text;
     if (answer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Wpisz kod!")),
+        const SnackBar(content: Text("Enter the code!")),
       );
       return;
     }
@@ -39,7 +39,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Captcha zweryfikowana pomyślnie!"),
+          content: Text("Captcha verified successfully!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -63,12 +63,12 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Demonstracja modułu Captcha",
+              "Captcha Module Demonstration",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              "Poniższy komponent jest niezależny i gotowy do użycia na ekranach logowania/rejestracji.",
+              "The component below is independent and ready to use on login/registration screens.",
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
@@ -78,7 +78,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
               answerController: _captchaInputController,
               onRefresh: () {
                 // Opcjonalny callback, np. logowanie zdarzenia
-                debugPrint("Użytkownik odświeżył captchę");
+                debugPrint("User refreshed the captcha");
               },
             ),
             // ---------------------------------
@@ -97,7 +97,7 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
                         height: 20, 
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                       )
-                    : const Text("ZWERYFIKUJ CAPTCHĘ"),
+                    : const Text("VERIFY CAPTCHA"),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

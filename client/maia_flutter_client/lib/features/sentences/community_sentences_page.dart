@@ -32,7 +32,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Dołącz do społeczności!",
+                    "Join the community!",
                     style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -40,7 +40,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "Zaloguj się, aby zapisywać zdania od innych użytkowników w swoim prywatnym notatniku.",
+                    "Log in to save sentences from other users to your personal notebook.",
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -60,7 +60,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text("ZAŁÓŻ KONTO"),
+                      child: const Text("SIGN UP"),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -75,14 +75,14 @@ class CommunitySentencesPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text("ZALOGUJ SIĘ"),
+                      child: const Text("LOG IN"),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
                     child: const Text(
-                      "Może później",
+                      "Maybe later",
                       style: TextStyle(color: Colors.grey),
                     ),
                   ),
@@ -127,7 +127,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                       Icon(Icons.filter_list),
                       SizedBox(width: 12),
                       Text(
-                        "Filtruj po języku źródłowym",
+                        "Filter by source language",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -199,7 +199,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     Navigator.of(ctx).pop();
                   },
                   icon: const Icon(Icons.public),
-                  label: const Text("Pokaż wszystkie języki świata"),
+                  label: const Text("Show all languages"),
                 ),
               ],
             ),
@@ -228,8 +228,8 @@ class CommunitySentencesPage extends ConsumerWidget {
         //foregroundColor: Colors.white, 
         label: Text(
           state.sourceLang != null
-              ? 'Filtr: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
-              : 'Filtruj',
+              ? 'Filter: ${AppLanguages.getFlag(state.sourceLang!)} ${state.sourceLang!.toUpperCase()}'
+              : 'Filter',
         ),
       ),
       // ======================================================================
@@ -255,17 +255,17 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ? () => notifier.previousPage()
                           : null,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text("Poprzednia"),
+                      label: const Text("Previous"),
                     ),
                     Text(
-                      "Strona ${state.currentPage} z ${state.totalPages}",
+                      "Page ${state.currentPage} of ${state.totalPages}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton.icon(
                       onPressed: !state.isLastPage && !state.isLoading
                           ? () => notifier.nextPage()
                           : null,
-                      label: const Text("Następna"),
+                      label: const Text("Next"),
                       icon: const Icon(Icons.arrow_forward),
                     ),
                   ],
@@ -289,7 +289,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Błąd: ${state.errorMessage}',
+                      'Error: ${state.errorMessage}',
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -297,7 +297,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     onPressed: () => notifier.refreshCurrentPage(),
                     icon: Icon(Icons.refresh, color: Colors.red.shade900),
                     label: Text(
-                      "Ponów",
+                      "Retry",
                       style: TextStyle(color: Colors.red.shade900),
                     ),
                   ),
@@ -323,7 +323,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Brak zdań w tym języku",
+                            "No sentences in this language",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -332,7 +332,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Zmień filtry lub wróć później.",
+                            "Change your filters or check back later.",
                             style: TextStyle(color: Colors.grey.shade500),
                           ),
                         ],

@@ -26,7 +26,7 @@ class SentencesAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54,)
                 )
               : const Icon(Icons.refresh),
-          tooltip: "Odśwież listę",
+          tooltip: "Refresh",
           onPressed: state.isLoading 
               ? null // Zablokuj, jeśli już ładuje
               : () {

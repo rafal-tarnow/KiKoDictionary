@@ -2,16 +2,16 @@ class AppLanguages {
   AppLanguages._();
 
   static const Map<String, String> supported = {
-    'en': 'English (Angielski)',
-    'pl': 'Polski',
-    'es': 'Español (Hiszpański)',
-    'de': 'Deutsch (Niemiecki)',
-    'fr': 'Français (Francuski)',
-    'uk': 'Українська (Ukraiński)',
+    'en': 'English',
+    'pl': 'Polski (Polish)',
+    'es': 'Español (Spanish)',
+    'de': 'Deutsch (German)',
+    'fr': 'Français (French)',
+    'uk': 'Українська (Ukrainian)',
   };
 
   static String getName(String code) {
-    return supported[code] ?? 'Nieznany ($code)';
+    return supported[code] ?? 'Unknown ($code)';
   }
 
   // ================= ZMIANA: NOWA FUNKCJA DO FLAG =================

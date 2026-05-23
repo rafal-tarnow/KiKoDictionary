@@ -41,7 +41,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       // SnackBar jako dodatkowe potwierdzenie
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Link został wysłany! Sprawdź skrzynkę e-mail.'),
+          content: Text('Link sent! Please check your inbox.'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -80,7 +80,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                     child: TextButton.icon(
                       onPressed: state.isLoading ? null : _navigateToLogin,
                       icon: const Icon(Icons.arrow_back, size: 20),
-                      label: const Text("Powrót do logowania"),
+                      label: const Text("Back to login"),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero, // Zmniejsza padding, by wyrównać do lewej
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -102,7 +102,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
                   // --- 3. Nagłówek ---
                   Text(
-                    state.isSuccess ? "Sprawdź skrzynkę" : "Przypomnij hasło",
+                    state.isSuccess ? "Check your inbox" : "Reset password",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -115,8 +115,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   // --- 4. Podtytuł (Instrukcja) ---
                   Text(
                     state.isSuccess 
-                      ? "Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do resetowania hasła."
-                      : "Podaj adres email, na który wyślemy link do\nresetowania hasła.",
+                      ? "If an account exists for this email, you will receive a password reset link shortly."
+                      : "Enter your email address and we'll send you a link to\nreset your password.",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                       height: 1.5,
@@ -136,17 +136,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       onFieldSubmitted: (_) => _submit(),
                       enabled: !state.isLoading,
                       decoration: const InputDecoration(
-                        labelText: "Adres email",
+                        labelText: "Email address",
                         prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
-                        hintText: "np. tom@example.com",
+                        hintText: "e.g. tom@example.com",
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Wpisz adres email';
+                          return 'Enter your email address';
                         }
                         if (!value.contains('@') || !value.contains('.')) {
-                          return 'Niepoprawny format email';
+                          return 'Invalid email format';
                         }
                         return null;
                       },
@@ -197,7 +197,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text("WYŚLIJ LINK RESETUJĄCY"),
+                          : const Text("SEND RESET LINK"),
                     )
                   else
                     // Przycisk powrotu do logowania po sukcesie
@@ -209,7 +209,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         textStyle: const TextStyle(fontSize: 16),
                       ),
                       icon: const Icon(Icons.login),
-                      label: const Text("WRÓĆ DO LOGOWANIA"),
+                      label: const Text("BACK TO LOGIN"),
                     ),
                 ],
               ),
