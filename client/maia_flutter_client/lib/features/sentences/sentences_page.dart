@@ -5,6 +5,7 @@ import '../../core/navigation_provider.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/widgets/sentence_form_dialog.dart';
 import 'presentation/widgets/sentence_tile.dart';
+import '../../core/routing/app_page.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -60,8 +61,8 @@ class SentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationIndexProvider.notifier).state =
-                            4; // Index Rejestracji
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.register; // Index Rejestracji
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -81,8 +82,8 @@ class SentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationIndexProvider.notifier).state =
-                            5; // Index Logowania
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.login; // Index Logowania
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

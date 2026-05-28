@@ -5,6 +5,7 @@ import '../../../core/constants/app_languages.dart';
 import '../../../core/navigation_provider.dart';
 import '../../settings/presentation/controllers/settings_controller.dart';
 import '../../user/presentation/controllers/user_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -31,7 +32,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       await ref.read(userControllerProvider.notifier).fetchUser();
       
       // Przekierowujemy na stronę główną
-      ref.read(navigationIndexProvider.notifier).state = 0; // HomePage
+      ref.read(navigationProvider.notifier).state = AppPage.home; // HomePage
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

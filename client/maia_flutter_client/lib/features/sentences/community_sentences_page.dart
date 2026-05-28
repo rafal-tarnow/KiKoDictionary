@@ -5,6 +5,7 @@ import '../../core/navigation_provider.dart';
 import 'presentation/community_sentences_provider.dart';
 import 'presentation/widgets/community_sentence_tile.dart';
 import '../../core/constants/app_languages.dart';
+import '../../core/routing/app_page.dart';
 
 class CommunitySentencesPage extends ConsumerWidget {
   const CommunitySentencesPage({super.key});
@@ -54,8 +55,8 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationIndexProvider.notifier).state =
-                            4; // Rejestracja
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.register; // Rejestracja
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -69,8 +70,8 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationIndexProvider.notifier).state =
-                            5; // Logowanie
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.login; // Logowanie
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

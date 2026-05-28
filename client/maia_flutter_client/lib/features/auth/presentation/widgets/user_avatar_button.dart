@@ -4,12 +4,11 @@ import '../../../../core/navigation_provider.dart';
 import '../../../../core/constants/app_languages.dart'; // NOWY IMPORT
 import '../../../user/presentation/controllers/user_controller.dart'; // NOWY IMPORT
 import '../controllers/auth_controller.dart';
+import '../../../../core/routing/app_page.dart';
 
 class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
 
-  static const int _loginPageIndex = 5;
-  static const int _settingsPageIndex = 10;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,7 +58,7 @@ class UserAvatarButton extends ConsumerWidget {
             if (value == 'logout') {
               _handleLogout(context, ref);
             } else if (value == 'settings') {
-              ref.read(navigationIndexProvider.notifier).state = _settingsPageIndex;
+              ref.read(navigationProvider.notifier).state = AppPage.settings;
             }
           },
           
@@ -111,7 +110,7 @@ class UserAvatarButton extends ConsumerWidget {
           child: Icon(Icons.login, color: Colors.grey.shade700, size: 20),
         ),
         onPressed: () {
-          ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
+          ref.read(navigationProvider.notifier).state = AppPage.login;
         },
       ),
     );
@@ -130,6 +129,6 @@ class UserAvatarButton extends ConsumerWidget {
       );
     }
     
-    ref.read(navigationIndexProvider.notifier).state = 0;
+    ref.read(navigationProvider.notifier).state = AppPage.home;
   }
 }

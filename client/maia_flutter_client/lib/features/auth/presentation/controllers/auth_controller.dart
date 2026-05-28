@@ -4,6 +4,7 @@ import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
 import '../../../sentences/presentation/sentences_provider.dart';
+import '../../../../core/routing/app_page.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -66,7 +67,7 @@ class AuthController extends StateNotifier<AuthState> {
     if (user != null && user.profile != null) {
       if (user.profile!.isOnboardingCompleted == false) {
         // Przekierowanie na Index 11 (OnboardingPage) z ominięciem menu głównego
-        _ref.read(navigationIndexProvider.notifier).state = 11;
+        _ref.read(navigationProvider.notifier).state = AppPage.onboarding;
       }
     }
   }

@@ -4,6 +4,7 @@ import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
 import 'widgets/username_editor.dart';
+import '../../../core/routing/app_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -48,7 +49,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       );
       // Przekierowanie na stronę główną (Index 0) po wylogowaniu
-      ref.read(navigationIndexProvider.notifier).state = 0;
+      ref.read(navigationProvider.notifier).state = AppPage.home;
     }
   }
 

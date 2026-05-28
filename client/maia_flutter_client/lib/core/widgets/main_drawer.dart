@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import "../../features/auth/presentation/controllers/auth_controller.dart";
 import '../navigation_provider.dart';
+import "../routing/app_page.dart";
 
 class MainDrawer extends ConsumerWidget {
   const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(navigationIndexProvider);
+    final selectedPage = ref.watch(navigationProvider);
     // Obserwujemy stan autentykacji
     final authState = ref.watch(authControllerProvider);
     final isLoggedIn = authState.isAuthenticated;
@@ -46,8 +47,8 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Home',
             icon: Icons.home,
-            index: 0,
-            isSelected: selectedIndex == 0,
+            page: AppPage.home,
+            isSelected: selectedPage == AppPage.home,
           ),
           // _DrawerTile(
           //   title: 'Slownik',
@@ -58,8 +59,8 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Words',
             icon: Icons.school,
-            index: 2,
-            isSelected: selectedIndex == 2,
+            page: AppPage.words,
+            isSelected: selectedPage == AppPage.words,
           ),
           // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
           const Divider(height: 32),
@@ -74,15 +75,15 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'My Notebook', // Zmiana nazwy dla jasności
             icon: Icons.book,
-            index: 3,
-            isSelected: selectedIndex == 3,
+            page: AppPage.sentences,
+            isSelected: selectedPage == AppPage.sentences,
           ),
           
           _DrawerTile(
             title: 'Community', // Dodanie nowej strony
             icon: Icons.public,
-            index: 12, // Odnosi się do nowej strony dodanej w app.dart
-            isSelected: selectedIndex == 12,
+            page: AppPage.communitySentences, // Odnosi się do nowej strony dodanej w app.dart
+            isSelected: selectedPage == AppPage.communitySentences,
           ),
           const Divider(height: 32),
           // ===================================================================================
@@ -134,13 +135,13 @@ class MainDrawer extends ConsumerWidget {
 class _DrawerTile extends ConsumerWidget {
   final String title;
   final IconData icon;
-  final int index;
+  final AppPage page;
   final bool isSelected;
 
   const _DrawerTile({
     required this.title,
     required this.icon,
-    required this.index,
+    required this.page,
     required this.isSelected,
   });
 
@@ -159,7 +160,7 @@ class _DrawerTile extends ConsumerWidget {
       selectedTileColor: Colors.deepPurple.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onTap: () {
-        ref.read(navigationIndexProvider.notifier).state = index;
+        ref.read(navigationProvider.notifier).state = page;
         Navigator.pop(context);
       },
     );

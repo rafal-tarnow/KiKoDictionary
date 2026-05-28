@@ -4,6 +4,7 @@ import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../captcha/presentation/widgets/captcha_box.dart';
 import '../../captcha/presentation/captcha_controller.dart';
 import 'controllers/register_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -73,7 +74,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _captchaInputCtrl.clear();
 
       // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationIndexProvider.notifier).state = 5;
+      ref.read(navigationProvider.notifier).state = AppPage.login;
 
       // Pobranie nowej captchy "na zaś"
       ref.read(captchaControllerProvider.notifier).fetchCaptcha();
@@ -262,9 +263,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             : () {
                                 // Nawigacja do logowania (Index 5 w AppShell)
                                 ref
-                                        .read(navigationIndexProvider.notifier)
+                                        .read(navigationProvider.notifier)
                                         .state =
-                                    5;
+                                    AppPage.login;
                               },
                         child: const Text("Log in"),
                       ),

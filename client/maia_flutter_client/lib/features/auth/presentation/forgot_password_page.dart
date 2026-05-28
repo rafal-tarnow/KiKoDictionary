@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/forgot_password_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -14,8 +15,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
 
-  // Indeks strony logowania w MainShell (według app.dart jest to 5)
-  static const int _loginPageIndex = 5;
 
   @override
   void dispose() {
@@ -52,7 +51,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   void _navigateToLogin() {
-    ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
+    ref.read(navigationProvider.notifier).state = AppPage.login;
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/login_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -56,7 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       );
 
       // Przekierowanie na stronę główną (Index 0)
-      ref.read(navigationIndexProvider.notifier).state = 0;
+      ref.read(navigationProvider.notifier).state = AppPage.home;
     }
   }
 
@@ -175,7 +176,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onPressed: loginState.isLoading
                           ? null
                           : () {
-                              ref.read(navigationIndexProvider.notifier).state = 9; // Index nowej strony
+                              ref.read(navigationProvider.notifier).state = AppPage.forgotPassword; // Index nowej strony
                             },
                       style: TextButton.styleFrom(
                         // Zmniejszamy minimalny rozmiar i padding, żeby tekst
@@ -257,9 +258,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             : () {
                                 // Nawigacja do rejestracji (Index 4 w AppShell)
                                 ref
-                                        .read(navigationIndexProvider.notifier)
+                                        .read(navigationProvider.notifier)
                                         .state =
-                                    4;
+                                    AppPage.register;
                               },
                         child: const Text("Register"),
                       ),

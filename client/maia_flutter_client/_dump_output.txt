@@ -10,6 +10,7 @@ import 'package:maia_flutter_client/features/auth/presentation/login_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/register_page.dart';
 import 'package:maia_flutter_client/features/auth/presentation/widgets/user_avatar_button.dart';
 import 'core/navigation_provider.dart';
+import 'core/routing/app_page.dart';
 import 'core/widgets/main_drawer.dart';
 import 'features/home/home_page.dart';
 import 'features/home/home_app_bar.dart';
@@ -29,87 +30,61 @@ import 'package:maia_flutter_client/features/sentences/community_sentences_page.
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
 
-  static const List<Widget> _pages = [
-    HomePage(),
-    DictionaryPage(),
-    WordsPage(),
-    SentencesPage(),
-    RegisterPage(),
-    LoginPage(),
-    //Dev Tools Pages
-    TestPage(),
-    ServicesHealthPage(),
-    CaptchaPage(),
-    //Pages not shown in the Drawer
-    ForgotPasswordPage(),
-    SettingsPage(),
-    OnboardingPage(),
-    CommunitySentencesPage(),
-  ];
+  Widget _buildPage(AppPage page) {
+    switch (page) {
+      case AppPage.home: return const HomePage();
+      case AppPage.dictionary: return const DictionaryPage();
+      case AppPage.words: return const WordsPage();
+      case AppPage.sentences: return const SentencesPage();
+      case AppPage.register: return const RegisterPage();
+      case AppPage.login: return const LoginPage();
+      case AppPage.test: return const TestPage();
+      case AppPage.health: return const ServicesHealthPage();
+      case AppPage.captcha: return const CaptchaPage();
+      case AppPage.forgotPassword: return const ForgotPasswordPage();
+      case AppPage.settings: return const SettingsPage();
+      case AppPage.onboarding: return const OnboardingPage();
+      case AppPage.communitySentences: return const CommunitySentencesPage();
+    }
+  }
 
-  static final List<PreferredSizeWidget?> _appBars = [
-    const HomeAppBar(),
-    AppBar(
-      title: const Text("Dictionary"),
+  PreferredSizeWidget? _buildAppBar(AppPage page) {
+    switch (page) {
+      case AppPage.home: return const HomeAppBar();
+      case AppPage.sentences: return const SentencesAppBar();
+      case AppPage.test: return const TestAppBar();
+      case AppPage.onboarding: return null; // Brak AppBar dla Onboardingu
+      
+      // Standardowe AppBary
+      case AppPage.dictionary: return _standardAppBar("Dictionary");
+      case AppPage.words: return _standardAppBar("Words");
+      case AppPage.register: return _standardAppBar("Register");
+      case AppPage.login: return _standardAppBar("Log in");
+      case AppPage.health: return _standardAppBar("Health Check");
+      case AppPage.captcha: return _standardAppBar("Captcha Demo");
+      case AppPage.forgotPassword: return _standardAppBar("Reset Password");
+      case AppPage.settings: return _standardAppBar("Settings");
+      case AppPage.communitySentences: return _standardAppBar("Community");
+    }
+  }
+
+  // Funkcja pomocnicza, żeby nie duplikować kodu standardowego AppBara (DRY)
+  PreferredSizeWidget _standardAppBar(String title) {
+    return AppBar(
+      title: Text(title),
       elevation: 2,
       actions: const [UserAvatarButton()],
-    ),
-    AppBar(
-      title: const Text("Words"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    const SentencesAppBar(),
-    AppBar(
-      title: const Text("Register"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    AppBar(
-      title: const Text("Log in"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    const TestAppBar(),
-    AppBar(
-      title: const Text("Health Check"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    AppBar(
-      title: const Text("Captcha Demo"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    AppBar(
-      title: const Text("Reset Password"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    AppBar(
-      title: const Text("Settings"),
-      elevation: 2,
-      actions: const [UserAvatarButton()],
-    ),
-    // ================= [ZMIANA 3]: Czysty AppBar dla Onboardingu =================
-    // Onboarding nie powinien pozwalać na nawigację wstecz ani pokazywać menu bocznego
-    null, // Podajemy null, żeby nadpisać zachowanie w głównym Scaffoldzie (patrz niżej)
-    // ===============================================================================
-    AppBar(
-      title: const Text("Community"), 
-      elevation: 2, 
-      actions: const [UserAvatarButton()]
-    ),
-  ];
+    );
+  }
 
 
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(navigationIndexProvider);
+    final selectedPage = ref.watch(navigationProvider);
 
     // Sprawdzamy czy to index onboardingu
-    final isFullScreenBinding = selectedIndex == 11;
+    final isFullScreenBinding = selectedPage.isFullScreen;
 
     return Container(
       //szare tło aplikacji
@@ -135,17 +110,17 @@ class MainShell extends ConsumerWidget {
                 ),
               ],
             ),
-            child: ClipRect(
-              //ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
               child: Scaffold(
-                //backgroundColor: Theme.of(context).colorScheme.surface,
                 backgroundColor: const Color(0xFFFFFFFF),
-                appBar: isFullScreenBinding ? null : _appBars[selectedIndex],
+                // ================= [ZMIANA 4]: Używamy metod z Enumem =================
+                appBar: isFullScreenBinding ? null : _buildAppBar(selectedPage),
                 drawer: isFullScreenBinding ? null : const MainDrawer(),
-                //body: _pages[selectedIndex],
-                body: IndexedStack(index: selectedIndex, children: _pages),
+                body: IndexedStack(
+                  index: selectedPage.index, // Enum pod spodem wciąż ma int (np. 0, 1, 2) idealny dla IndexedStack!
+                  // Mapujemy wszystkie wartości Enuma na listę widoków
+                  children: AppPage.values.map((p) => _buildPage(p)).toList(),
+                ),
               ),
-            ),
           ),
         ),
       ),
@@ -419,6 +394,7 @@ import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/login_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -472,7 +448,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       );
 
       // Przekierowanie na stronę główną (Index 0)
-      ref.read(navigationIndexProvider.notifier).state = 0;
+      ref.read(navigationProvider.notifier).state = AppPage.home;
     }
   }
 
@@ -591,7 +567,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onPressed: loginState.isLoading
                           ? null
                           : () {
-                              ref.read(navigationIndexProvider.notifier).state = 9; // Index nowej strony
+                              ref.read(navigationProvider.notifier).state = AppPage.forgotPassword; // Index nowej strony
                             },
                       style: TextButton.styleFrom(
                         // Zmniejszamy minimalny rozmiar i padding, żeby tekst
@@ -673,9 +649,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             : () {
                                 // Nawigacja do rejestracji (Index 4 w AppShell)
                                 ref
-                                        .read(navigationIndexProvider.notifier)
+                                        .read(navigationProvider.notifier)
                                         .state =
-                                    4;
+                                    AppPage.register;
                               },
                         child: const Text("Register"),
                       ),
@@ -705,6 +681,7 @@ import '../../../core/constants/app_languages.dart';
 import '../../../core/navigation_provider.dart';
 import '../../settings/presentation/controllers/settings_controller.dart';
 import '../../user/presentation/controllers/user_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -731,7 +708,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       await ref.read(userControllerProvider.notifier).fetchUser();
       
       // Przekierowujemy na stronę główną
-      ref.read(navigationIndexProvider.notifier).state = 0; // HomePage
+      ref.read(navigationProvider.notifier).state = AppPage.home; // HomePage
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -862,6 +839,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/forgot_password_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -874,8 +852,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
 
-  // Indeks strony logowania w MainShell (według app.dart jest to 5)
-  static const int _loginPageIndex = 5;
 
   @override
   void dispose() {
@@ -912,7 +888,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   void _navigateToLogin() {
-    ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
+    ref.read(navigationProvider.notifier).state = AppPage.login;
   }
 
   @override
@@ -1093,6 +1069,7 @@ import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../captcha/presentation/widgets/captcha_box.dart';
 import '../../captcha/presentation/captcha_controller.dart';
 import 'controllers/register_controller.dart';
+import '../../../core/routing/app_page.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -1162,7 +1139,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _captchaInputCtrl.clear();
 
       // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationIndexProvider.notifier).state = 5;
+      ref.read(navigationProvider.notifier).state = AppPage.login;
 
       // Pobranie nowej captchy "na zaś"
       ref.read(captchaControllerProvider.notifier).fetchCaptcha();
@@ -1351,9 +1328,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             : () {
                                 // Nawigacja do logowania (Index 5 w AppShell)
                                 ref
-                                        .read(navigationIndexProvider.notifier)
+                                        .read(navigationProvider.notifier)
                                         .state =
-                                    5;
+                                    AppPage.login;
                               },
                         child: const Text("Log in"),
                       ),
@@ -1591,6 +1568,7 @@ import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
 import '../../../sentences/presentation/sentences_provider.dart';
+import '../../../../core/routing/app_page.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -1653,7 +1631,7 @@ class AuthController extends StateNotifier<AuthState> {
     if (user != null && user.profile != null) {
       if (user.profile!.isOnboardingCompleted == false) {
         // Przekierowanie na Index 11 (OnboardingPage) z ominięciem menu głównego
-        _ref.read(navigationIndexProvider.notifier).state = 11;
+        _ref.read(navigationProvider.notifier).state = AppPage.onboarding;
       }
     }
   }
@@ -1701,12 +1679,11 @@ import '../../../../core/navigation_provider.dart';
 import '../../../../core/constants/app_languages.dart'; // NOWY IMPORT
 import '../../../user/presentation/controllers/user_controller.dart'; // NOWY IMPORT
 import '../controllers/auth_controller.dart';
+import '../../../../core/routing/app_page.dart';
 
 class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
 
-  static const int _loginPageIndex = 5;
-  static const int _settingsPageIndex = 10;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1756,7 +1733,7 @@ class UserAvatarButton extends ConsumerWidget {
             if (value == 'logout') {
               _handleLogout(context, ref);
             } else if (value == 'settings') {
-              ref.read(navigationIndexProvider.notifier).state = _settingsPageIndex;
+              ref.read(navigationProvider.notifier).state = AppPage.settings;
             }
           },
           
@@ -1808,7 +1785,7 @@ class UserAvatarButton extends ConsumerWidget {
           child: Icon(Icons.login, color: Colors.grey.shade700, size: 20),
         ),
         onPressed: () {
-          ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
+          ref.read(navigationProvider.notifier).state = AppPage.login;
         },
       ),
     );
@@ -1827,7 +1804,7 @@ class UserAvatarButton extends ConsumerWidget {
       );
     }
     
-    ref.read(navigationIndexProvider.notifier).state = 0;
+    ref.read(navigationProvider.notifier).state = AppPage.home;
   }
 }
 
@@ -2607,6 +2584,7 @@ import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
 import 'widgets/username_editor.dart';
+import '../../../core/routing/app_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -2651,7 +2629,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       );
       // Przekierowanie na stronę główną (Index 0) po wylogowaniu
-      ref.read(navigationIndexProvider.notifier).state = 0;
+      ref.read(navigationProvider.notifier).state = AppPage.home;
     }
   }
 
@@ -4034,6 +4012,7 @@ import '../../core/navigation_provider.dart';
 import 'presentation/community_sentences_provider.dart';
 import 'presentation/widgets/community_sentence_tile.dart';
 import '../../core/constants/app_languages.dart';
+import '../../core/routing/app_page.dart';
 
 class CommunitySentencesPage extends ConsumerWidget {
   const CommunitySentencesPage({super.key});
@@ -4083,8 +4062,8 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationIndexProvider.notifier).state =
-                            4; // Rejestracja
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.register; // Rejestracja
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -4098,8 +4077,8 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationIndexProvider.notifier).state =
-                            5; // Logowanie
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.login; // Logowanie
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -4425,6 +4404,7 @@ import '../../core/navigation_provider.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/widgets/sentence_form_dialog.dart';
 import 'presentation/widgets/sentence_tile.dart';
+import '../../core/routing/app_page.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -4480,8 +4460,8 @@ class SentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationIndexProvider.notifier).state =
-                            4; // Index Rejestracji
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.register; // Index Rejestracji
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -4501,8 +4481,8 @@ class SentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationIndexProvider.notifier).state =
-                            5; // Index Logowania
+                        ref.read(navigationProvider.notifier).state =
+                            AppPage.login; // Index Logowania
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -4589,10 +4569,10 @@ class SentencesPage extends ConsumerWidget {
                           ? () => notifier.previousPage()
                           : null,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text("Poprzednia"),
+                      label: const Text("Previous"),
                     ),
                     Text(
-                      "Strona ${sentencesState.currentPage}",
+                      "Page ${sentencesState.currentPage}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton.icon(
@@ -4601,7 +4581,7 @@ class SentencesPage extends ConsumerWidget {
                               !sentencesState.isLoading
                           ? () => notifier.nextPage()
                           : null,
-                      label: const Text("Następna"),
+                      label: const Text("Next"),
                       icon: const Icon(Icons.arrow_forward),
                     ),
                   ],
@@ -5710,7 +5690,7 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
       // 4. Jeśli błąd (np. brak sieci, albo "Już masz to zdanie") - cofamy optymistyczne UI
       setState(() => _isSaved = false);
       
-      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Błąd klonowania";
+      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Failed to copy sentence";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMsg),
@@ -6212,8 +6192,12 @@ class AppSizes{
 Zawartość pliku:
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'routing/app_page.dart'; // ================= [ZMIANA]: Import Enuma =================
 
-final navigationIndexProvider = StateProvider<int>((ref) => 0);
+// ================= [ZMIANA]: Zmiana typu z int na AppPage =================
+final navigationProvider = StateProvider<AppPage>((ref) => AppPage.home);
+// UWAGA: Zmieniłem nazwę z navigationIndexProvider na navigationProvider,
+// ponieważ przechowujemy teraz "Stronę", a nie "Indeks".
 
 
 ===============================
@@ -6246,13 +6230,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import "../../features/auth/presentation/controllers/auth_controller.dart";
 import '../navigation_provider.dart';
+import "../routing/app_page.dart";
 
 class MainDrawer extends ConsumerWidget {
   const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(navigationIndexProvider);
+    final selectedPage = ref.watch(navigationProvider);
     // Obserwujemy stan autentykacji
     final authState = ref.watch(authControllerProvider);
     final isLoggedIn = authState.isAuthenticated;
@@ -6290,8 +6275,8 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Home',
             icon: Icons.home,
-            index: 0,
-            isSelected: selectedIndex == 0,
+            index: AppPage.home,
+            isSelected: selectedPage == AppPage.home,
           ),
           // _DrawerTile(
           //   title: 'Slownik',
@@ -6302,8 +6287,8 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Words',
             icon: Icons.school,
-            index: 2,
-            isSelected: selectedIndex == 2,
+            index: AppPage.words,
+            isSelected: selectedPage == AppPage.words,
           ),
           // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
           const Divider(height: 32),
@@ -6318,15 +6303,15 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'My Notebook', // Zmiana nazwy dla jasności
             icon: Icons.book,
-            index: 3,
-            isSelected: selectedIndex == 3,
+            index: AppPage.sentences,
+            isSelected: selectedPage == AppPage.sentences,
           ),
           
           _DrawerTile(
             title: 'Community', // Dodanie nowej strony
             icon: Icons.public,
-            index: 12, // Odnosi się do nowej strony dodanej w app.dart
-            isSelected: selectedIndex == 12,
+            index: AppPage.communitySentences, // Odnosi się do nowej strony dodanej w app.dart
+            isSelected: selectedPage == AppPage.communitySentences,
           ),
           const Divider(height: 32),
           // ===================================================================================
@@ -6378,13 +6363,13 @@ class MainDrawer extends ConsumerWidget {
 class _DrawerTile extends ConsumerWidget {
   final String title;
   final IconData icon;
-  final int index;
+  final AppPage page;
   final bool isSelected;
 
   const _DrawerTile({
     required this.title,
     required this.icon,
-    required this.index,
+    required this.page,
     required this.isSelected,
   });
 
@@ -6403,7 +6388,7 @@ class _DrawerTile extends ConsumerWidget {
       selectedTileColor: Colors.deepPurple.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onTap: () {
-        ref.read(navigationIndexProvider.notifier).state = index;
+        ref.read(navigationProvider.notifier).state = page;
         Navigator.pop(context);
       },
     );
@@ -6764,6 +6749,39 @@ class AppLanguages {
       case '--': return ' ';
       default: return '🌍'; // Fallback
     }
+  }
+}
+
+
+===============================
+Ścieżka do pliku: ./lib/core/routing/app_page.dart
+
+Zawartość pliku:
+
+// ================= NOWY PLIK =================
+// Profesjonalne podejście: Enum zamiast twardych liczb (magic numbers).
+// Kolejność tutaj definiuje indeks w IndexedStack.
+enum AppPage {
+  home,               // dawniej 0
+  dictionary,         // dawniej 1
+  words,              // dawniej 2
+  sentences,          // dawniej 3
+  register,           // dawniej 4
+  login,              // dawniej 5
+  test,               // dawniej 6
+  health,             // dawniej 7
+  captcha,            // dawniej 8
+  forgotPassword,     // dawniej 9
+  settings,           // dawniej 10
+  onboarding,         // dawniej 11
+  communitySentences, // dawniej 12
+}
+
+// Opcjonalne rozszerzenie (Extension), jeśli potrzebujesz dodatkowych właściwości dla danej strony
+extension AppPageExtension on AppPage {
+  // Przykładowo, możemy tu zdefiniować, czy strona wymaga ukrycia menu bocznego (drawer)
+  bool get isFullScreen {
+    return this == AppPage.onboarding;
   }
 }
 
