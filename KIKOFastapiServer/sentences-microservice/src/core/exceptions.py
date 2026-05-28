@@ -1,4 +1,3 @@
-# <=== CAŁKOWICIE NOWY PLIK: Profesjonalna obsługa wyjątków ===>
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -14,9 +13,9 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
         field = error.get("loc")[-1] if error.get("loc") else "unknown"
         message = error.get("msg")
         
-        # Tłumaczymy techniczne błędy Pydantic na biznesowe komunikaty UI
+        # ================= [ZMIANA]: Język Angielski =================
         if error.get("type") == "string_too_long":
-            message = f"Tekst w polu '{field}' jest za długi. Obecny limit to {settings.CURRENT_MAX_CHARS} znaków."
+            message = f"Text in field '{field}' is too long. Current limit is {settings.CURRENT_MAX_CHARS} characters."
             
         errors.append({
             "field": field,
@@ -28,7 +27,7 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "error": "Validation Error",
-            "message": "Przekazane dane nie spełniają wymagań (np. są zbyt długie).",
+            "message": "Provided data does not meet requirements.", # <--- Tutaj też po angielsku
             "details": errors
         }
     )

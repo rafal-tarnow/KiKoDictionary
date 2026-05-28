@@ -26,7 +26,7 @@ class ApiErrorHandler {
     }
   }
 
-  static String _handleBadResponse(Response? response) {
+static String _handleBadResponse(Response? response) {
     if (response == null) return "Unknown server error.";
 
     final dynamic data = response.data;
@@ -34,17 +34,17 @@ class ApiErrorHandler {
 
     // KROK 1: Sprawdź, czy serwer przysłał konkretny komunikat błędu.
     if (data is Map) {
-      // ================= ZMIANA: Obsługa naszego Custom Validation Error z FastAPI =================
-      // Sprawdzamy czy to błąd walidacji i czy zawiera NASZ klucz 'details' (dodany na backendzie)
+      // Obsługa naszego Custom Validation Error z FastAPI (np. za długi tekst)
       if (statusCode == 422 &&
           data.containsKey('details') &&
           data['details'] is List) {
         final list = data['details'] as List;
         if (list.isNotEmpty && list.first is Map) {
-          // Pobieramy wiadomość prosto z backendu (np. "Tekst w polu 'sentence' jest za długi. Obecny limit to 150 znaków.")
           final backendMsg =
               list.first['message']?.toString() ?? "Data validation error.";
-          return backendMsg;
+          
+          // ================= [ZMIANA]: Tłumaczymy przed zwróceniem! =================
+          return _translateMessage(backendMsg);
         }
       }
       // =========================================================================================
@@ -165,6 +165,15 @@ class ApiErrorHandler {
     //auth service error
     if (msg.contains("Database error: Internal operation failed.")) {
       return "An internal server error occurred. Please try again.";
+    }
+
+    if (msg.contains("is too long. Current limit is")) {
+      // Możesz zostawić to bez zmian (zwróci np. "Text in field 'original_text' is too long. Current limit is 150 characters.")
+      // Albo wygładzić to dla użytkownika, wycinając nazwy systemowych pól:
+      if (msg.contains("original_text") || msg.contains("translated_text")) {
+          return "The provided text exceeds the character limit (150).";
+      }
+      return msg;
     }
 
     // Jeśli nie mamy tłumaczenia, zwracamy oryginał (np. "Password is too short")

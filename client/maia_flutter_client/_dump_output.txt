@@ -110,17 +110,19 @@ class MainShell extends ConsumerWidget {
                 ),
               ],
             ),
+            child: ClipRect(
+              // ClipRect jest potrzebny bo inaczej boczny Drawer rysuje sie poza oknem 
+              // aplikacji w widoku np na tablecie, dlatego trzeba przyciac Drawer do glownego słupka aplikacji
               child: Scaffold(
                 backgroundColor: const Color(0xFFFFFFFF),
-                // ================= [ZMIANA 4]: Używamy metod z Enumem =================
                 appBar: isFullScreenBinding ? null : _buildAppBar(selectedPage),
                 drawer: isFullScreenBinding ? null : const MainDrawer(),
                 body: IndexedStack(
-                  index: selectedPage.index, // Enum pod spodem wciąż ma int (np. 0, 1, 2) idealny dla IndexedStack!
-                  // Mapujemy wszystkie wartości Enuma na listę widoków
+                  index: selectedPage.index, 
                   children: AppPage.values.map((p) => _buildPage(p)).toList(),
                 ),
               ),
+            ),
           ),
         ),
       ),
@@ -3908,7 +3910,7 @@ Future<UserProfile> updateProfile({
           final suggestions = List<String>.from(detail['suggestions'] ?? []);
           
           throw UsernameConflictException(
-            message: "Ta nazwa użytkownika jest już zajęta.",
+            message: "This username is already taken.",
             suggestions: suggestions,
           );
         }
@@ -6275,7 +6277,7 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Home',
             icon: Icons.home,
-            index: AppPage.home,
+            page: AppPage.home,
             isSelected: selectedPage == AppPage.home,
           ),
           // _DrawerTile(
@@ -6287,7 +6289,7 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'Words',
             icon: Icons.school,
-            index: AppPage.words,
+            page: AppPage.words,
             isSelected: selectedPage == AppPage.words,
           ),
           // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
@@ -6303,14 +6305,14 @@ class MainDrawer extends ConsumerWidget {
           _DrawerTile(
             title: 'My Notebook', // Zmiana nazwy dla jasności
             icon: Icons.book,
-            index: AppPage.sentences,
+            page: AppPage.sentences,
             isSelected: selectedPage == AppPage.sentences,
           ),
           
           _DrawerTile(
             title: 'Community', // Dodanie nowej strony
             icon: Icons.public,
-            index: AppPage.communitySentences, // Odnosi się do nowej strony dodanej w app.dart
+            page: AppPage.communitySentences, // Odnosi się do nowej strony dodanej w app.dart
             isSelected: selectedPage == AppPage.communitySentences,
           ),
           const Divider(height: 32),
@@ -6568,7 +6570,7 @@ class ApiErrorHandler {
     }
   }
 
-  static String _handleBadResponse(Response? response) {
+static String _handleBadResponse(Response? response) {
     if (response == null) return "Unknown server error.";
 
     final dynamic data = response.data;
@@ -6576,17 +6578,17 @@ class ApiErrorHandler {
 
     // KROK 1: Sprawdź, czy serwer przysłał konkretny komunikat błędu.
     if (data is Map) {
-      // ================= ZMIANA: Obsługa naszego Custom Validation Error z FastAPI =================
-      // Sprawdzamy czy to błąd walidacji i czy zawiera NASZ klucz 'details' (dodany na backendzie)
+      // Obsługa naszego Custom Validation Error z FastAPI (np. za długi tekst)
       if (statusCode == 422 &&
           data.containsKey('details') &&
           data['details'] is List) {
         final list = data['details'] as List;
         if (list.isNotEmpty && list.first is Map) {
-          // Pobieramy wiadomość prosto z backendu (np. "Tekst w polu 'sentence' jest za długi. Obecny limit to 150 znaków.")
           final backendMsg =
               list.first['message']?.toString() ?? "Data validation error.";
-          return backendMsg;
+          
+          // ================= [ZMIANA]: Tłumaczymy przed zwróceniem! =================
+          return _translateMessage(backendMsg);
         }
       }
       // =========================================================================================
@@ -6707,6 +6709,15 @@ class ApiErrorHandler {
     //auth service error
     if (msg.contains("Database error: Internal operation failed.")) {
       return "An internal server error occurred. Please try again.";
+    }
+
+    if (msg.contains("is too long. Current limit is")) {
+      // Możesz zostawić to bez zmian (zwróci np. "Text in field 'original_text' is too long. Current limit is 150 characters.")
+      // Albo wygładzić to dla użytkownika, wycinając nazwy systemowych pól:
+      if (msg.contains("original_text") || msg.contains("translated_text")) {
+          return "The provided text exceeds the character limit (150).";
+      }
+      return msg;
     }
 
     // Jeśli nie mamy tłumaczenia, zwracamy oryginał (np. "Password is too short")

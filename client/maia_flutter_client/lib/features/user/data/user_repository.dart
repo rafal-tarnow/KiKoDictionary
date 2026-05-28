@@ -62,7 +62,7 @@ Future<UserProfile> updateProfile({
           final suggestions = List<String>.from(detail['suggestions'] ?? []);
           
           throw UsernameConflictException(
-            message: "Ta nazwa użytkownika jest już zajęta.",
+            message: "This username is already taken.",
             suggestions: suggestions,
           );
         }
