@@ -87,7 +87,12 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = create_access_token(
+        data={
+            "sub": str(user.id),
+            "tier": user.account_subscription.value.lower() 
+        }
+    )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     # save RefreshToken
@@ -186,7 +191,12 @@ async def refresh_access_token(
         )
 
     # 5. Stwórz nowy token dostępowy
-    new_access_token = create_access_token(data={"sub": str(db_refresh_token.user_id)})
+    new_access_token = create_access_token(
+        data={
+            "sub": str(user.id),
+            "tier": user.account_subscription.value.lower()
+        }
+    )
     
     # 6. (Token Rotation): Unieważnij STARY token i wydaj NOWY
     await refresh_token_repo.delete(token_id=db_refresh_token.id)

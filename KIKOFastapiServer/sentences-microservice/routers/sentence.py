@@ -18,7 +18,7 @@ from crud.sentence import (
 from database import get_db
 
 # ================= ZMIANA: Importujemy naszą zależność =================
-from dependencies import get_current_user_id, get_optional_user_id
+from dependencies import get_current_user, get_optional_user_id, CurrentUser
 import math
 
 router = APIRouter(prefix="/api/sentences", tags=["sentences"])
@@ -62,10 +62,10 @@ def read_community_sentences_endpoint(
 def clone_sentence_endpoint(
     sentence_id: int,
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # UWAGA: Tutaj autoryzacja jest WYMAGANA
+    current_user: CurrentUser = Depends(get_current_user) # UWAGA: Tutaj autoryzacja jest WYMAGANA
 ):
     """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
-    return clone_sentence(db, sentence_id, user_id)
+    return clone_sentence(db, sentence_id, current_user)
 # ==============================================================================
 
 
@@ -76,9 +76,9 @@ def read_my_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
+    current_user: CurrentUser = Depends(get_current_user)
 ):
-    sentences, total = get_my_sentences(db, page, per_page, user_id)
+    sentences, total = get_my_sentences(db, page, per_page, current_user)
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
     # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
@@ -95,32 +95,32 @@ def read_my_sentences_endpoint(
 def create_sentence_endpoint(
     sentence: SentenceCreate, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]: Wymagamy zalogowania
 ):
-    return create_sentence(db, sentence, user_id) # [ZMIANA]: Przekazujemy user_id
+    return create_sentence(db, sentence, current_user) # [ZMIANA]: Przekazujemy user_id
 
 # ZABEZPIECZONY KONKRETNY ZASÓB (CZYTANIE/EDYCJA/USUWANIE)
 @router.get("/{sentence_id}", response_model=Sentence)
 def read_sentence_endpoint(
     sentence_id: int, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return get_sentence(db, sentence_id, user_id) # [ZMIANA]
+    return get_sentence(db, sentence_id, current_user) # [ZMIANA]
 
 @router.put("/{sentence_id}", response_model=Sentence)
 def update_sentence_endpoint(
     sentence_id: int, 
     sentence_update: SentenceUpdate, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return update_sentence(db, sentence_id, sentence_update, user_id) # [ZMIANA]
+    return update_sentence(db, sentence_id, sentence_update, current_user) # [ZMIANA]
 
 @router.delete("/{sentence_id}")
 def delete_sentence_endpoint(
     sentence_id: int, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return delete_sentence(db, sentence_id, user_id) # [ZMIANA]
+    return delete_sentence(db, sentence_id, current_user) # [ZMIANA]

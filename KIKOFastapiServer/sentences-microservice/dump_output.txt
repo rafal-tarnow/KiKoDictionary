@@ -42,6 +42,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from typing import Optional
+from pydantic import BaseModel
 
 from src.core.config import settings
 
@@ -56,6 +57,7 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl="http://127.0.0.1:8002/api/v1/auth/login", 
     auto_error=False
 )
+
 
 def get_optional_user_id(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
     """
@@ -79,12 +81,21 @@ def get_optional_user_id(token: Optional[str] = Depends(oauth2_scheme_optional))
         return None
 # ===================================================================================
 
+class CurrentUser(BaseModel):
+    id: str
+    tier: str = "free" # Zabezpieczenie: domyślnie free
+    
+    @property
+    def is_pro(self) -> bool:
+        return self.tier.lower() == "pro"
 
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
     """
     Weryfikuje token JWT i wyciąga z niego 'sub' (czyli user_id).
     Rzuca 401 Unauthorized, jeśli token jest nieważny, wygasły lub sfałszowany.
     Zwraca string (UUID) reprezentujący ID użytkownika.
+    Weryfikuje token i wyciąga obiekt usera z jego tierem (pro/free).
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,17 +104,16 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     )
     
     try:
-        # Dekodowanie z użyciem SECRET_KEY z serwisu Auth
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         
-        # Wyciągnięcie ID usera i upewnienie się, że to token dostępowy, a nie odświeżający
         user_id: Optional[str] = payload.get("sub")
         token_type: Optional[str] = payload.get("type")
+        tier: str = payload.get("tier", "free") # <--- Wyciągamy tier (musisz to dodać w serwisie logowania)
         
         if user_id is None or token_type != "access":
             raise credentials_exception
             
-        return user_id
+        return CurrentUser(id=user_id, tier=tier)
     except JWTError:
         raise credentials_exception
 
@@ -134,7 +144,7 @@ from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.exceptions import RequestValidationError
-from src.core.exceptions import validation_exception_handler
+from src.core.exceptions import validation_exception_handler, TierLimitExceededException, tier_limit_exception_handler
 
 from routers import sentence
 from database import engine
@@ -148,6 +158,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Sentence Learning API")
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(TierLimitExceededException, tier_limit_exception_handler)
 
 # Zamontuj katalog assets/img pod ścieżką /img
 app.mount("/img/faces", StaticFiles(directory="assets/img"), name="img")
@@ -333,7 +344,7 @@ from crud.sentence import (
 from database import get_db
 
 # ================= ZMIANA: Importujemy naszą zależność =================
-from dependencies import get_current_user_id, get_optional_user_id
+from dependencies import get_current_user, get_optional_user_id, CurrentUser
 import math
 
 router = APIRouter(prefix="/api/sentences", tags=["sentences"])
@@ -377,10 +388,10 @@ def read_community_sentences_endpoint(
 def clone_sentence_endpoint(
     sentence_id: int,
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # UWAGA: Tutaj autoryzacja jest WYMAGANA
+    current_user: CurrentUser = Depends(get_current_user) # UWAGA: Tutaj autoryzacja jest WYMAGANA
 ):
     """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
-    return clone_sentence(db, sentence_id, user_id)
+    return clone_sentence(db, sentence_id, current_user)
 # ==============================================================================
 
 
@@ -391,9 +402,9 @@ def read_my_sentences_endpoint(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
+    current_user: CurrentUser = Depends(get_current_user)
 ):
-    sentences, total = get_my_sentences(db, page, per_page, user_id)
+    sentences, total = get_my_sentences(db, page, per_page, current_user)
     total_pages = math.ceil(total / per_page) if total > 0 else 1
     
     # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
@@ -410,35 +421,35 @@ def read_my_sentences_endpoint(
 def create_sentence_endpoint(
     sentence: SentenceCreate, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]: Wymagamy zalogowania
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]: Wymagamy zalogowania
 ):
-    return create_sentence(db, sentence, user_id) # [ZMIANA]: Przekazujemy user_id
+    return create_sentence(db, sentence, current_user) # [ZMIANA]: Przekazujemy user_id
 
 # ZABEZPIECZONY KONKRETNY ZASÓB (CZYTANIE/EDYCJA/USUWANIE)
 @router.get("/{sentence_id}", response_model=Sentence)
 def read_sentence_endpoint(
     sentence_id: int, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return get_sentence(db, sentence_id, user_id) # [ZMIANA]
+    return get_sentence(db, sentence_id, current_user) # [ZMIANA]
 
 @router.put("/{sentence_id}", response_model=Sentence)
 def update_sentence_endpoint(
     sentence_id: int, 
     sentence_update: SentenceUpdate, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return update_sentence(db, sentence_id, sentence_update, user_id) # [ZMIANA]
+    return update_sentence(db, sentence_id, sentence_update, current_user) # [ZMIANA]
 
 @router.delete("/{sentence_id}")
 def delete_sentence_endpoint(
     sentence_id: int, 
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user_id) # [ZMIANA]
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
-    return delete_sentence(db, sentence_id, user_id) # [ZMIANA]
+    return delete_sentence(db, sentence_id, current_user) # [ZMIANA]
 
 
 ===============================
@@ -452,32 +463,52 @@ from models.sentence import Sentence
 from schemas.sentence import SentenceCreate, SentenceUpdate
 from fastapi import HTTPException, status
 
-# ================= 1. PRZESTRZEŃ PRYWATNA (Wymaga user_id) =================
+from src.core.config import settings
+from src.core.exceptions import TierLimitExceededException
+from dependencies import CurrentUser
 
-# [ZMIANA]: Wymagamy user_id przy tworzeniu
-def create_sentence(db: Session, sentence: SentenceCreate, user_id: str):
-    # ================= [ZMIANA 3]: Mapowanie nowych pól przy tworzeniu =================
+
+
+def validate_tier_limits(text: str | None, current_user: CurrentUser, field_name: str):
+    """
+    Sprawdza, czy przesyłany tekst nie przekracza limitów danego konta.
+    Ignoruje puste wartości (None), co pozwala na częściowe update'y.
+    """
+    if text is None:
+        return
+
+    max_allowed = settings.MAX_CHARS_PREMIUM if current_user.is_pro else settings.MAX_CHARS_FREE
+    
+    if len(text) > max_allowed:
+        raise TierLimitExceededException(field=field_name, limit=max_allowed)
+
+
+
+def create_sentence(db: Session, sentence: SentenceCreate, current_user: CurrentUser):
+    # Walidacja biznesowa
+    validate_tier_limits(sentence.original_text, current_user, "original_text")
+    validate_tier_limits(sentence.translated_text, current_user, "translated_text")
+
     db_sentence = Sentence(
-        user_id=user_id,
+        user_id=current_user.id,
         original_text=sentence.original_text,
         translated_text=sentence.translated_text,
         source_language=sentence.source_language,
         target_language=sentence.target_language
     )
-    # ===================================================================================
     db.add(db_sentence)
     db.commit()
     db.refresh(db_sentence)
     return db_sentence
 
 # [ZMIANA - NOWA NAZWA]: Zwracamy zdania TYLKO danego użytkownika
-def get_my_sentences(db: Session, page: int, per_page: int, user_id: str):
+def get_my_sentences(db: Session, page: int, per_page: int, current_user: CurrentUser):
     """Pobiera zdania tylko zalogowanego użytkownika (Prywatny notatnik)"""
     offset = (page - 1) * per_page
     
     # 2. DODAJEMY SORTOWANIE (ORDER BY created_at DESC)
     # [ZMIANA]: Dodano filtr filter(Sentence.user_id == user_id)
-    query = db.query(Sentence).filter(Sentence.user_id == user_id).order_by(desc(Sentence.created_at))
+    query = db.query(Sentence).filter(Sentence.user_id == current_user.id).order_by(desc(Sentence.created_at))
     
     # Pobieramy dane z uwzględnieniem paginacji
     sentences = query.offset(offset).limit(per_page).all()
@@ -488,36 +519,41 @@ def get_my_sentences(db: Session, page: int, per_page: int, user_id: str):
     return sentences, total
 
 # [ZMIANA]: Pobranie konkretnego zdania Z uwzględnieniem właściciela
-def get_sentence(db: Session, sentence_id: int, user_id: str):
-    sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
+def get_sentence(db: Session, sentence_id: int, current_user: CurrentUser):
+    sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == current_user.id).first()
     if sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     return sentence
 
-# [ZMIANA]: Aktualizacja zdania Z uwzględnieniem właściciela
-def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate, user_id: str):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
+
+def update_sentence(db: Session, sentence_id: int, sentence_update: SentenceUpdate, current_user: CurrentUser):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == current_user.id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     
-    # ================= [ZMIANA 4]: Mapowanie nowych pól przy aktualizacji =================
+    # Walidacja biznesowa TYLKO przesyłanych pól. 
+    # Jeśli użytkownik Free edytuje np. tylko język, zignorujemy tekst!
     if sentence_update.original_text is not None:
+        validate_tier_limits(sentence_update.original_text, current_user, "original_text")
         db_sentence.original_text = sentence_update.original_text
+        
     if sentence_update.translated_text is not None:
+        validate_tier_limits(sentence_update.translated_text, current_user, "translated_text")
         db_sentence.translated_text = sentence_update.translated_text
+        
     if sentence_update.source_language is not None:
         db_sentence.source_language = sentence_update.source_language
+        
     if sentence_update.target_language is not None:
         db_sentence.target_language = sentence_update.target_language
-    # ======================================================================================
     
     db.commit()
     db.refresh(db_sentence)
     return db_sentence
 
 # [ZMIANA]: Usuwanie zdania Z uwzględnieniem właściciela
-def delete_sentence(db: Session, sentence_id: int, user_id: str):
-    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == user_id).first()
+def delete_sentence(db: Session, sentence_id: int, current_user: CurrentUser):
+    db_sentence = db.query(Sentence).filter(Sentence.id == sentence_id, Sentence.user_id == current_user.id).first()
     if db_sentence is None:
         raise HTTPException(status_code=404, detail="Sentence not found")
     db.delete(db_sentence)
@@ -526,23 +562,29 @@ def delete_sentence(db: Session, sentence_id: int, user_id: str):
 
 
 # ================= [NOWE - PRODUKCJA 4]: Akcja Klonowania (Mądry Backend) =================
-def clone_sentence(db: Session, original_sentence_id: int, new_user_id: str):
+def clone_sentence(db: Session, original_sentence_id: int, current_user: CurrentUser): # <--- ZMIANA: current_user: CurrentUser
     """Kopiuje cudze zdanie ze społeczności i przypisuje je do zalogowanego usera"""
     
-    # 1. Pobieramy oryginał (bez względu na to kto jest właścicielem)
+    # 1. Pobieramy oryginał
     original = db.query(Sentence).filter(Sentence.id == original_sentence_id).first()
     
     if original is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original sentence not found")
         
     # 2. Business Logic: Ochrona przed sklonowaniem własnego zdania
-    if original.user_id == new_user_id:
+    if original.user_id == current_user.id: # <--- ZMIANA
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already own this sentence")
 
-    # ================= [NOWE - Zabezpieczenie przed Spamem/Podwójnym klonowaniem] =================
-    # 3. Business Logic: Sprawdzamy, czy użytkownik już wcześniej nie sklonował tego zdania
+    # ================= [NOWA LOGIKA BIZNESOWA: OCHRONA PLANU FREE] =================
+    # Musimy sprawdzić, czy użytkownik FREE nie próbuje sklonować zdania usera PRO, 
+    # które przekracza darmowy limit!
+    validate_tier_limits(original.original_text, current_user, "original_text")
+    validate_tier_limits(original.translated_text, current_user, "translated_text")
+    # ===============================================================================
+
+    # 3. Zabezpieczenie przed podwójnym klonowaniem
     already_saved = db.query(Sentence).filter(
-        Sentence.user_id == new_user_id,
+        Sentence.user_id == current_user.id, # <--- ZMIANA
         Sentence.original_text == original.original_text,
         Sentence.translated_text == original.translated_text,
         Sentence.source_language == original.source_language,
@@ -554,11 +596,10 @@ def clone_sentence(db: Session, original_sentence_id: int, new_user_id: str):
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="You have already saved this sentence to your list."
         )
-    # ==============================================================================================
 
-    # 4. Klonowanie: Tworzymy nowy obiekt przypisany do usera, NIE KOPIUJEMY starego 'id' ani 'created_at'
+    # 4. Klonowanie
     cloned_sentence = Sentence(
-        user_id=new_user_id,
+        user_id=current_user.id, # <--- ZMIANA
         original_text=original.original_text,
         translated_text=original.translated_text,
         source_language=original.source_language,
@@ -569,7 +610,6 @@ def clone_sentence(db: Session, original_sentence_id: int, new_user_id: str):
     db.commit()
     db.refresh(cloned_sentence)
     return cloned_sentence
-# =========================================================================================
 
 # ================= 2. PRZESTRZEŃ PUBLICZNA (Społeczność) =================
 
@@ -609,18 +649,17 @@ from typing import Optional, List
 from src.core.config import settings
 
 class SentenceCreate(BaseModel):
-    # ================= [ZMIANA 2]: Nowe pola w schematach =================
-    original_text: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
-    translated_text: str = Field(default="", min_length=0, max_length=settings.CURRENT_MAX_CHARS)
-    
+    # ZMIANA: Zezwalamy na przepuszczenie do serwisu maksymalnej wartości z bazy danych
+    original_text: str = Field(default="", min_length=0, max_length=settings.MAX_CHARS_PREMIUM)
+    translated_text: str = Field(default="", min_length=0, max_length=settings.MAX_CHARS_PREMIUM)
     # ISO 639-1 to zazwyczaj 2 litery (np. 'pl', 'en'), ew. 'en-US' (5 znaków). Max 10 to bezpieczny margines.
     source_language: str = Field(default="en", min_length=2, max_length=10)
     target_language: str = Field(default="en", min_length=2, max_length=10)
 
-
 class SentenceUpdate(BaseModel):
-    original_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
-    translated_text: Optional[str] = Field(None, min_length=0, max_length=settings.CURRENT_MAX_CHARS)
+    # Opcjonalne pola do edycji. Jeśli None - znaczy, że nie ruszamy tego pola.
+    original_text: Optional[str] = Field(None, min_length=0, max_length=settings.MAX_CHARS_PREMIUM)
+    translated_text: Optional[str] = Field(None, min_length=0, max_length=settings.MAX_CHARS_PREMIUM)
     source_language: Optional[str] = Field(None, min_length=2, max_length=10)
     target_language: Optional[str] = Field(None, min_length=2, max_length=10)
 
@@ -672,8 +711,6 @@ class Settings(BaseSettings):
     # Trzymamy tu przyszłe limity, żeby architektura była gotowa
     MAX_CHARS_FREE: int = 150
     MAX_CHARS_PREMIUM: int = 569
-    # Na ten moment wymuszamy darmowy limit globalnie
-    CURRENT_MAX_CHARS: int = MAX_CHARS_FREE 
     # ========================================================
 
     class Config:
@@ -694,6 +731,32 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from src.core.config import settings
 
+
+# --- NOWY WYJĄTEK BIZNESOWY ---
+class TierLimitExceededException(Exception):
+    def __init__(self, field: str, limit: int):
+        self.field = field
+        self.limit = limit
+
+def tier_limit_exception_handler(request: Request, exc: TierLimitExceededException) -> JSONResponse:
+    """
+    Obsługuje błąd biznesowy, gdy user free przekracza limit.
+    Struktura błędu jest spójna z Pydantic (RequestValidationError).
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Plan Limit Exceeded",
+            "message": "Please upgrade to PRO to use longer texts.",
+            "details": [{
+                "field": exc.field,
+                "message": f"Text is too long for your current plan. Limit is {exc.limit} characters.",
+                "type": "tier_limit_exceeded"
+            }]
+        }
+    )
+
+
 def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """
     Przechwytuje błędy walidacji (np. gdy ktoś przekroczy 150 znaków) 
@@ -706,7 +769,7 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
         
         # ================= [ZMIANA]: Język Angielski =================
         if error.get("type") == "string_too_long":
-            message = f"Text in field '{field}' is too long. Current limit is {settings.CURRENT_MAX_CHARS} characters."
+            message = f"Text in field '{field}' is too long. The absolute system limit is {settings.MAX_CHARS_PREMIUM} characters."
             
         errors.append({
             "field": field,

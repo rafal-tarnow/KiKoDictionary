@@ -14,8 +14,6 @@ class Settings(BaseSettings):
     # Trzymamy tu przyszłe limity, żeby architektura była gotowa
     MAX_CHARS_FREE: int = 150
     MAX_CHARS_PREMIUM: int = 569
-    # Na ten moment wymuszamy darmowy limit globalnie
-    CURRENT_MAX_CHARS: int = MAX_CHARS_FREE 
     # ========================================================
 
     class Config:

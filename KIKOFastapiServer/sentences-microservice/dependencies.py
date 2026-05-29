@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from typing import Optional
+from pydantic import BaseModel
 
 from src.core.config import settings
 
@@ -16,6 +17,7 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl="http://127.0.0.1:8002/api/v1/auth/login", 
     auto_error=False
 )
+
 
 def get_optional_user_id(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
     """
@@ -39,12 +41,21 @@ def get_optional_user_id(token: Optional[str] = Depends(oauth2_scheme_optional))
         return None
 # ===================================================================================
 
+class CurrentUser(BaseModel):
+    id: str
+    tier: str = "free" # Zabezpieczenie: domyślnie free
+    
+    @property
+    def is_pro(self) -> bool:
+        return self.tier.lower() == "pro"
 
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
     """
     Weryfikuje token JWT i wyciąga z niego 'sub' (czyli user_id).
     Rzuca 401 Unauthorized, jeśli token jest nieważny, wygasły lub sfałszowany.
     Zwraca string (UUID) reprezentujący ID użytkownika.
+    Weryfikuje token i wyciąga obiekt usera z jego tierem (pro/free).
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -53,16 +64,15 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     )
     
     try:
-        # Dekodowanie z użyciem SECRET_KEY z serwisu Auth
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         
-        # Wyciągnięcie ID usera i upewnienie się, że to token dostępowy, a nie odświeżający
         user_id: Optional[str] = payload.get("sub")
         token_type: Optional[str] = payload.get("type")
+        tier: str = payload.get("tier", "free") # <--- Wyciągamy tier (musisz to dodać w serwisie logowania)
         
         if user_id is None or token_type != "access":
             raise credentials_exception
             
-        return user_id
+        return CurrentUser(id=user_id, tier=tier)
     except JWTError:
         raise credentials_exception
