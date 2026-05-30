@@ -33,6 +33,7 @@ class UserController extends StateNotifier<AsyncValue<User?>> {
         username: currentUser.username,
         email: currentUser.email,
         role: currentUser.role,
+        accountSubscription: currentUser.accountSubscription,
         profile: currentUser.profile, // Uwaga, to referencja, zmieniamy niżej
       ));
       

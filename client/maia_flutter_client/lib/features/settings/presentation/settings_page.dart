@@ -4,6 +4,7 @@ import 'package:maia_flutter_client/core/navigation_provider.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
 import 'widgets/username_editor.dart';
+import 'widgets/subscription_card.dart';
 import '../../../core/routing/app_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -79,6 +80,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              const SubscriptionCard(),
+
+              const SizedBox(height: 16),
 
               const UsernameEditor(),
 

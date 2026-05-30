@@ -6,8 +6,12 @@ class User {
   final String username;
   final String email;
   final String role;
-  // ================= ZMIANA: Nowe pole =================
-  final UserProfile? profile; 
+
+  final UserProfile? profile;
+  final String accountSubscription; 
+
+  // Wygodny getter (Clean Code), żeby w UI pisać `if (user.isPro)`
+  bool get isPro => accountSubscription.toUpperCase() == 'PRO';
 
   User({
     required this.id, 
@@ -15,6 +19,7 @@ class User {
     required this.email, 
     required this.role,
     this.profile,
+    required this.accountSubscription,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -23,7 +28,7 @@ class User {
       username: json['username'],
       email: json['email'],
       role: json['account_role'],
-      // ================= ZMIANA: Parsowanie zagnieżdżonego obiektu =================
+      accountSubscription: json['account_subscription'] ?? 'FREE',
       profile: json['profile'] != null 
           ? UserProfile.fromJson(json['profile']) 
           : null,
