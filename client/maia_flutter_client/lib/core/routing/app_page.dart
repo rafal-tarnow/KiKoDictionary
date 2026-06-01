@@ -9,7 +9,7 @@ enum AppPage {
   register,           // dawniej 4
   login,              // dawniej 5
   test,               // dawniej 6
-  health,             // dawniej 7
+  //health,             // dawniej 7
   captcha,            // dawniej 8
   forgotPassword,     // dawniej 9
   settings,           // dawniej 10

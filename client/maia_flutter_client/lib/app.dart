@@ -16,7 +16,7 @@ import 'features/sentences/sentences_app_bar.dart';
 import 'features/test/test_page.dart';
 import 'features/test/test_app_bar.dart';
 import 'core/app_sizes.dart'; // Import stałych
-import 'features/health/services_health_page.dart';
+//import 'features/health/services_health_page.dart';
 import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
 import 'features/auth/presentation/onboarding_page.dart';
@@ -34,7 +34,7 @@ class MainShell extends ConsumerWidget {
       case AppPage.register: return const RegisterPage();
       case AppPage.login: return const LoginPage();
       case AppPage.test: return const TestPage();
-      case AppPage.health: return const ServicesHealthPage();
+      //case AppPage.health: return const ServicesHealthPage();
       case AppPage.captcha: return const CaptchaPage();
       case AppPage.forgotPassword: return const ForgotPasswordPage();
       case AppPage.settings: return const SettingsPage();
@@ -55,7 +55,7 @@ class MainShell extends ConsumerWidget {
       case AppPage.words: return _standardAppBar("Words");
       case AppPage.register: return _standardAppBar("Register");
       case AppPage.login: return _standardAppBar("Log in");
-      case AppPage.health: return _standardAppBar("Health Check");
+      //case AppPage.health: return _standardAppBar("Health Check");
       case AppPage.captcha: return _standardAppBar("Captcha Demo");
       case AppPage.forgotPassword: return _standardAppBar("Reset Password");
       case AppPage.settings: return _standardAppBar("Settings");

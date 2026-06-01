@@ -9,7 +9,7 @@ allowed_extensions = ['.dart']
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary'  , 'sentences' , 'test']
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'auth', 'captcha', 'dictionary' , 'health' , 'home'  , 'sentences' , 'settings',  'test' , 'user' , 'words', ]
 
-blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health'   , 'sentences' ,  'test'  , 'words', ]
+blocked_dirs = ['venv', '__pycache__', '.git', 'migrations', 'dictionary' , 'health'   , 'sentences'  , 'words', ]
 #blocked_dirs = ['venv', '__pycache__', '.git', 'migrations',  ]
 
 # Lista zablokowanych plików (pełne nazwy plików)
