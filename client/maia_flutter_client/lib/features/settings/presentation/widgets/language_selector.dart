@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_languages.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
 import '../controllers/settings_controller.dart';
 
@@ -41,10 +42,64 @@ class LanguageSelector extends ConsumerWidget {
             // Obsługa różnych stanów (loading/error/data)
             userState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text(
-                'Error loading profile: $err',
-                style: const TextStyle(color: Colors.red),
-              ),
+
+//////////////////////////////////////////////////////////////////////////
+
+              error: (error, stackTrace) {
+                // 1. Tłumaczymy surowy błąd (DioException) na przyjazny tekst
+                final errorMessage = ApiErrorHandler.getErrorMessage(error);
+                
+                // 2. Zwracamy spójny zresztą aplikacji kontener błędu z opcją ponowienia
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.cloud_off, color: Colors.red, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage,
+                              style: TextStyle(
+                                color: Colors.red.shade900,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            // Wymusza ponowne pobranie danych użytkownika z serwera
+                            ref.read(userControllerProvider.notifier).fetchUser();
+                          },
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text("Try again"),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+
+              //////////////////////////////////////////////////////
               data: (user) {
                 if (user == null || user.profile == null) {
                   return const Text("No profile data available.");

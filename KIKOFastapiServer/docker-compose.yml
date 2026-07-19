@@ -1,0 +1,44 @@
+services:
+  captcha:
+    build: ./captcha-microservice
+    container_name: maia-captcha
+    volumes:
+      - ./databases:/app/db
+    environment:
+      - DATABASE_URL=sqlite:////app/db/captcha.db
+    restart: always
+
+  auth:
+    build: ./auth-microservice
+    container_name: maia-auth
+    volumes:
+      - ./databases:/app/db
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/db/users.db
+      - CAPTCHA_SERVICE_URL=http://captcha:8001/api/v1
+    env_file:
+      - ./auth-microservice/.env
+    depends_on:
+      - captcha
+    restart: always
+
+  sentences:
+    build: ./sentences-microservice
+    container_name: maia-sentences
+    volumes:
+      - ./databases:/app/db
+    environment:
+      - DATABASE_URL=sqlite:////app/db/sentences.db
+    restart: always
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    depends_on:
+      - captcha
+      - auth
+      - sentences

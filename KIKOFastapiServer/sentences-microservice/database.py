@@ -1,9 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
 # URL bazy danych (SQLite dla prostoty, można zmienić na PostgreSQL)
-DATABASE_URL = "sqlite:///./sentences.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sentences.db")
+#DATABASE_URL = "sqlite:///./sentences.db"
 # Przykład dla PostgreSQL:
 # DATABASE_URL = "postgresql://user:password@localhost:5432/dbname"
 

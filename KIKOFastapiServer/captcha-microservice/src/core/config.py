@@ -1,11 +1,15 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CAPTCHA Microservice"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    DATABASE_URL: str = "sqlite:///./captcha.db"
+    
+    # DODANO: ": str" 
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./captcha.db")
+    
     ALLOWED_ORIGINS: List[str] = ["*"]
     CAPTCHA_LENGTH: int = 6
     CAPTCHA_WIDTH: int = 200
