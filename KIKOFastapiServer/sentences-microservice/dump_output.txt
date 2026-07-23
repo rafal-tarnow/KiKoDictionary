@@ -1,5 +1,5 @@
 ===============================
-Ścieżka do pliku: ./database.py
+Ścieżka do pliku: .\database.py
 
 Zawartość pliku:
 
@@ -36,7 +36,7 @@ def get_db():
 
 
 ===============================
-Ścieżka do pliku: ./dependencies.py
+Ścieżka do pliku: .\dependencies.py
 
 Zawartość pliku:
 
@@ -121,7 +121,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
 
 
 ===============================
-Ścieżka do pliku: ./main.py
+Ścieżka do pliku: .\main.py
 
 Zawartość pliku:
 
@@ -283,179 +283,7 @@ if __name__ == "__main__":
 
 
 ===============================
-Ścieżka do pliku: ./models/sentence.py
-
-Zawartość pliku:
-
-from sqlalchemy import Column, Integer, String, DateTime, Index
-from database import Base
-from datetime import datetime, timezone
-from src.core.config import settings
-
-class Sentence(Base):
-    __tablename__ = "sentences"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, index=True, nullable=False)
-    
-    # ================= [ZMIANA 1]: Nowe nazewnictwo pól =================
-    # 'original_text' zastępuje 'sentence'
-    # 'translated_text' zastępuje 'translation'
-    original_text = Column(String(settings.MAX_CHARS_PREMIUM), index=True, nullable=False, default="")
-    translated_text = Column(String(settings.MAX_CHARS_PREMIUM), nullable=False, default="")
-    
-    # Rozbicie języka na źródłowy i docelowy
-    source_language = Column(String(10), index=True, nullable=False, default="en")
-    target_language = Column(String(10), index=True, nullable=False, default="en")
-    # ====================================================================
-    
-    # [ZMIANA]: Dodałem index=True dla pojedynczego sortowania
-    created_at = Column(DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc))
-
-    # ================= [NOWE - PRODUKCJA]: Indeks Złożony =================
-    # Baza danych stworzy specjalne drzewo zoptymalizowane dokładnie pod zapytanie:
-    # "daj mi zdania z angielskiego na polski, posortowane od najnowszego"
-    __table_args__ = (
-        Index('ix_sentences_lang_date', 'source_language', 'target_language', 'created_at'),
-    )
-    # =======================================================================
-
-
-===============================
-Ścieżka do pliku: ./routers/sentence.py
-
-Zawartość pliku:
-
-from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List, Optional
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, PaginatedSentences
-
-# ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
-from crud.sentence import (
-    create_sentence, 
-    get_my_sentences, 
-    get_community_sentences, 
-    get_sentence, 
-    update_sentence, 
-    delete_sentence,
-    clone_sentence
-)
-from database import get_db
-
-# ================= ZMIANA: Importujemy naszą zależność =================
-from dependencies import get_current_user, get_optional_user_id, CurrentUser
-import math
-
-router = APIRouter(prefix="/api/sentences", tags=["sentences"])
-
-# ================= 1. PRZESTRZEŃ PUBLICZNA =================
-
-# ================= [NOWE - PRODUKCJA 8]: Mądry endpoint Community =================
-@router.get("/community", response_model=PaginatedSentences) # <--- ZMIANA
-def read_community_sentences_endpoint(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=100),
-    source_lang: Optional[str] = Query(None, description="Filtruj po języku źródłowym, np. 'en'"),
-    target_lang: Optional[str] = Query(None, description="Filtruj po języku docelowym, np. 'pl'"),
-    db: Session = Depends(get_db),
-    user_id: Optional[str] = Depends(get_optional_user_id) 
-):
-    sentences, total = get_community_sentences(
-        db=db, 
-        page=page, 
-        per_page=per_page, 
-        source_language=source_lang,
-        target_language=target_lang
-    )
-    total_pages = math.ceil(total / per_page) if total > 0 else 1
-    
-    # [ZMIANA]: FastAPI samo zamieni to na JSON i zwaliduje!
-    return {
-        "data": sentences,
-        "page": page,
-        "per_page": per_page,
-        "total": total,
-        "total_pages": total_pages,
-        "is_authenticated": user_id is not None 
-    }
-    
-
-
-# ================= [NOWE - PRODUKCJA 9]: Akcja kopiowania =================
-# Używamy POST, a status odpowiedzi to 201 Created (standard REST API)
-@router.post("/{sentence_id}/clone", response_model=Sentence, status_code=status.HTTP_201_CREATED)
-def clone_sentence_endpoint(
-    sentence_id: int,
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user) # UWAGA: Tutaj autoryzacja jest WYMAGANA
-):
-    """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
-    return clone_sentence(db, sentence_id, current_user)
-# ==============================================================================
-
-
-# ================= 2. PRZESTRZEŃ PRYWATNA =================
-
-@router.get("/me", response_model=PaginatedSentences) # <--- ZMIANA
-def read_my_sentences_endpoint(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user)
-):
-    sentences, total = get_my_sentences(db, page, per_page, current_user)
-    total_pages = math.ceil(total / per_page) if total > 0 else 1
-    
-    # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
-    return {
-        "data": sentences,
-        "page": page,
-        "per_page": per_page,
-        "total": total,
-        "total_pages": total_pages
-    }
-
-# CZYSTA KOLEKCJA (DODAWANIE)
-@router.post("/", response_model=Sentence)
-def create_sentence_endpoint(
-    sentence: SentenceCreate, 
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]: Wymagamy zalogowania
-):
-    return create_sentence(db, sentence, current_user) # [ZMIANA]: Przekazujemy user_id
-
-# ZABEZPIECZONY KONKRETNY ZASÓB (CZYTANIE/EDYCJA/USUWANIE)
-@router.get("/{sentence_id}", response_model=Sentence)
-def read_sentence_endpoint(
-    sentence_id: int, 
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
-):
-    return get_sentence(db, sentence_id, current_user) # [ZMIANA]
-
-@router.put("/{sentence_id}", response_model=Sentence)
-def update_sentence_endpoint(
-    sentence_id: int, 
-    sentence_update: SentenceUpdate, 
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
-):
-    return update_sentence(db, sentence_id, sentence_update, current_user) # [ZMIANA]
-
-@router.delete("/{sentence_id}")
-def delete_sentence_endpoint(
-    sentence_id: int, 
-    db: Session = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
-):
-    return delete_sentence(db, sentence_id, current_user) # [ZMIANA]
-
-
-===============================
-Ścieżka do pliku: ./crud/sentence.py
+Ścieżka do pliku: .\crud\sentence.py
 
 Zawartość pliku:
 
@@ -641,7 +469,179 @@ def get_community_sentences(
 
 
 ===============================
-Ścieżka do pliku: ./schemas/sentence.py
+Ścieżka do pliku: .\models\sentence.py
+
+Zawartość pliku:
+
+from sqlalchemy import Column, Integer, String, DateTime, Index
+from database import Base
+from datetime import datetime, timezone
+from src.core.config import settings
+
+class Sentence(Base):
+    __tablename__ = "sentences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True, nullable=False)
+    
+    # ================= [ZMIANA 1]: Nowe nazewnictwo pól =================
+    # 'original_text' zastępuje 'sentence'
+    # 'translated_text' zastępuje 'translation'
+    original_text = Column(String(settings.MAX_CHARS_PREMIUM), index=True, nullable=False, default="")
+    translated_text = Column(String(settings.MAX_CHARS_PREMIUM), nullable=False, default="")
+    
+    # Rozbicie języka na źródłowy i docelowy
+    source_language = Column(String(10), index=True, nullable=False, default="en")
+    target_language = Column(String(10), index=True, nullable=False, default="en")
+    # ====================================================================
+    
+    # [ZMIANA]: Dodałem index=True dla pojedynczego sortowania
+    created_at = Column(DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc))
+
+    # ================= [NOWE - PRODUKCJA]: Indeks Złożony =================
+    # Baza danych stworzy specjalne drzewo zoptymalizowane dokładnie pod zapytanie:
+    # "daj mi zdania z angielskiego na polski, posortowane od najnowszego"
+    __table_args__ = (
+        Index('ix_sentences_lang_date', 'source_language', 'target_language', 'created_at'),
+    )
+    # =======================================================================
+
+
+===============================
+Ścieżka do pliku: .\routers\sentence.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, PaginatedSentences
+
+# ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
+from crud.sentence import (
+    create_sentence, 
+    get_my_sentences, 
+    get_community_sentences, 
+    get_sentence, 
+    update_sentence, 
+    delete_sentence,
+    clone_sentence
+)
+from database import get_db
+
+# ================= ZMIANA: Importujemy naszą zależność =================
+from dependencies import get_current_user, get_optional_user_id, CurrentUser
+import math
+
+router = APIRouter(prefix="/api/sentences", tags=["sentences"])
+
+# ================= 1. PRZESTRZEŃ PUBLICZNA =================
+
+# ================= [NOWE - PRODUKCJA 8]: Mądry endpoint Community =================
+@router.get("/community", response_model=PaginatedSentences) # <--- ZMIANA
+def read_community_sentences_endpoint(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    source_lang: Optional[str] = Query(None, description="Filtruj po języku źródłowym, np. 'en'"),
+    target_lang: Optional[str] = Query(None, description="Filtruj po języku docelowym, np. 'pl'"),
+    db: Session = Depends(get_db),
+    user_id: Optional[str] = Depends(get_optional_user_id) 
+):
+    sentences, total = get_community_sentences(
+        db=db, 
+        page=page, 
+        per_page=per_page, 
+        source_language=source_lang,
+        target_language=target_lang
+    )
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    
+    # [ZMIANA]: FastAPI samo zamieni to na JSON i zwaliduje!
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "is_authenticated": user_id is not None 
+    }
+    
+
+
+# ================= [NOWE - PRODUKCJA 9]: Akcja kopiowania =================
+# Używamy POST, a status odpowiedzi to 201 Created (standard REST API)
+@router.post("/{sentence_id}/clone", response_model=Sentence, status_code=status.HTTP_201_CREATED)
+def clone_sentence_endpoint(
+    sentence_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user) # UWAGA: Tutaj autoryzacja jest WYMAGANA
+):
+    """Kopiuje zdanie ze społeczności i dodaje do prywatnej listy użytkownika."""
+    return clone_sentence(db, sentence_id, current_user)
+# ==============================================================================
+
+
+# ================= 2. PRZESTRZEŃ PRYWATNA =================
+
+@router.get("/me", response_model=PaginatedSentences) # <--- ZMIANA
+def read_my_sentences_endpoint(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    sentences, total = get_my_sentences(db, page, per_page, current_user)
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    
+    # [ZMIANA]: Czysty słownik, FastAPI ogarnie resztę
+    return {
+        "data": sentences,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages
+    }
+
+# CZYSTA KOLEKCJA (DODAWANIE)
+@router.post("/", response_model=Sentence)
+def create_sentence_endpoint(
+    sentence: SentenceCreate, 
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]: Wymagamy zalogowania
+):
+    return create_sentence(db, sentence, current_user) # [ZMIANA]: Przekazujemy user_id
+
+# ZABEZPIECZONY KONKRETNY ZASÓB (CZYTANIE/EDYCJA/USUWANIE)
+@router.get("/{sentence_id}", response_model=Sentence)
+def read_sentence_endpoint(
+    sentence_id: int, 
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
+):
+    return get_sentence(db, sentence_id, current_user) # [ZMIANA]
+
+@router.put("/{sentence_id}", response_model=Sentence)
+def update_sentence_endpoint(
+    sentence_id: int, 
+    sentence_update: SentenceUpdate, 
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
+):
+    return update_sentence(db, sentence_id, sentence_update, current_user) # [ZMIANA]
+
+@router.delete("/{sentence_id}")
+def delete_sentence_endpoint(
+    sentence_id: int, 
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
+):
+    return delete_sentence(db, sentence_id, current_user) # [ZMIANA]
+
+
+===============================
+Ścieżka do pliku: .\schemas\sentence.py
 
 Zawartość pliku:
 
@@ -693,7 +693,62 @@ class PaginatedSentences(BaseModel):
 
 
 ===============================
-Ścieżka do pliku: ./src/core/config.py
+Ścieżka do pliku: .\src\api\endpoints\health.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, status
+from src.api.endpoints.schemas.health import HealthCheckResponse
+from src.core.config import settings
+
+health_router = APIRouter()
+
+@health_router.get(
+    "/live",
+    response_model=HealthCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Liveness Probe",
+    description="Sprawdza czy aplikacja jest uruchomiona. Nie sprawdza zależności."
+)
+async def liveness_probe():
+    """
+    Szybki check dla Kubernetesa. Jeśli to nie działa, K8s restartuje poda.
+    """
+    return HealthCheckResponse(
+        status="ok",
+        version=settings.VERSION
+    )
+
+
+===============================
+Ścieżka do pliku: .\src\api\endpoints\schemas\health.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel
+from typing import Dict, Optional
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    version: str
+    uptime: Optional[float] = None
+    components: Optional[Dict[str, str]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "ok",
+                "version": "1.0.0",
+                "components": {
+                    "database": "operational",
+                    "redis": "down"
+                }
+            }
+        }
+
+
+===============================
+Ścieżka do pliku: .\src\core\config.py
 
 Zawartość pliku:
 
@@ -724,7 +779,7 @@ settings = Settings()
 
 
 ===============================
-Ścieżka do pliku: ./src/core/exceptions.py
+Ścieżka do pliku: .\src\core\exceptions.py
 
 Zawartość pliku:
 
@@ -787,60 +842,5 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
             "details": errors
         }
     )
-
-
-===============================
-Ścieżka do pliku: ./src/api/endpoints/health.py
-
-Zawartość pliku:
-
-from fastapi import APIRouter, status
-from src.api.endpoints.schemas.health import HealthCheckResponse
-from src.core.config import settings
-
-health_router = APIRouter()
-
-@health_router.get(
-    "/live",
-    response_model=HealthCheckResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Liveness Probe",
-    description="Sprawdza czy aplikacja jest uruchomiona. Nie sprawdza zależności."
-)
-async def liveness_probe():
-    """
-    Szybki check dla Kubernetesa. Jeśli to nie działa, K8s restartuje poda.
-    """
-    return HealthCheckResponse(
-        status="ok",
-        version=settings.VERSION
-    )
-
-
-===============================
-Ścieżka do pliku: ./src/api/endpoints/schemas/health.py
-
-Zawartość pliku:
-
-from pydantic import BaseModel
-from typing import Dict, Optional
-
-class HealthCheckResponse(BaseModel):
-    status: str
-    version: str
-    uptime: Optional[float] = None
-    components: Optional[Dict[str, str]] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "status": "ok",
-                "version": "1.0.0",
-                "components": {
-                    "database": "operational",
-                    "redis": "down"
-                }
-            }
-        }
 
 

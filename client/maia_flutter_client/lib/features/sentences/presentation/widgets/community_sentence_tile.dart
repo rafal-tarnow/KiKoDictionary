@@ -8,25 +8,26 @@ import '../../../auth/presentation/controllers/auth_controller.dart';
 class CommunitySentenceTile extends ConsumerStatefulWidget {
   final Sentence sentence;
   // Funkcja callback, żeby otworzyć dialog logowania przekazany ze strony głównej
-  final VoidCallback onLoginPrompt; 
+  final VoidCallback onLoginPrompt;
 
   const CommunitySentenceTile({
-    super.key, 
+    super.key,
     required this.sentence,
     required this.onLoginPrompt,
   });
 
   @override
-  ConsumerState<CommunitySentenceTile> createState() => _CommunitySentenceTileState();
+  ConsumerState<CommunitySentenceTile> createState() =>
+      _CommunitySentenceTileState();
 }
 
 class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
   // Lokalny stan optymistyczny (zabezpiecza przed podwójnym kliknięciem i daje natychmiastowy feedback)
-  bool _isSaved = false; 
+  bool _isSaved = false;
 
   Future<void> _handleClone() async {
     final authState = ref.read(authControllerProvider);
-    
+
     // 1. Jeśli nie zalogowany -> Pokaż zachętę do logowania
     if (!authState.isAuthenticated) {
       widget.onLoginPrompt();
@@ -53,8 +54,10 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
     } else if (!success && mounted) {
       // 4. Jeśli błąd (np. brak sieci, albo "Już masz to zdanie") - cofamy optymistyczne UI
       setState(() => _isSaved = false);
-      
-      final errorMsg = ref.read(cloneSentenceControllerProvider).error?.toString() ?? "Failed to copy sentence";
+
+      final errorMsg =
+          ref.read(cloneSentenceControllerProvider).error?.toString() ??
+          "Failed to copy sentence";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMsg),
@@ -68,17 +71,22 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
   @override
   Widget build(BuildContext context) {
     // Jeśli controller ładuje to konkretne id, pokazujemy mały spinner (można uprościć)
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         // Subtelne obramowanie, żeby odróżnić od "Moich Zdań"
-        side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.1)), 
+        side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.1)),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
+        contentPadding: const EdgeInsets.only(
+          left: 16,
+          right: 8,
+          top: 8,
+          bottom: 8,
+        ),
         title: Text(
           widget.sentence.originalText,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -94,23 +102,24 @@ class _CommunitySentenceTileState extends ConsumerState<CommunitySentenceTile> {
                 color: Colors.grey.shade800,
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '${widget.sentence.sourceLanguage.toUpperCase()} ➔ ${widget.sentence.targetLanguage.toUpperCase()}',
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.language, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.sentence.sourceLanguage}:${widget.sentence.targetLanguage}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
             ),
           ],
         ),
         isThreeLine: true,
         trailing: IconButton(
-          onPressed: _isSaved ? null : _handleClone, // Wyłącz jeśli już zapisane
+          onPressed: _isSaved
+              ? null
+              : _handleClone, // Wyłącz jeśli już zapisane
           tooltip: "Save to my notebook",
           icon: Icon(
             _isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,

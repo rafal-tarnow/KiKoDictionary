@@ -1,5 +1,5 @@
 ===============================
-Ścieżka do pliku: ./pytest.ini
+Ścieżka do pliku: .\pytest.ini
 
 Zawartość pliku:
 
@@ -10,15 +10,7 @@ filterwarnings =
 
 
 ===============================
-Ścieżka do pliku: ./src/__init__.py
-
-Zawartość pliku:
-
-
-
-
-===============================
-Ścieżka do pliku: ./src/dependencies.py
+Ścieżka do pliku: .\src\dependencies.py
 
 Zawartość pliku:
 
@@ -72,7 +64,7 @@ async def get_current_user(
 
 
 ===============================
-Ścieżka do pliku: ./src/main.py
+Ścieżka do pliku: .\src\main.py
 
 Zawartość pliku:
 
@@ -175,205 +167,7 @@ async def root():
 
 
 ===============================
-Ścieżka do pliku: ./src/core/config.py
-
-Zawartość pliku:
-
-import os
-from typing import List, Union
-from pydantic import field_validator, AnyHttpUrl
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
-
-load_dotenv()
-
-class Settings(BaseSettings):
-    VERSION: str = "1.0.0"
-    CAPTCHA_SERVICE_URL: str = os.getenv("CAPTCHA_SERVICE_URL", "http://127.0.0.1:8001/api/v1") 
-    # JWT Settings
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
-    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
-
-    # Database Settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")
-
-    # Password Reset
-    RESET_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", 15))
-    
-    # --- URL CONFIGURATION ---
-    # Główny adres frontendu (np. strona główna)
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    
-    # Dedykowany URL do strony resetowania hasła.
-    # Jeśli nie jest podany w .env, domyślnie składa się z FRONTEND_URL + /auth/reset-password
-    # Dzięki temu w .env możesz wpisać PEŁNY, specyficzny link do pliku .html
-    RESET_PASSWORD_URL: str = os.getenv("RESET_PASSWORD_URL", None)
-
-    
-    # Email Settings (przykładowe pod Gmail lub SMTP)
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
-    SMTP_USER: str = os.getenv("SMTP_USER", "twoj-email@gmail.com")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "twoje-haslo-aplikacji")
-    # Adres e-mail, z którego system "technicznie" wysyła wiadomości.
-    # To na ten adres użytkownik spróbuje odpisać, jeśli kliknie "Odpowiedz".
-    # os.getenv(...) sprawdza czy w pliku .env jest klucz EMAILS_FROM_EMAIL.
-    # Jeśli nie ma, używa wartości domyślnej "info@myapp.com".
-    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "info@myapp.com")
-    # Nazwa wyświetlana (Friendly Name), którą użytkownik widzi na liście wiadomości
-    # zamiast surowego adresu e-mail. Buduje to zaufanie i profesjonalny wizerunek.
-    # Np. zamiast widzieć "info@myapp.com", użytkownik zobaczy "My Users Service".
-    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "English Learner")
-    # --- CORS CONFIGURATION (PRO) ---
-    # To pole wczyta string z .env i zamieni go na listę dzięki walidatorowi poniżej.
-    # Domyślnie pusta lista (bezpieczeństwo).
-    # ZMIANA TUTAJ:
-    # Zmieniamy List[str] na Union[List[str], str].
-    # Dzięki temu Pydantic nie wymusza JSON-a na starcie, a walidator i tak zamieni to na listę.
-    BACKEND_CORS_ORIGINS: Union[List[str], str] = []
-
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
-        # Ta logika jest poprawna i teraz zadziała, bo Pydantic dopuścił stringa na wejściu
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
-
-    def get_reset_password_link(self, token: str) -> str:
-        """
-        Inteligentnie buduje link. Jeśli w .env zdefiniowano RESET_PASSWORD_URL, używa go.
-        W przeciwnym razie buduje domyślną ścieżkę dla SPA (Single Page App).
-        """
-        base_url = self.RESET_PASSWORD_URL
-        
-        # Fallback: Jeśli nie zdefiniowano specyficznego URL, budujemy standardowy
-        if not base_url:
-            base_url = f"{self.FRONTEND_URL}/auth/reset-password"
-            
-        return f"{base_url}?token={token}"
-    
-settings = Settings()
-
-
-===============================
-Ścieżka do pliku: ./src/core/security.py
-
-Zawartość pliku:
-
-from datetime import datetime, timedelta, timezone
-from typing import Optional
-
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-
-from .config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password: str, hashed_password: str) ->bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire, "type": "access"})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
-
-
-def create_refresh_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
-
-
-===============================
-Ścieżka do pliku: ./src/services/email/service.py
-
-Zawartość pliku:
-
-import os
-from pathlib import Path
-from typing import List
-
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from src.core.config import settings
-
-# Ustalanie ścieżki do szablonów w sposób niezależny od systemu operacyjnego
-# __file__ to ścieżka do tego pliku (service.py).
-# .parent to katalog 'email', a / 'templates' to podkatalog.
-TEMPLATE_FOLDER = Path(__file__).resolve().parent / "templates"
-
-class EmailService:
-    def __init__(self):
-        # Konfiguracja połączenia SMTP
-        self.conf = ConnectionConfig(
-            MAIL_USERNAME=settings.SMTP_USER,
-            MAIL_PASSWORD=settings.SMTP_PASSWORD,
-            MAIL_FROM=settings.EMAILS_FROM_EMAIL,
-            MAIL_PORT=settings.SMTP_PORT,
-            MAIL_SERVER=settings.SMTP_HOST,
-            MAIL_FROM_NAME=settings.EMAILS_FROM_NAME,
-            MAIL_STARTTLS=True,  # Zazwyczaj True dla portu 587
-            MAIL_SSL_TLS=False,  # Zazwyczaj False dla portu 587 (True dla 465)
-            USE_CREDENTIALS=True,
-            VALIDATE_CERTS=True,
-            TEMPLATE_FOLDER=TEMPLATE_FOLDER
-        )
-        self.fast_mail = FastMail(self.conf)
-
-    async def send_reset_password_email(self, email_to: str, token: str):
-        """
-        Wysyła prawdziwy email z użyciem szablonu HTML.
-        """
-        # 1. Przygotowanie danych do szablonu (Context)
-        # ZMIANA: Używamy metody z settings do poprawnego zbudowania linku
-        reset_link = settings.get_reset_password_link(token)
-        
-        template_body = {
-            "app_name": settings.EMAILS_FROM_NAME,
-            "link": reset_link,
-            "valid_minutes": settings.RESET_TOKEN_EXPIRE_MINUTES,
-            "subject": "Reset Your Password"
-        }
-
-        # 2. Tworzenie wiadomości
-        message = MessageSchema(
-            subject="Reset Your Password - Action Required",
-            recipients=[email_to],
-            template_body=template_body,
-            subtype=MessageType.html
-        )
-
-        # 3. Wysyłka
-        try:
-            await self.fast_mail.send_message(message, template_name="reset_password.html")
-            print(f"LOG: Email sent to {email_to} with link: {reset_link}")
-        except Exception as e:
-            print(f"ERROR: Failed to send email to {email_to}. Error: {e}")
-
-
-email_service = EmailService()
-
-
-===============================
-Ścieżka do pliku: ./src/services/email/__init__.py
+Ścieżka do pliku: .\src\__init__.py
 
 Zawartość pliku:
 
@@ -381,67 +175,7 @@ Zawartość pliku:
 
 
 ===============================
-Ścieżka do pliku: ./src/services/email/templates/base.html
-
-Zawartość pliku:
-
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ subject }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #888; }
-        .button { background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>{{ app_name }}</h2>
-        </div>
-        
-        <div class="content">
-            {% block content %}{% endblock %}
-        </div>
-
-        <div class="footer">
-            <p>&copy; 2026 {{ app_name }}. All rights reserved.</p>
-            <p>If you did not request this email, please ignore it.</p>
-        </div>
-    </div>
-</body>
-</html>
-
-
-===============================
-Ścieżka do pliku: ./src/services/email/templates/reset_password.html
-
-Zawartość pliku:
-
-{% extends "base.html" %}
-
-{% block content %}
-<h3>Hello,</h3>
-<p>We received a request to reset your password for your account at <strong>{{ app_name }}</strong>.</p>
-<p>Please click the button below to set a new password:</p>
-
-<div style="text-align: center;">
-    <a href="{{ link }}" class="button">Reset Password</a>
-</div>
-
-<p>Or copy and paste this link into your browser:</p>
-<p><a href="{{ link }}">{{ link }}</a></p>
-
-<p>This link is valid for <strong>{{ valid_minutes }} minutes</strong>.</p>
-{% endblock %}
-
-
-===============================
-Ścieżka do pliku: ./src/api/v1/routers/auth.py
+Ścieżka do pliku: .\src\api\v1\routers\auth.py
 
 Zawartość pliku:
 
@@ -750,7 +484,53 @@ async def reset_password(
 
 
 ===============================
-Ścieżka do pliku: ./src/api/v1/routers/users.py
+Ścieżka do pliku: .\src\api\v1\routers\health.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, status
+from src.api.v1.schemas.health import HealthCheckResponse
+from src.core.config import settings
+
+health_router = APIRouter()
+
+@health_router.get(
+    "/live",
+    response_model=HealthCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Liveness Probe",
+    description="Sprawdza czy aplikacja jest uruchomiona. Nie sprawdza zależności."
+)
+async def liveness_probe():
+    """
+    Szybki check dla Kubernetesa. Jeśli to nie działa, K8s restartuje poda.
+    """
+    return HealthCheckResponse(
+        status="ok",
+        version=settings.VERSION
+    )
+
+
+===============================
+Ścieżka do pliku: .\src\api\v1\routers\test.py
+
+Zawartość pliku:
+
+from fastapi import APIRouter, Depends
+from typing import Dict
+from src.db.models.user import User as UserDb
+from src.dependencies import get_current_user
+
+router = APIRouter(prefix="/api/v1/data", tags=["Data"])
+
+@router.get("/test-data", response_model=Dict[str, str])
+async def get_test_data(current_user: UserDb = Depends(get_current_user)):
+    return {"message": "This is protected test data", "user_id": str(current_user.id)}
+
+
+
+===============================
+Ścieżka do pliku: .\src\api\v1\routers\users.py
 
 Zawartość pliku:
 
@@ -887,53 +667,7 @@ async def delete_user_me(
 
 
 ===============================
-Ścieżka do pliku: ./src/api/v1/routers/test.py
-
-Zawartość pliku:
-
-from fastapi import APIRouter, Depends
-from typing import Dict
-from src.db.models.user import User as UserDb
-from src.dependencies import get_current_user
-
-router = APIRouter(prefix="/api/v1/data", tags=["Data"])
-
-@router.get("/test-data", response_model=Dict[str, str])
-async def get_test_data(current_user: UserDb = Depends(get_current_user)):
-    return {"message": "This is protected test data", "user_id": str(current_user.id)}
-
-
-
-===============================
-Ścieżka do pliku: ./src/api/v1/routers/health.py
-
-Zawartość pliku:
-
-from fastapi import APIRouter, status
-from src.api.v1.schemas.health import HealthCheckResponse
-from src.core.config import settings
-
-health_router = APIRouter()
-
-@health_router.get(
-    "/live",
-    response_model=HealthCheckResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Liveness Probe",
-    description="Sprawdza czy aplikacja jest uruchomiona. Nie sprawdza zależności."
-)
-async def liveness_probe():
-    """
-    Szybki check dla Kubernetesa. Jeśli to nie działa, K8s restartuje poda.
-    """
-    return HealthCheckResponse(
-        status="ok",
-        version=settings.VERSION
-    )
-
-
-===============================
-Ścieżka do pliku: ./src/api/v1/schemas/auth.py
+Ścieżka do pliku: .\src\api\v1\schemas\auth.py
 
 Zawartość pliku:
 
@@ -955,7 +689,35 @@ class ResetPasswordRequest(BaseModel):
 
 
 ===============================
-Ścieżka do pliku: ./src/api/v1/schemas/token.py
+Ścieżka do pliku: .\src\api\v1\schemas\health.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel, ConfigDict
+from typing import Dict, Optional
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    version: str
+    uptime: Optional[float] = None
+    components: Optional[Dict[str, str]] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "ok",
+                "version": "1.0.0",
+                "components": {
+                    "database": "operational",
+                    "redis": "down"
+                }
+            }
+        }
+    )
+
+
+===============================
+Ścieżka do pliku: .\src\api\v1\schemas\token.py
 
 Zawartość pliku:
 
@@ -977,7 +739,7 @@ class RefreshTokenRequest(BaseModel):
 
 
 ===============================
-Ścieżka do pliku: ./src/api/v1/schemas/user.py
+Ścieżka do pliku: .\src\api\v1\schemas\user.py
 
 Zawartość pliku:
 
@@ -1082,35 +844,7 @@ class UserUpdateUsername(BaseModel):
 
 
 ===============================
-Ścieżka do pliku: ./src/api/v1/schemas/health.py
-
-Zawartość pliku:
-
-from pydantic import BaseModel, ConfigDict
-from typing import Dict, Optional
-
-class HealthCheckResponse(BaseModel):
-    status: str
-    version: str
-    uptime: Optional[float] = None
-    components: Optional[Dict[str, str]] = None
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "status": "ok",
-                "version": "1.0.0",
-                "components": {
-                    "database": "operational",
-                    "redis": "down"
-                }
-            }
-        }
-    )
-
-
-===============================
-Ścieżka do pliku: ./src/api/v1/schemas/user_profile.py
+Ścieżka do pliku: .\src\api\v1\schemas\user_profile.py
 
 Zawartość pliku:
 
@@ -1168,7 +902,136 @@ class UserProfilePublic(UserProfileBase):
 
 
 ===============================
-Ścieżka do pliku: ./src/db/session.py
+Ścieżka do pliku: .\src\core\config.py
+
+Zawartość pliku:
+
+import os
+from typing import List, Union
+from pydantic import field_validator, AnyHttpUrl
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Settings(BaseSettings):
+    VERSION: str = "1.0.0"
+    CAPTCHA_SERVICE_URL: str = os.getenv("CAPTCHA_SERVICE_URL", "http://127.0.0.1:8001/api/v1") 
+    # JWT Settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
+
+    # Database Settings
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./users.db")
+
+    # Password Reset
+    RESET_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", 15))
+    
+    # --- URL CONFIGURATION ---
+    # Główny adres frontendu (np. strona główna)
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Dedykowany URL do strony resetowania hasła.
+    # Jeśli nie jest podany w .env, domyślnie składa się z FRONTEND_URL + /auth/reset-password
+    # Dzięki temu w .env możesz wpisać PEŁNY, specyficzny link do pliku .html
+    RESET_PASSWORD_URL: str = os.getenv("RESET_PASSWORD_URL", None)
+
+    
+    # Email Settings (przykładowe pod Gmail lub SMTP)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
+    SMTP_USER: str = os.getenv("SMTP_USER", "twoj-email@gmail.com")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "twoje-haslo-aplikacji")
+    # Adres e-mail, z którego system "technicznie" wysyła wiadomości.
+    # To na ten adres użytkownik spróbuje odpisać, jeśli kliknie "Odpowiedz".
+    # os.getenv(...) sprawdza czy w pliku .env jest klucz EMAILS_FROM_EMAIL.
+    # Jeśli nie ma, używa wartości domyślnej "info@myapp.com".
+    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "info@myapp.com")
+    # Nazwa wyświetlana (Friendly Name), którą użytkownik widzi na liście wiadomości
+    # zamiast surowego adresu e-mail. Buduje to zaufanie i profesjonalny wizerunek.
+    # Np. zamiast widzieć "info@myapp.com", użytkownik zobaczy "My Users Service".
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "English Learner")
+    # --- CORS CONFIGURATION (PRO) ---
+    # To pole wczyta string z .env i zamieni go na listę dzięki walidatorowi poniżej.
+    # Domyślnie pusta lista (bezpieczeństwo).
+    # ZMIANA TUTAJ:
+    # Zmieniamy List[str] na Union[List[str], str].
+    # Dzięki temu Pydantic nie wymusza JSON-a na starcie, a walidator i tak zamieni to na listę.
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+        # Ta logika jest poprawna i teraz zadziała, bo Pydantic dopuścił stringa na wejściu
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
+
+    def get_reset_password_link(self, token: str) -> str:
+        """
+        Inteligentnie buduje link. Jeśli w .env zdefiniowano RESET_PASSWORD_URL, używa go.
+        W przeciwnym razie buduje domyślną ścieżkę dla SPA (Single Page App).
+        """
+        base_url = self.RESET_PASSWORD_URL
+        
+        # Fallback: Jeśli nie zdefiniowano specyficznego URL, budujemy standardowy
+        if not base_url:
+            base_url = f"{self.FRONTEND_URL}/auth/reset-password"
+            
+        return f"{base_url}?token={token}"
+    
+settings = Settings()
+
+
+===============================
+Ścieżka do pliku: .\src\core\security.py
+
+Zawartość pliku:
+
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from .config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) ->bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+
+===============================
+Ścieżka do pliku: .\src\db\session.py
 
 Zawartość pliku:
 
@@ -1192,32 +1055,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 ===============================
-Ścieżka do pliku: ./src/db/models/refresh_token.py
-
-Zawartość pliku:
-
-# src/db/models/refresh_token.py
-import uuid
-from sqlalchemy import Column, String, DateTime, func, ForeignKey
-from sqlalchemy.orm import relationship
-from .user import Base
-
-class RefreshToken(Base):
-    __tablename__ = "refresh_tokens"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    refresh_token = Column(String, unique=True, index=True, nullable=False)
-    
-    # [ZMIANA]: Włączamy timezone=True, żeby Python wiedział jak traktować tę datę
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    user = relationship("User")
-
-
-===============================
-Ścieżka do pliku: ./src/db/models/password_reset.py
+Ścieżka do pliku: .\src\db\models\password_reset.py
 
 Zawartość pliku:
 
@@ -1242,23 +1080,32 @@ class PasswordResetToken(Base):
 
 
 ===============================
-Ścieżka do pliku: ./src/db/models/__init__.py
+Ścieżka do pliku: .\src\db\models\refresh_token.py
 
 Zawartość pliku:
 
-# Importujemy Base oraz wszystkie modele, aby SQLAlchemy (i Alembic/Pytest)
-# wiedziało o istnieniu wszystkich tabel.
-from .user import Base, User
-from .user_profile import UserProfile
-from .refresh_token import RefreshToken
-from .password_reset import PasswordResetToken
+# src/db/models/refresh_token.py
+import uuid
+from sqlalchemy import Column, String, DateTime, func, ForeignKey
+from sqlalchemy.orm import relationship
+from .user import Base
 
-# Ułatwi to importowanie w innych plikach
-__all__ = ["Base", "User", "UserProfile", "RefreshToken", "PasswordResetToken"]
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    refresh_token = Column(String, unique=True, index=True, nullable=False)
+    
+    # [ZMIANA]: Włączamy timezone=True, żeby Python wiedział jak traktować tę datę
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User")
 
 
 ===============================
-Ścieżka do pliku: ./src/db/models/user.py
+Ścieżka do pliku: .\src\db\models\user.py
 
 Zawartość pliku:
 
@@ -1317,7 +1164,7 @@ class User(Base):
 
 
 ===============================
-Ścieżka do pliku: ./src/db/models/user_profile.py
+Ścieżka do pliku: .\src\db\models\user_profile.py
 
 Zawartość pliku:
 
@@ -1351,7 +1198,70 @@ class UserProfile(Base):
 
 
 ===============================
-Ścieżka do pliku: ./src/db/repository/refresh_token_repository.py
+Ścieżka do pliku: .\src\db\models\__init__.py
+
+Zawartość pliku:
+
+# Importujemy Base oraz wszystkie modele, aby SQLAlchemy (i Alembic/Pytest)
+# wiedziało o istnieniu wszystkich tabel.
+from .user import Base, User
+from .user_profile import UserProfile
+from .refresh_token import RefreshToken
+from .password_reset import PasswordResetToken
+
+# Ułatwi to importowanie w innych plikach
+__all__ = ["Base", "User", "UserProfile", "RefreshToken", "PasswordResetToken"]
+
+
+===============================
+Ścieżka do pliku: .\src\db\repository\password_reset_repository.py
+
+Zawartość pliku:
+
+from typing import Optional
+from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from src.db.models.password_reset import PasswordResetToken
+
+class PasswordResetRepository:
+    def __init__(self, db_session: AsyncSession):
+        self.db = db_session
+
+    async def create(self, user_id: str, token: str, expires_at: datetime) -> PasswordResetToken:
+        # Opcjonalnie: Możesz tu najpierw unieważnić poprzednie niewykorzystane tokeny tego usera
+        db_token = PasswordResetToken(
+            user_id=user_id,
+            token=token,
+            expires_at=expires_at,
+            is_used=False
+        )
+        self.db.add(db_token)
+        await self.db.commit()
+        await self.db.refresh(db_token)
+        return db_token
+
+    async def get_valid_token(self, token: str) -> Optional[PasswordResetToken]:
+        """
+        Pobiera token, jeśli istnieje, nie został użyty i nie wygasł.
+        """
+        query = select(PasswordResetToken).filter(
+            PasswordResetToken.token == token,
+            PasswordResetToken.is_used == False,
+            PasswordResetToken.expires_at > datetime.now(timezone.utc)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    async def mark_as_used(self, token_id: str) -> None:
+        db_token = await self.db.get(PasswordResetToken, token_id)
+        if db_token:
+            db_token.is_used = True
+            await self.db.commit()
+
+
+===============================
+Ścieżka do pliku: .\src\db\repository\refresh_token_repository.py
 
 Zawartość pliku:
 
@@ -1408,54 +1318,44 @@ class RefreshTokenRepository:
 
 
 ===============================
-Ścieżka do pliku: ./src/db/repository/password_reset_repository.py
+Ścieżka do pliku: .\src\db\repository\user_profile_repository.py
 
 Zawartość pliku:
 
-from typing import Optional
-from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from src.db.models.password_reset import PasswordResetToken
+from src.db.models.user_profile import UserProfile
+from src.api.v1.schemas.user_profile import UserProfileUpdate
 
-class PasswordResetRepository:
+class UserProfileRepository:
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 
-    async def create(self, user_id: str, token: str, expires_at: datetime) -> PasswordResetToken:
-        # Opcjonalnie: Możesz tu najpierw unieważnić poprzednie niewykorzystane tokeny tego usera
-        db_token = PasswordResetToken(
-            user_id=user_id,
-            token=token,
-            expires_at=expires_at,
-            is_used=False
+    async def update_profile(self, user_id: str, profile_data: UserProfileUpdate) -> UserProfile:
+        from sqlalchemy.future import select
+        
+        # Pobieramy profil
+        result = await self.db.execute(
+            select(UserProfile).filter(UserProfile.user_id == user_id)
         )
-        self.db.add(db_token)
+        db_profile = result.scalars().first()
+
+        if not db_profile:
+            # Fallback (bezpieczeństwo): Gdyby z jakiegoś powodu profil nie istniał, twórzmy go w locie
+            db_profile = UserProfile(user_id=user_id)
+            self.db.add(db_profile)
+
+        # Dynamiczna aktualizacja tylko tych pól, które zostały przysłane (nie są None)
+        update_data = profile_data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_profile, key, value)
+
         await self.db.commit()
-        await self.db.refresh(db_token)
-        return db_token
-
-    async def get_valid_token(self, token: str) -> Optional[PasswordResetToken]:
-        """
-        Pobiera token, jeśli istnieje, nie został użyty i nie wygasł.
-        """
-        query = select(PasswordResetToken).filter(
-            PasswordResetToken.token == token,
-            PasswordResetToken.is_used == False,
-            PasswordResetToken.expires_at > datetime.now(timezone.utc)
-        )
-        result = await self.db.execute(query)
-        return result.scalars().first()
-
-    async def mark_as_used(self, token_id: str) -> None:
-        db_token = await self.db.get(PasswordResetToken, token_id)
-        if db_token:
-            db_token.is_used = True
-            await self.db.commit()
+        await self.db.refresh(db_profile)
+        return db_profile
 
 
 ===============================
-Ścieżka do pliku: ./src/db/repository/user_repository.py
+Ścieżka do pliku: .\src\db\repository\user_repository.py
 
 Zawartość pliku:
 
@@ -1654,39 +1554,139 @@ class UserRepository:
 
 
 ===============================
-Ścieżka do pliku: ./src/db/repository/user_profile_repository.py
+Ścieżka do pliku: .\src\services\email\service.py
 
 Zawartość pliku:
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.db.models.user_profile import UserProfile
-from src.api.v1.schemas.user_profile import UserProfileUpdate
+import os
+from pathlib import Path
+from typing import List
 
-class UserProfileRepository:
-    def __init__(self, db_session: AsyncSession):
-        self.db = db_session
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from src.core.config import settings
 
-    async def update_profile(self, user_id: str, profile_data: UserProfileUpdate) -> UserProfile:
-        from sqlalchemy.future import select
-        
-        # Pobieramy profil
-        result = await self.db.execute(
-            select(UserProfile).filter(UserProfile.user_id == user_id)
+# Ustalanie ścieżki do szablonów w sposób niezależny od systemu operacyjnego
+# __file__ to ścieżka do tego pliku (service.py).
+# .parent to katalog 'email', a / 'templates' to podkatalog.
+TEMPLATE_FOLDER = Path(__file__).resolve().parent / "templates"
+
+class EmailService:
+    def __init__(self):
+        # Konfiguracja połączenia SMTP
+        self.conf = ConnectionConfig(
+            MAIL_USERNAME=settings.SMTP_USER,
+            MAIL_PASSWORD=settings.SMTP_PASSWORD,
+            MAIL_FROM=settings.EMAILS_FROM_EMAIL,
+            MAIL_PORT=settings.SMTP_PORT,
+            MAIL_SERVER=settings.SMTP_HOST,
+            MAIL_FROM_NAME=settings.EMAILS_FROM_NAME,
+            MAIL_STARTTLS=True,  # Zazwyczaj True dla portu 587
+            MAIL_SSL_TLS=False,  # Zazwyczaj False dla portu 587 (True dla 465)
+            USE_CREDENTIALS=True,
+            VALIDATE_CERTS=True,
+            TEMPLATE_FOLDER=TEMPLATE_FOLDER
         )
-        db_profile = result.scalars().first()
+        self.fast_mail = FastMail(self.conf)
 
-        if not db_profile:
-            # Fallback (bezpieczeństwo): Gdyby z jakiegoś powodu profil nie istniał, twórzmy go w locie
-            db_profile = UserProfile(user_id=user_id)
-            self.db.add(db_profile)
+    async def send_reset_password_email(self, email_to: str, token: str):
+        """
+        Wysyła prawdziwy email z użyciem szablonu HTML.
+        """
+        # 1. Przygotowanie danych do szablonu (Context)
+        # ZMIANA: Używamy metody z settings do poprawnego zbudowania linku
+        reset_link = settings.get_reset_password_link(token)
+        
+        template_body = {
+            "app_name": settings.EMAILS_FROM_NAME,
+            "link": reset_link,
+            "valid_minutes": settings.RESET_TOKEN_EXPIRE_MINUTES,
+            "subject": "Reset Your Password"
+        }
 
-        # Dynamiczna aktualizacja tylko tych pól, które zostały przysłane (nie są None)
-        update_data = profile_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(db_profile, key, value)
+        # 2. Tworzenie wiadomości
+        message = MessageSchema(
+            subject="Reset Your Password - Action Required",
+            recipients=[email_to],
+            template_body=template_body,
+            subtype=MessageType.html
+        )
 
-        await self.db.commit()
-        await self.db.refresh(db_profile)
-        return db_profile
+        # 3. Wysyłka
+        try:
+            await self.fast_mail.send_message(message, template_name="reset_password.html")
+            print(f"LOG: Email sent to {email_to} with link: {reset_link}")
+        except Exception as e:
+            print(f"ERROR: Failed to send email to {email_to}. Error: {e}")
+
+
+email_service = EmailService()
+
+
+===============================
+Ścieżka do pliku: .\src\services\email\__init__.py
+
+Zawartość pliku:
+
+
+
+
+===============================
+Ścieżka do pliku: .\src\services\email\templates\base.html
+
+Zawartość pliku:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ subject }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #888; }
+        .button { background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>{{ app_name }}</h2>
+        </div>
+        
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2026 {{ app_name }}. All rights reserved.</p>
+            <p>If you did not request this email, please ignore it.</p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+===============================
+Ścieżka do pliku: .\src\services\email\templates\reset_password.html
+
+Zawartość pliku:
+
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Hello,</h3>
+<p>We received a request to reset your password for your account at <strong>{{ app_name }}</strong>.</p>
+<p>Please click the button below to set a new password:</p>
+
+<div style="text-align: center;">
+    <a href="{{ link }}" class="button">Reset Password</a>
+</div>
+
+<p>Or copy and paste this link into your browser:</p>
+<p><a href="{{ link }}">{{ link }}</a></p>
+
+<p>This link is valid for <strong>{{ valid_minutes }} minutes</strong>.</p>
+{% endblock %}
 
 

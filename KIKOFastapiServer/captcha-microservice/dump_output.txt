@@ -1,114 +1,5 @@
 ===============================
-Ścieżka do pliku: ./tests/test_captcha.py
-
-Zawartość pliku:
-
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-from src.main import app
-from src.database import SessionLocal, engine
-from src.database.models import Base, Captcha
-from src.database.repository import CaptchaRepository
-
-@pytest.fixture(scope="module")
-def test_client():
-    # Tworzenie tabel w bazie przed testami
-    Base.metadata.create_all(bind=engine)
-    client = TestClient(app)
-    yield client
-    # Usuwanie tabel po testach
-    Base.metadata.drop_all(bind=engine)
-
-@pytest.fixture
-def db():
-    # Tworzenie sesji bazy danych dla każdego testu
-    db = SessionLocal()
-    yield db
-    db.close()
-
-@pytest.mark.asyncio
-async def test_generate_captcha(test_client):
-    # Test generowania CAPTCHA
-    response = test_client.get("/api/v1/captcha")
-    assert response.status_code == 200
-    data = response.json()
-    
-    # Sprawdzanie struktury odpowiedzi
-    assert "id" in data
-    assert "image" in data
-    assert data["image"].startswith("data:image/png;base64,")
-    assert "created_at" in data
-    assert "text" not in data  # Tekst nie powinien być zwracany
-    
-    # Sprawdzanie, czy CAPTCHA została zapisana w bazie
-    db = SessionLocal()
-    captcha = db.query(Captcha).filter(Captcha.id == data["id"]).first()
-    assert captcha is not None
-    assert len(captcha.text) == 6  # Domyślna długość CAPTCHA
-    db.close()
-
-@pytest.mark.asyncio
-async def test_verify_captcha(test_client, db: Session):
-    # Najpierw generujemy CAPTCHA
-    response = test_client.get("/api/v1/captcha")
-    assert response.status_code == 200
-    captcha_data = response.json()
-    captcha_id = captcha_data["id"]
-    
-    # Pobieramy tekst CAPTCHA z bazy danych
-    captcha = db.query(Captcha).filter(Captcha.id == captcha_id).first()
-    assert captcha is not None
-    correct_text = captcha.text
-    
-    # Test weryfikacji z poprawnym tekstem
-    verify_response = test_client.post(
-        "/api/v1/captcha/verify",
-        json={"id": captcha_id, "text": correct_text}
-    )
-    assert verify_response.status_code == 200
-    assert verify_response.json() == {"is_valid": True}
-    
-    # Test weryfikacji z niepoprawnym tekstem
-    verify_response = test_client.post(
-        "/api/v1/captcha/verify",
-        json={"id": captcha_id, "text": "WRONG"}
-    )
-    assert verify_response.status_code == 200
-    assert verify_response.json() == {"is_valid": False}
-    
-    # Test weryfikacji z nieistniejącym ID
-    verify_response = test_client.post(
-        "/api/v1/captcha/verify",
-        json={"id": 9999, "text": "ANY"}
-    )
-    assert verify_response.status_code == 404
-    assert "Captcha not found" in verify_response.json()["detail"]
-
-@pytest.mark.asyncio
-async def test_get_captcha(test_client, db: Session):
-    # Generujemy CAPTCHA
-    response = test_client.get("/api/v1/captcha")
-    assert response.status_code == 200
-    captcha_id = response.json()["id"]
-    
-    # Test pobierania CAPTCHA
-    response = test_client.get(f"/api/v1/captcha/{captcha_id}")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == captcha_id
-    assert data["image"] == ""  # Obrazek nie jest zwracany
-    assert "created_at" in data
-    assert "text" not in data
-    
-    # Test pobierania nieistniejącej CAPTCHA
-    response = test_client.get("/api/v1/captcha/9999")
-    assert response.status_code == 404
-    assert "Captcha not found" in response.json()["detail"]
-
-
-===============================
-Ścieżka do pliku: ./src/dependencies.py
+Ścieżka do pliku: .\src\dependencies.py
 
 Zawartość pliku:
 
@@ -133,12 +24,13 @@ def get_captcha_generator():
     return CaptchaGenerator(
         width=settings.CAPTCHA_WIDTH,
         height=settings.CAPTCHA_HEIGHT,
-        length=settings.CAPTCHA_LENGTH
+        length=settings.CAPTCHA_LENGTH,
+        use_digits=settings.CAPTCHA_USE_DIGITS
     )
 
 
 ===============================
-Ścieżka do pliku: ./src/main.py
+Ścieżka do pliku: .\src\main.py
 
 Zawartość pliku:
 
@@ -187,226 +79,7 @@ async def shutdown_event():
 
 
 ===============================
-Ścieżka do pliku: ./src/core/captcha_generator.py
-
-Zawartość pliku:
-
-import random
-import string
-import base64
-from typing import Tuple
-from captcha.image import ImageCaptcha  # To musisz mieć zainstalowane
-
-class CaptchaGenerator:
-    def __init__(self, width: int, height: int, length: int):
-        self.width = width
-        self.height = height
-        self.length = length
-        self.characters = string.ascii_uppercase + string.digits
-        # Inicjalizacja generatora z biblioteki.
-        # Nie podajemy argumentu 'fonts', więc biblioteka użyje swoich WBUDOWANYCH czcionek.
-        # To gwarantuje identyczny wygląd na każdym systemie (Dev/Prod).
-        self.image_generator = ImageCaptcha(width=self.width, height=self.height)
-
-    def generate_captcha(self) -> Tuple[str, str]:
-        # Generowanie losowego tekstu
-        text = ''.join(random.choice(self.characters) for _ in range(self.length))
-        
-        print(f"CAPTCHA TEXT = {text}")
-
-        # Generowanie obrazka przez bibliotekę
-        # Metoda generate zwraca obiekt BytesIO (strumień bajtów)
-        data = self.image_generator.generate(text)
-        
-        # Konwersja strumienia bajtów na base64 (tak jak w Twoim oryginale)
-        # getvalue() pobiera surowe bajty PNG
-        img_str = base64.b64encode(data.getvalue()).decode()
-
-        # Zwracamy w formacie zgodnym z Twoim frontendem/API
-        return text, f"data:image/png;base64,{img_str}"
-
-
-===============================
-Ścieżka do pliku: ./src/core/config.py
-
-Zawartość pliku:
-
-from pydantic_settings import BaseSettings
-from typing import List
-
-class Settings(BaseSettings):
-    PROJECT_NAME: str = "CAPTCHA Microservice"
-    VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
-    DATABASE_URL: str = "sqlite:///./captcha.db"
-    ALLOWED_ORIGINS: List[str] = ["*"]
-    CAPTCHA_LENGTH: int = 6
-    CAPTCHA_WIDTH: int = 200
-    CAPTCHA_HEIGHT: int = 80
-    CACHE_TTL: int = 300  # 5 minutes in seconds
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-
-settings = Settings()
-
-
-===============================
-Ścieżka do pliku: ./src/schemas/captcha.py
-
-Zawartość pliku:
-
-from pydantic import BaseModel
-from datetime import datetime
-
-# class CaptchaCreate(BaseModel):
-#     text: str
-
-class CaptchaResponse(BaseModel):
-    id: int
-    text: str
-    image: str
-    created_at: datetime
-
-#     class Config:
-#         from_attributes = True
-
-# class CaptchaVerifyRequest(BaseModel):
-#     id: int
-#     text: str
-
-# class CaptchaVerifyResponse(BaseModel):
-#     is_valid: bool
-
-##############################################################3
-
-# src/schemas/captcha.py
-import uuid
-from pydantic import BaseModel, Field
-
-class CaptchaChallengeResponse(BaseModel): # Zmieniony schemat dla generowania
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    image: str # Base64 data URL obrazka
-
-class CaptchaVerifyRequest(BaseModel):
-    id: uuid.UUID
-    answer: str # Zmieniona nazwa pola
-
-class CaptchaVerifyResponse(BaseModel):
-    is_valid: bool
-
-
-===============================
-Ścieżka do pliku: ./src/schemas/health.py
-
-Zawartość pliku:
-
-from pydantic import BaseModel
-from typing import Dict, Optional
-
-class HealthCheckResponse(BaseModel):
-    status: str
-    version: str
-    uptime: Optional[float] = None
-    components: Optional[Dict[str, str]] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "status": "ok",
-                "version": "1.0.0",
-                "components": {
-                    "database": "operational",
-                    "redis": "down"
-                }
-            }
-        }
-
-
-===============================
-Ścieżka do pliku: ./src/database/models.py
-
-Zawartość pliku:
-
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime, timezone
-
-Base = declarative_base()
-
-class Captcha(Base):
-    __tablename__ = "captchas"
-
-    id = Column(String, primary_key=True, index=True)
-    text = Column(String, index=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-
-===============================
-Ścieżka do pliku: ./src/database/repository.py
-
-Zawartość pliku:
-
-from sqlalchemy.orm import Session
-from src.database.models import Captcha
-from datetime import datetime
-
-# class CaptchaRepository:
-#     def __init__(self, db: Session):
-#         self.db = db
-
-#     def create_captcha(self, text: str) -> Captcha:
-#         captcha = Captcha(text=text, created_at=datetime.utcnow())
-#         self.db.add(captcha)
-#         self.db.commit()
-#         self.db.refresh(captcha)
-#         return captcha
-
-#     def get_captcha(self, captcha_id: int) -> Captcha:
-#         return self.db.query(Captcha).filter(Captcha.id == captcha_id).first()
-    
-# src/database/repository.py
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import delete
-
-class CaptchaRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
-    def create_captcha_entry(self, captcha_id: str, text: str):
-        # Zakładamy, że model Captcha ma pole 'id' typu String i 'text' typu String
-        # oraz 'created_at'
-        db_captcha = Captcha(id=captcha_id, text=text, created_at=datetime.now(timezone.utc))
-        self.db.add(db_captcha)
-        self.db.commit()
-        # self.db.refresh(db_captcha) # Niekoniecznie potrzebne, jeśli nie zwracasz obiektu
-
-    def get_valid_captcha_entry(self, captcha_id: str, ttl_seconds: int) -> Captcha | None:
-        captcha = self.db.query(Captcha).filter(Captcha.id == captcha_id).first()
-        if not captcha:
-            return None
-
-        # SPRAWDŹ TTL - Dodaj .replace(tzinfo=timezone.utc) tutaj:
-        # To zapewni, że captcha.created_at będzie traktowane jako świadome UTC
-        # tuż przed porównaniem, niezależnie od tego, jak zostało wczytane.
-        created_at_aware = captcha.created_at.replace(tzinfo=timezone.utc)
-
-        if datetime.now(timezone.utc) > created_at_aware + timedelta(seconds=ttl_seconds):
-            self.delete_captcha_entry(captcha_id) # Usuń przeterminowaną
-            return None
-        return captcha
-
-    def delete_captcha_entry(self, captcha_id: str):
-        # Zakładamy, że model Captcha ma pole 'id' typu String
-        stmt = delete(Captcha).where(Captcha.id == captcha_id)
-        self.db.execute(stmt)
-        self.db.commit()
-
-
-===============================
-Ścieżka do pliku: ./src/api/endpoints/health.py
+Ścieżka do pliku: .\src\api\endpoints\health.py
 
 Zawartość pliku:
 
@@ -434,7 +107,7 @@ async def liveness_probe():
 
 
 ===============================
-Ścieżka do pliku: ./src/api/endpoints/v1/endpoints.py
+Ścieżka do pliku: .\src\api\endpoints\v1\endpoints.py
 
 Zawartość pliku:
 
@@ -540,5 +213,354 @@ async def verify_captcha(
     
     # Nawet jeśli captcha_entry to None (nie znaleziono lub wygasło), is_valid pozostanie False
     return CaptchaVerifyResponse(is_valid=is_valid)
+
+
+===============================
+Ścieżka do pliku: .\src\core\captcha_generator.py
+
+Zawartość pliku:
+
+import random
+import string
+import base64
+from typing import Tuple
+from captcha.image import ImageCaptcha  # To musisz mieć zainstalowane
+
+class CaptchaGenerator:
+    def __init__(self, width: int, height: int, length: int, use_digits: bool = False):
+        self.width = width
+        self.height = height
+        self.length = length
+
+        # PRO TIP: Używamy "Safe Alphabet" (Bez mylących liter: O, I, Q)
+        safe_letters = "ABCDEFGHJKLMNPRSTUVWXYZ"
+        # Jeśli kiedykolwiek włączysz cyfry, one też są bezpieczne (bez 0 i 1)
+        safe_digits = "23456789"
+        
+        # Budowanie dostępnej puli znaków na podstawie flagi
+        if use_digits:
+            self.characters = safe_letters + safe_digits
+        else:
+            self.characters = safe_letters
+
+
+        # Inicjalizacja generatora z biblioteki.
+        # Nie podajemy argumentu 'fonts', więc biblioteka użyje swoich WBUDOWANYCH czcionek.
+        # To gwarantuje identyczny wygląd na każdym systemie (Dev/Prod).
+        self.image_generator = ImageCaptcha(width=self.width, height=self.height)
+
+    def generate_captcha(self) -> Tuple[str, str]:
+        # Generowanie losowego tekstu
+        text = ''.join(random.choice(self.characters) for _ in range(self.length))
+        
+        #print(f"CAPTCHA TEXT = {text}")
+
+        # Generowanie obrazka przez bibliotekę
+        # Metoda generate zwraca obiekt BytesIO (strumień bajtów)
+        data = self.image_generator.generate(text)
+        
+        # Konwersja strumienia bajtów na base64 (tak jak w Twoim oryginale)
+        # getvalue() pobiera surowe bajty PNG
+        img_str = base64.b64encode(data.getvalue()).decode()
+
+        # Zwracamy w formacie zgodnym z Twoim frontendem/API
+        return text, f"data:image/png;base64,{img_str}"
+
+
+===============================
+Ścieżka do pliku: .\src\core\config.py
+
+Zawartość pliku:
+
+from pydantic_settings import BaseSettings
+from typing import List
+import os
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "CAPTCHA Microservice"
+    VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
+    
+    # DODANO: ": str" 
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./captcha.db")
+    
+    ALLOWED_ORIGINS: List[str] = ["*"]
+    CAPTCHA_LENGTH: int = 6
+    CAPTCHA_WIDTH: int = 200
+    CAPTCHA_HEIGHT: int = 80
+    CACHE_TTL: int = 300  # 5 minutes in seconds
+    
+    # ================= ZMIANA: Flaga konfiguracyjna do cyfr =================
+    # Domyślnie ustawiamy na True, aby generować tylko litery
+    CAPTCHA_USE_DIGITS: bool = True
+    # ========================================================================
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = True
+
+settings = Settings()
+
+
+===============================
+Ścieżka do pliku: .\src\database\models.py
+
+Zawartość pliku:
+
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime, timezone
+
+Base = declarative_base()
+
+class Captcha(Base):
+    __tablename__ = "captchas"
+
+    id = Column(String, primary_key=True, index=True)
+    text = Column(String, index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+===============================
+Ścieżka do pliku: .\src\database\repository.py
+
+Zawartość pliku:
+
+from sqlalchemy.orm import Session
+from src.database.models import Captcha
+from datetime import datetime
+
+# class CaptchaRepository:
+#     def __init__(self, db: Session):
+#         self.db = db
+
+#     def create_captcha(self, text: str) -> Captcha:
+#         captcha = Captcha(text=text, created_at=datetime.utcnow())
+#         self.db.add(captcha)
+#         self.db.commit()
+#         self.db.refresh(captcha)
+#         return captcha
+
+#     def get_captcha(self, captcha_id: int) -> Captcha:
+#         return self.db.query(Captcha).filter(Captcha.id == captcha_id).first()
+    
+# src/database/repository.py
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import delete
+
+class CaptchaRepository:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def create_captcha_entry(self, captcha_id: str, text: str):
+        # Zakładamy, że model Captcha ma pole 'id' typu String i 'text' typu String
+        # oraz 'created_at'
+        db_captcha = Captcha(id=captcha_id, text=text, created_at=datetime.now(timezone.utc))
+        self.db.add(db_captcha)
+        self.db.commit()
+        # self.db.refresh(db_captcha) # Niekoniecznie potrzebne, jeśli nie zwracasz obiektu
+
+    def get_valid_captcha_entry(self, captcha_id: str, ttl_seconds: int) -> Captcha | None:
+        captcha = self.db.query(Captcha).filter(Captcha.id == captcha_id).first()
+        if not captcha:
+            return None
+
+        # SPRAWDŹ TTL - Dodaj .replace(tzinfo=timezone.utc) tutaj:
+        # To zapewni, że captcha.created_at będzie traktowane jako świadome UTC
+        # tuż przed porównaniem, niezależnie od tego, jak zostało wczytane.
+        created_at_aware = captcha.created_at.replace(tzinfo=timezone.utc)
+
+        if datetime.now(timezone.utc) > created_at_aware + timedelta(seconds=ttl_seconds):
+            self.delete_captcha_entry(captcha_id) # Usuń przeterminowaną
+            return None
+        return captcha
+
+    def delete_captcha_entry(self, captcha_id: str):
+        # Zakładamy, że model Captcha ma pole 'id' typu String
+        stmt = delete(Captcha).where(Captcha.id == captcha_id)
+        self.db.execute(stmt)
+        self.db.commit()
+
+
+===============================
+Ścieżka do pliku: .\src\schemas\captcha.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel
+from datetime import datetime
+
+# class CaptchaCreate(BaseModel):
+#     text: str
+
+class CaptchaResponse(BaseModel):
+    id: int
+    text: str
+    image: str
+    created_at: datetime
+
+#     class Config:
+#         from_attributes = True
+
+# class CaptchaVerifyRequest(BaseModel):
+#     id: int
+#     text: str
+
+# class CaptchaVerifyResponse(BaseModel):
+#     is_valid: bool
+
+##############################################################3
+
+# src/schemas/captcha.py
+import uuid
+from pydantic import BaseModel, Field
+
+class CaptchaChallengeResponse(BaseModel): # Zmieniony schemat dla generowania
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    image: str # Base64 data URL obrazka
+
+class CaptchaVerifyRequest(BaseModel):
+    id: uuid.UUID
+    answer: str # Zmieniona nazwa pola
+
+class CaptchaVerifyResponse(BaseModel):
+    is_valid: bool
+
+
+===============================
+Ścieżka do pliku: .\src\schemas\health.py
+
+Zawartość pliku:
+
+from pydantic import BaseModel
+from typing import Dict, Optional
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    version: str
+    uptime: Optional[float] = None
+    components: Optional[Dict[str, str]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "ok",
+                "version": "1.0.0",
+                "components": {
+                    "database": "operational",
+                    "redis": "down"
+                }
+            }
+        }
+
+
+===============================
+Ścieżka do pliku: .\tests\test_captcha.py
+
+Zawartość pliku:
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+from src.main import app
+from src.database import SessionLocal, engine
+from src.database.models import Base, Captcha
+from src.database.repository import CaptchaRepository
+
+@pytest.fixture(scope="module")
+def test_client():
+    # Tworzenie tabel w bazie przed testami
+    Base.metadata.create_all(bind=engine)
+    client = TestClient(app)
+    yield client
+    # Usuwanie tabel po testach
+    Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture
+def db():
+    # Tworzenie sesji bazy danych dla każdego testu
+    db = SessionLocal()
+    yield db
+    db.close()
+
+@pytest.mark.asyncio
+async def test_generate_captcha(test_client):
+    # Test generowania CAPTCHA
+    response = test_client.get("/api/v1/captcha")
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Sprawdzanie struktury odpowiedzi
+    assert "id" in data
+    assert "image" in data
+    assert data["image"].startswith("data:image/png;base64,")
+    assert "created_at" in data
+    assert "text" not in data  # Tekst nie powinien być zwracany
+    
+    # Sprawdzanie, czy CAPTCHA została zapisana w bazie
+    db = SessionLocal()
+    captcha = db.query(Captcha).filter(Captcha.id == data["id"]).first()
+    assert captcha is not None
+    assert len(captcha.text) == 6  # Domyślna długość CAPTCHA
+    db.close()
+
+@pytest.mark.asyncio
+async def test_verify_captcha(test_client, db: Session):
+    # Najpierw generujemy CAPTCHA
+    response = test_client.get("/api/v1/captcha")
+    assert response.status_code == 200
+    captcha_data = response.json()
+    captcha_id = captcha_data["id"]
+    
+    # Pobieramy tekst CAPTCHA z bazy danych
+    captcha = db.query(Captcha).filter(Captcha.id == captcha_id).first()
+    assert captcha is not None
+    correct_text = captcha.text
+    
+    # Test weryfikacji z poprawnym tekstem
+    verify_response = test_client.post(
+        "/api/v1/captcha/verify",
+        json={"id": captcha_id, "text": correct_text}
+    )
+    assert verify_response.status_code == 200
+    assert verify_response.json() == {"is_valid": True}
+    
+    # Test weryfikacji z niepoprawnym tekstem
+    verify_response = test_client.post(
+        "/api/v1/captcha/verify",
+        json={"id": captcha_id, "text": "WRONG"}
+    )
+    assert verify_response.status_code == 200
+    assert verify_response.json() == {"is_valid": False}
+    
+    # Test weryfikacji z nieistniejącym ID
+    verify_response = test_client.post(
+        "/api/v1/captcha/verify",
+        json={"id": 9999, "text": "ANY"}
+    )
+    assert verify_response.status_code == 404
+    assert "Captcha not found" in verify_response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_get_captcha(test_client, db: Session):
+    # Generujemy CAPTCHA
+    response = test_client.get("/api/v1/captcha")
+    assert response.status_code == 200
+    captcha_id = response.json()["id"]
+    
+    # Test pobierania CAPTCHA
+    response = test_client.get(f"/api/v1/captcha/{captcha_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == captcha_id
+    assert data["image"] == ""  # Obrazek nie jest zwracany
+    assert "created_at" in data
+    assert "text" not in data
+    
+    # Test pobierania nieistniejącej CAPTCHA
+    response = test_client.get("/api/v1/captcha/9999")
+    assert response.status_code == 404
+    assert "Captcha not found" in response.json()["detail"]
 
 

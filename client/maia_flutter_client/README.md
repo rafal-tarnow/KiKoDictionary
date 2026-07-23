@@ -26,3 +26,10 @@ flutter build web --base-href "/english_learner/flutter/"
 or 
 
 flutter build web --wasm --base-href "/english_learner/flutter/"
+
+
+## Komendy ktore trzeba wywolac po swiezym pobranu repozytorium (windows)
+1. flutter clean
+2. flutter pub get
+3. flutter doctor
+4. flutter run -d windows
