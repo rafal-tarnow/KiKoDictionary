@@ -6,6 +6,7 @@ enum AppPage {
   dictionary,         // dawniej 1
   words,              // dawniej 2
   sentences,          // dawniej 3
+  todos,
   register,           // dawniej 4
   login,              // dawniej 5
   test,               // dawniej 6

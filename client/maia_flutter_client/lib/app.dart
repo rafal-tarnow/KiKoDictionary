@@ -21,6 +21,7 @@ import 'features/settings/presentation/settings_page.dart';
 import 'features/captcha/captcha_page.dart';
 import 'features/auth/presentation/onboarding_page.dart';
 import 'package:maia_flutter_client/features/sentences/community_sentences_page.dart';
+import 'features/todos/presentation/todos_page.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
@@ -31,6 +32,7 @@ class MainShell extends ConsumerWidget {
       case AppPage.dictionary: return const DictionaryPage();
       case AppPage.words: return const WordsPage();
       case AppPage.sentences: return const SentencesPage();
+      case AppPage.todos: return const TodosPage();
       case AppPage.register: return const RegisterPage();
       case AppPage.login: return const LoginPage();
       case AppPage.test: return const TestPage();
@@ -47,6 +49,7 @@ class MainShell extends ConsumerWidget {
     switch (page) {
       case AppPage.home: return const HomeAppBar();
       case AppPage.sentences: return const SentencesAppBar();
+      case AppPage.todos: return _standardAppBar("Daily Tasks");
       case AppPage.test: return const TestAppBar();
       case AppPage.onboarding: return null; // Brak AppBar dla Onboardingu
       

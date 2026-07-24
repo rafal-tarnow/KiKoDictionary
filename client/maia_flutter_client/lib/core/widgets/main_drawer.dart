@@ -67,13 +67,13 @@ class MainDrawer extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.only(left: 16, bottom: 8),
             child: Text(
-              "YOUR SENTENCES",
+              "SENTENCES",
               style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
             ),
           ),
           
           _DrawerTile(
-            title: 'My Notebook', // Zmiana nazwy dla jasności
+            title: 'My Sentences', // Zmiana nazwy dla jasności
             icon: Icons.book,
             page: AppPage.sentences,
             isSelected: selectedPage == AppPage.sentences,
@@ -86,6 +86,19 @@ class MainDrawer extends ConsumerWidget {
             isSelected: selectedPage == AppPage.communitySentences,
           ),
           const Divider(height: 32),
+          const Padding(
+            padding: EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              "TODO",
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+          ),
+          _DrawerTile(
+            title: 'Daily Tasks', 
+            icon: Icons.checklist_rtl,
+            page: AppPage.todos,
+            isSelected: selectedPage == AppPage.todos,
+          ),
           // ===================================================================================
           // _DrawerTile(
           //   title: 'Rejestracja',
