@@ -37,6 +37,21 @@ services:
       - DATABASE_URL=sqlite:////app/db/sentences.db
     restart: always
 
+  todos:
+    build: ./todo-microservice
+    container_name: maia-todos
+    volumes:
+      - ./databases:/app/db  # To sprawi, że baza pojawi się obok innych!
+    ports:
+      - "8004:8004"    #TODO remove at production
+    environment:
+      # Podmieniamy lokalny URL bazy z .env na ścieżkę wewnątrz Dockera
+      # 4 ukośniki (////) oznaczają ścieżkę absolutną w Linuksie!
+      - DATABASE_URL=sqlite+aiosqlite:////app/db/todos.db
+    env_file:
+      - ./todo-microservice/.env # Zaczytuje SECRET_KEY i ALGORITHM
+    restart: always
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-tunnel
@@ -48,3 +63,4 @@ services:
       - captcha
       - auth
       - sentences
+      - todos

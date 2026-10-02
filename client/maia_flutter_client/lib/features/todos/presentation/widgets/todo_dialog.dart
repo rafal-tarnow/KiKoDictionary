@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/app_sizes.dart';
 
 class TodoDialog extends StatefulWidget {
   final String? initialContent;
@@ -41,7 +42,7 @@ class _TodoDialogState extends State<TodoDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: AppSizes.maxMobileWidth * 0.9),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(

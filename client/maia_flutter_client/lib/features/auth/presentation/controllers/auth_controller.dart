@@ -5,6 +5,7 @@ import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
 import '../../../sentences/presentation/sentences_provider.dart';
 import '../../../../core/routing/app_page.dart';
+import '../../../todos/presentation/todos_provider.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -86,6 +87,7 @@ class AuthController extends StateNotifier<AuthState> {
     // ZMIANA: Czyścimy pamięć globalną (User + Sentences) z danych starego użytkownika!
     _ref.read(userControllerProvider.notifier).clearUser();
     _ref.read(sentencesProvider.notifier).clearData(); 
+    _ref.invalidate(todosProvider);
     
     state = const AuthState(isAuthenticated: false, isAppLoading: false);
   }
