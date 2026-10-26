@@ -21,11 +21,12 @@ python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 fastapi-mail = "^1.6.1"
 aiosmtplib = "^5.1.0"
 coolname = "^4.1.0"
+# Runtime: weryfikacja captcha w routers/auth.py (wczesniej tylko w dev -> brak w obrazie Docker)
+httpx = "^0.28.1"
 
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.0"
-httpx = "^0.28.1"
 pytest-asyncio = "^1.0.0"
 
 [build-system]

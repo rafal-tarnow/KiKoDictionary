@@ -1,4 +1,9 @@
 # tests/conftest.py
+import os
+
+# Klucz testowy, gdy brak .env (np. CI). Musi byc ustawiony przed importem src.core.config.
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession

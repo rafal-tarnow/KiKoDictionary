@@ -7,7 +7,9 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
 
     # ================= ZMIANA: JWT Settings =================
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "Z9X8v5y7_kJqP3mW2nL4rT6uY8iO0pQ2xR5tV7wU9")
+    # Brak wartosci domyslnej celowo: bez SECRET_KEY w .env / srodowisku serwis nie wystartuje.
+    # Klucz musi byc identyczny jak w auth-microservice.
+    SECRET_KEY: str
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     
     # <=== NOWE: Konfiguracja limitów znaków ===>

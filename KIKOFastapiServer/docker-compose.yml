@@ -35,6 +35,8 @@ services:
       - "8003:8003"    #TODO remove at production, expose ports only for dev enviroment
     environment:
       - DATABASE_URL=sqlite:////app/db/sentences.db
+    env_file:
+      - ./sentences-microservice/.env # SECRET_KEY i ALGORITHM (takie same jak w auth)
     restart: always
 
   todos:
