@@ -52,6 +52,19 @@ services:
       - ./todo-microservice/.env # Zaczytuje SECRET_KEY i ALGORITHM
     restart: always
 
+  projects:
+    build: ./projects-microservice
+    container_name: maia-projects
+    volumes:
+      - ./databases:/app/db
+    ports:
+      - "8005:8005"    #TODO remove at production
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/db/projects.db
+    env_file:
+      - ./projects-microservice/.env # SECRET_KEY i ALGORITHM (takie same jak w auth)
+    restart: always
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-tunnel
@@ -64,3 +77,4 @@ services:
       - auth
       - sentences
       - todos
+      - projects

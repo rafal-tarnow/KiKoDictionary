@@ -99,6 +99,20 @@ class MainDrawer extends ConsumerWidget {
             page: AppPage.todos,
             isSelected: selectedPage == AppPage.todos,
           ),
+          const Divider(height: 32),
+          const Padding(
+            padding: EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              "PROJECTS",
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+          ),
+          _DrawerTile(
+            title: 'Projects',
+            icon: Icons.folder_copy_outlined,
+            page: AppPage.projects,
+            isSelected: selectedPage == AppPage.projects,
+          ),
           // ===================================================================================
           // _DrawerTile(
           //   title: 'Rejestracja',

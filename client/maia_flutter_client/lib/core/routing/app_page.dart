@@ -7,7 +7,8 @@ enum AppPage {
   words,              // dawniej 2
   sentences,          // dawniej 3
   todos,
-  register,           // dawniej 4
+  projects,
+  register,          // dawniej 4
   login,              // dawniej 5
   test,               // dawniej 6
   //health,             // dawniej 7

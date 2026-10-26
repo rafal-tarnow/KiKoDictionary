@@ -19,6 +19,9 @@ samples, guidance on mobile development, and a full API reference.
 w prawym dolnym rogu VSC wybrac platforme docelowa a nastepnie:
 flutter run --release
 
+## Run relase version on windows
+flutter run -d windows --release
+
 ## Build web version
 
 flutter build web --base-href "/english_learner/flutter/"
