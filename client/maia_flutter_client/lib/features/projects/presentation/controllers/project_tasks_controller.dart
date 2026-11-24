@@ -4,7 +4,7 @@ import '../../../../core/network/api_error_handler.dart';
 import '../../data/models/project_task.dart';
 import '../../data/project_tasks_repository.dart';
 import '../../domain/action_result.dart';
-import '../../domain/list_reorder.dart';
+import '../../../../core/utils/list_reorder.dart';
 import 'projects_controller.dart';
 import 'projects_session_provider.dart';
 

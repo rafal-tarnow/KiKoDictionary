@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Dict, Optional
 
 class HealthCheckResponse(BaseModel):
@@ -7,8 +7,8 @@ class HealthCheckResponse(BaseModel):
     uptime: Optional[float] = None
     components: Optional[Dict[str, str]] = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "ok",
                 "version": "1.0.0",
@@ -18,3 +18,4 @@ class HealthCheckResponse(BaseModel):
                 }
             }
         }
+    )

@@ -28,8 +28,8 @@ async def get_current_user(
         if user_id is None or token_type != "access":
             raise credentials_exception
         token_data = TokenData(user_id=user_id)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
     
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id=token_data.user_id)

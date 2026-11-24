@@ -30,7 +30,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     if (success && mounted) {
       // Ponownie pobieramy usera z bazy, aby mieć zaktualizowaną flagę (jeśli baza ją zmienia)
       await ref.read(userControllerProvider.notifier).fetchUser();
-      
+      // Po await widget mógł zostać usunięty - wtedy nie wolno używać context
+      if (!mounted) return;
+
       // Przekierowujemy na stronę główną
       ref.read(navigationProvider.notifier).state = AppPage.home; // HomePage
       

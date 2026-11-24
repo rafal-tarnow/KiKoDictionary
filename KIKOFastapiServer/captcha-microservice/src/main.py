@@ -30,13 +30,3 @@ app.include_router(v1_router, prefix="/api/v1")
 
 # Include health router
 app.include_router(health_router, prefix="/health", tags=["Health & Operations"])
-
-@app.on_event("startup")
-async def startup_event():
-    # Initialize any required resources
-    pass
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    # Cleanup resources
-    pass

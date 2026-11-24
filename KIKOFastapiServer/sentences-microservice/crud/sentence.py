@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from models.sentence import Sentence
-from schemas.sentence import SentenceCreate, SentenceUpdate
+from schemas.sentence import SentenceCreate, SentenceUpdate, SentenceReorder
+from crud import sentence_ordering
 from fastapi import HTTPException, status
 
 from src.core.config import settings
@@ -35,7 +36,8 @@ def create_sentence(db: Session, sentence: SentenceCreate, current_user: Current
         original_text=sentence.original_text,
         translated_text=sentence.translated_text,
         source_language=sentence.source_language,
-        target_language=sentence.target_language
+        target_language=sentence.target_language,
+        position=sentence_ordering.position_for_new_sentence(db, current_user.id),
     )
     db.add(db_sentence)
     db.commit()
@@ -49,7 +51,11 @@ def get_my_sentences(db: Session, page: int, per_page: int, current_user: Curren
     
     # 2. DODAJEMY SORTOWANIE (ORDER BY created_at DESC)
     # [ZMIANA]: Dodano filtr filter(Sentence.user_id == user_id)
-    query = db.query(Sentence).filter(Sentence.user_id == current_user.id).order_by(desc(Sentence.created_at))
+    query = (
+        db.query(Sentence)
+        .filter(Sentence.user_id == current_user.id)
+        .order_by(Sentence.position.asc(), Sentence.id.asc())  # reczna kolejnosc usera
+    )
     
     # Pobieramy dane z uwzględnieniem paginacji
     sentences = query.offset(offset).limit(per_page).all()
@@ -144,7 +150,8 @@ def clone_sentence(db: Session, original_sentence_id: int, current_user: Current
         original_text=original.original_text,
         translated_text=original.translated_text,
         source_language=original.source_language,
-        target_language=original.target_language
+        target_language=original.target_language,
+        position=sentence_ordering.position_for_new_sentence(db, current_user.id),
     )
     
     db.add(cloned_sentence)
@@ -177,3 +184,30 @@ def get_community_sentences(
     
     return sentences, total
 # =================================================================================
+
+# ================= Kolejnosc na liscie "My Sentences" =================
+def reorder_sentence(db: Session, sentence_id: int, reorder: SentenceReorder, current_user: CurrentUser):
+    """Drag & drop: ustawia zdanie miedzy prev_id (nad) a next_id (pod)."""
+    db_sentence = get_sentence(db, sentence_id, current_user)
+    sentence_ordering.move_between(db, db_sentence, reorder.prev_id, reorder.next_id)
+    db.commit()
+    db.refresh(db_sentence)
+    return db_sentence
+
+
+def move_sentence_to_top(db: Session, sentence_id: int, current_user: CurrentUser):
+    """Na sam poczatek listy (gora pierwszej strony)."""
+    db_sentence = get_sentence(db, sentence_id, current_user)
+    sentence_ordering.move_to_top(db, db_sentence)
+    db.commit()
+    db.refresh(db_sentence)
+    return db_sentence
+
+
+def move_sentence_to_bottom(db: Session, sentence_id: int, current_user: CurrentUser):
+    """Na sam koniec listy (dol ostatniej strony)."""
+    db_sentence = get_sentence(db, sentence_id, current_user)
+    sentence_ordering.move_to_bottom(db, db_sentence)
+    db.commit()
+    db.refresh(db_sentence)
+    return db_sentence

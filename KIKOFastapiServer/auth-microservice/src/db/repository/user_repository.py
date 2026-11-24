@@ -5,7 +5,6 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, func
 from datetime import datetime, timezone
 import uuid
-import re
 from coolname import generate_slug
 import random
 
@@ -23,7 +22,7 @@ class UserRepository:
         email_lower = email.lower()
         # [ZMIANA]: Pobieramy tylko aktywnych użytkowników
         result = await self.db.execute(
-            select(User).filter(User.email == email_lower, User.is_active == True)
+            select(User).filter(User.email == email_lower, User.is_active.is_(True))
         )
         return result.scalars().first()
     
@@ -38,7 +37,7 @@ class UserRepository:
         result = await self.db.execute(
             select(User).filter(
                 func.lower(User.username) == username_lower,
-                User.is_active == True
+                User.is_active.is_(True)
             )
         )
         return result.scalars().first()
@@ -69,7 +68,7 @@ class UserRepository:
                     User.email == identifier_lower,
                     func.lower(User.username) == identifier_lower
                 ),
-                User.is_active == True
+                User.is_active.is_(True)
             )
         )
         return result.scalars().first()

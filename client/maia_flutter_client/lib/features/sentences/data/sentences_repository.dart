@@ -142,4 +142,25 @@ class SentencesRepository {
   }
   // ===================================================================
 
+  // ================= Kolejność na liście "My Sentences" =================
+  /// Drag & drop: [previousId] - zdanie nad nowym miejscem, [nextId] - pod nim.
+  Future<Sentence> reorderSentence(int id, {int? previousId, int? nextId}) async {
+    final response = await _dio.post(
+      '/api/sentences/$id/reorder',
+      data: {'prev_id': previousId, 'next_id': nextId},
+    );
+    return Sentence.fromJson(response.data);
+  }
+
+  /// Na sam początek listy (góra pierwszej strony).
+  Future<Sentence> moveSentenceToTop(int id) async {
+    final response = await _dio.post('/api/sentences/$id/move-to-top');
+    return Sentence.fromJson(response.data);
+  }
+
+  /// Na sam koniec listy (dół ostatniej strony).
+  Future<Sentence> moveSentenceToBottom(int id) async {
+    final response = await _dio.post('/api/sentences/$id/move-to-bottom');
+    return Sentence.fromJson(response.data);
+  }
 }

@@ -1,0 +1,27 @@
+# Wspólna konfiguracja lintera dla wszystkich mikroserwisów (ruff: https://docs.astral.sh/ruff/).
+# Uruchomienie z katalogu KIKOFastapiServer:  ruff check .
+#
+# Wybrane reguły łapią realne błędy, a nie styl:
+#   E4/E7/E9 + F  - błędy składni, nieużywane / zdublowane importy i zmienne, złe porównania
+#   B             - typowe pułapki (np. gubienie przyczyny wyjątku)
+#   ASYNC         - blokujące operacje w funkcjach async
+#   PLE           - błędy wykrywane przez pylint
+target-version = "py312"
+extend-exclude = ["migrations", "dump_project.py", "venv"]
+
+[lint]
+select = ["E4", "E7", "E9", "F", "B", "ASYNC", "PLE"]
+
+[lint.flake8-bugbear]
+# Depends()/Query()/... w domyślnych argumentach to standardowy wzorzec FastAPI, nie błąd
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
+]

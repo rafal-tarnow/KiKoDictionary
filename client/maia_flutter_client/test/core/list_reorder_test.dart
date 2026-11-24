@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maia_flutter_client/features/projects/domain/list_reorder.dart';
+import 'package:maia_flutter_client/core/utils/list_reorder.dart';
 
 void main() {
   const items = ['A', 'B', 'C', 'D'];

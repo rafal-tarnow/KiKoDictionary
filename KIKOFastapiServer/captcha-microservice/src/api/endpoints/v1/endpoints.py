@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
-from src.schemas.captcha import CaptchaResponse, CaptchaVerifyRequest, CaptchaVerifyResponse
+import uuid
+
+from fastapi import APIRouter, Depends
+from src.core.config import settings
+from src.schemas.captcha import CaptchaChallengeResponse, CaptchaVerifyRequest, CaptchaVerifyResponse
 from src.database.repository import CaptchaRepository
 from src.core.captcha_generator import CaptchaGenerator
 from src.dependencies import get_captcha_repository, get_captcha_generator
@@ -50,10 +53,6 @@ router = APIRouter()
 
 ###############################################################################
 
-
-import uuid
-from src.core.config import settings
-from src.schemas.captcha import CaptchaChallengeResponse
 
 @router.get("/captcha", response_model=CaptchaChallengeResponse)
 async def generate_captcha(

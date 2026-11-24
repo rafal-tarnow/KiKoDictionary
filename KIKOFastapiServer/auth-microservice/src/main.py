@@ -7,11 +7,7 @@ from sqlalchemy.exc import OperationalError
 from src.core.config import settings
 from src.api.v1.routers import auth
 from src.api.v1.routers import test
-from src.db.models.user import Base
-from src.db.models.refresh_token import RefreshToken
-from src.db.models.password_reset import PasswordResetToken
-from src.db.models.user_profile import UserProfile
-from src.db.session import engine
+import src.db.models  # noqa: F401 - rejestruje wszystkie modele (relacje SQLAlchemy po nazwach)
 from src.api.v1.routers.health import health_router
 from src.api.v1.routers import users
 
@@ -88,7 +84,7 @@ async def yaml_docs():
             headers={"Content-Disposition": "attachment; filename=docs.yaml"}
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating YAML: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating YAML: {str(e)}") from e
 
 
 @app.get("/", tags=['Health Check'])

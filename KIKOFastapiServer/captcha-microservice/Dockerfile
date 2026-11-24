@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# pip jako root w kontenerze jest zamierzony (kontener = izolacja) - bez ostrzezenia przy budowaniu
+ENV PIP_ROOT_USER_ACTION=ignore
+
 WORKDIR /app
 
 COPY requirements.txt .

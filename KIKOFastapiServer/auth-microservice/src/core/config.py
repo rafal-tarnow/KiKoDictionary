@@ -1,6 +1,6 @@
 import os
 from typing import List, Union
-from pydantic import field_validator, AnyHttpUrl
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     # Dedykowany URL do strony resetowania hasła.
     # Jeśli nie jest podany w .env, domyślnie składa się z FRONTEND_URL + /auth/reset-password
     # Dzięki temu w .env możesz wpisać PEŁNY, specyficzny link do pliku .html
-    RESET_PASSWORD_URL: str = os.getenv("RESET_PASSWORD_URL", None)
+    # Opcjonalne (None = link budowany z FRONTEND_URL, patrz get_reset_password_link)
+    RESET_PASSWORD_URL: str | None = os.getenv("RESET_PASSWORD_URL")
 
     
     # Email Settings (przykładowe pod Gmail lub SMTP)

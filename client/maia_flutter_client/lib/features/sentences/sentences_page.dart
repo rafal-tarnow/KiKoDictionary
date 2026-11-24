@@ -292,7 +292,10 @@ class SentencesPage extends ConsumerWidget {
                   )
                 : Stack(
                     children: [
-                      ListView.separated(
+                      // Przeciąganie jak w Daily Tasks / Projects: uchwyt po lewej
+                      // + długie przytrzymanie kafelka na ekranach dotykowych.
+                      // Między stronami przenosi się z menu kafelka ("Move to top" / "Move to end").
+                      ReorderableListView.builder(
                         itemCount: sentencesState.sentences.length,
                         padding: const EdgeInsets.only(
                           left: 8,
@@ -300,18 +303,35 @@ class SentencesPage extends ConsumerWidget {
                           top: 8,
                           bottom: 80,
                         ), // Odstęp na FAB
-                        separatorBuilder: (context, index) {
-                          return Divider(
-                            height: 16,
-                            thickness: 0.5,
-                            color: Colors.grey.shade400,
-                            indent: 8,
-                            endIndent: 8,
-                          );
+                        buildDefaultDragHandles: false,
+                        proxyDecorator: (child, index, animation) => Material(
+                          elevation: 6,
+                          color: Colors.transparent,
+                          child: child,
+                        ),
+                        onReorderItem: (oldIndex, newIndex) async {
+                          final success = await notifier.reorder(oldIndex, newIndex);
+                          if (!success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Failed to move the sentence."),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         itemBuilder: (context, index) {
                           final item = sentencesState.sentences[index];
-                          return SentenceTile(sentence: item);
+                          return ReorderableDelayedDragStartListener(
+                            key: ValueKey(item.id),
+                            index: index,
+                            child: SentenceTile(
+                              sentence: item,
+                              index: index,
+                              isFirstOverall: sentencesState.isFirstOverall(index),
+                              isLastOverall: sentencesState.isLastOverall(index),
+                            ),
+                          );
                         },
                       ),
                       if (sentencesState.isLoading)

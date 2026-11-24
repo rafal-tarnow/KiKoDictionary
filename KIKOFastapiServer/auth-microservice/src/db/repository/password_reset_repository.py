@@ -27,7 +27,7 @@ class PasswordResetRepository:
         """
         query = select(PasswordResetToken).filter(
             PasswordResetToken.token == token,
-            PasswordResetToken.is_used == False,
+            PasswordResetToken.is_used.is_(False),
             PasswordResetToken.expires_at > datetime.now(timezone.utc)
         )
         result = await self.db.execute(query)

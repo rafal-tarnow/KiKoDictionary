@@ -26,6 +26,7 @@ class Sentence(BaseModel):
     source_language: str
     target_language: str
     created_at: datetime
+    position: float = 0.0  # reczna kolejnosc na liscie "My Sentences" (mniejsza = wyzej)
     
     # ================= [NOWE - PRODUKCJA 3]: Pydantic V2 Standard =================
     model_config = ConfigDict(from_attributes=True)
@@ -34,6 +35,14 @@ class Sentence(BaseModel):
 
 
 # ================= [NOWE - PRODUKCJA]: Schematy Paginacji =================
+class SentenceReorder(BaseModel):
+    """Wynik przeciagniecia: ID zdan bezposrednio NAD (prev_id) i POD (next_id) nowym miejscem."""
+    prev_id: Optional[int] = None
+    next_id: Optional[int] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class PaginatedSentences(BaseModel):
     data: List[Sentence]
     page: int

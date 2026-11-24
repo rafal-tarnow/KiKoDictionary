@@ -3,6 +3,9 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# pip jako root w kontenerze jest zamierzony (kontener = izolacja) - bez ostrzezenia przy budowaniu
+ENV PIP_ROOT_USER_ACTION=ignore
+
 WORKDIR /app
 
 # Instalacja poetry

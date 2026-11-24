@@ -56,7 +56,7 @@ async def get_random():
     return {'number': rn, 'limit': 100}
 
 @app.get('/json')
-async def get_json_file():
+def get_json_file():
     json_path = Path(__file__).parent / "data.json"
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)

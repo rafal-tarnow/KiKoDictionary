@@ -1,6 +1,4 @@
-import os
 from pathlib import Path
-from typing import List
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from src.core.config import settings

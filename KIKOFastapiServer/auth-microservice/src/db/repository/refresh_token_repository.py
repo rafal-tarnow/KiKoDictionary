@@ -31,10 +31,11 @@ class RefreshTokenRepository:
         return result.scalars().first()
     
     async def delete(self, token_id: str) -> None:
-        db_token = await self.db.get(RefreshToken, token_id)
-        if db_token:
-            await self.db.delete(db_token)
-            await self.db.commit()
+        # Pojedynczy DELETE ... WHERE zamiast pobrania + usunięcia obiektu.
+        # Jest idempotentny: gdy dwa równoległe żądania (np. podwójne wylogowanie)
+        # usuwają ten sam token, nie ma ostrzeżenia SAWarning "expected to delete 1 row(s); 0 were matched".
+        await self.db.execute(delete(RefreshToken).where(RefreshToken.id == token_id))
+        await self.db.commit()
 
     # Dodaj to na końcu klasy RefreshTokenRepository
     async def delete_all_for_user(self, user_id: str) -> None:
@@ -42,9 +43,6 @@ class RefreshTokenRepository:
         Usuwa wszystkie tokeny odświeżające danego użytkownika.
         Używane przy zmianie hasła, aby wylogować użytkownika ze wszystkich urządzeń.
         """
-        # Importujemy delete wewnątrz metody lub na górze pliku
-        from sqlalchemy import delete 
-        
         stmt = delete(RefreshToken).where(RefreshToken.user_id == user_id)
         await self.db.execute(stmt)
         await self.db.commit()

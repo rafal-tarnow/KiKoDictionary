@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_error_handler.dart';
+import '../../auth/presentation/controllers/auth_controller.dart';
 import '../data/models/todo_model.dart';
 import '../data/todo_repository.dart';
 
@@ -19,19 +20,26 @@ class TodosState {
   }
 }
 
+// Każda metoda po `await` sprawdza `mounted`: kontroler mógł zostać w międzyczasie zniszczony
+// (np. wylogowanie albo zmiana sesji w trakcie zapytania). Zapis do `state` po dispose
+// kończy się wyjątkiem "Tried to use TodosController after `dispose` was called".
 class TodosController extends StateNotifier<TodosState> {
   final TodoRepository _repo;
 
-  TodosController(this._repo) : super(TodosState()) {
-    loadTodos();
+  /// [autoLoad] = false dla niezalogowanego użytkownika - wtedy nie pytamy API
+  /// (bez tokena serwer odpowiada 401, co wymuszałoby kolejne wylogowania).
+  TodosController(this._repo, {bool autoLoad = true}) : super(TodosState()) {
+    if (autoLoad) loadTodos();
   }
 
   Future<void> loadTodos() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final todos = await _repo.getTodos();
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, items: todos);
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: ApiErrorHandler.getErrorMessage(e));
     }
   }
@@ -39,10 +47,12 @@ class TodosController extends StateNotifier<TodosState> {
   Future<bool> addTodo(String content) async {
     try {
       final newTodo = await _repo.createTodo(content);
+      if (!mounted) return false;
       // Dodajemy na sam dół listy
       state = state.copyWith(items: [...state.items, newTodo]);
       return true;
     } catch (e) {
+      if (!mounted) return false;
       state = state.copyWith(error: ApiErrorHandler.getErrorMessage(e));
       return false;
     }
@@ -52,7 +62,7 @@ class TodosController extends StateNotifier<TodosState> {
     // 1. Optymistyczna zmiana UI
     final previousState = state.items;
     final updatedItem = todo.copyWith(isCompleted: !todo.isCompleted);
-    
+
     state = state.copyWith(
       items: state.items.map((e) => e.id == todo.id ? updatedItem : e).toList(),
     );
@@ -62,6 +72,7 @@ class TodosController extends StateNotifier<TodosState> {
       await _repo.updateTodo(todo.id, isCompleted: updatedItem.isCompleted);
     } catch (e) {
       // 3. Rollback w razie błędu sieci
+      if (!mounted) return;
       state = state.copyWith(items: previousState, error: "Failed to update task.");
     }
   }
@@ -69,11 +80,13 @@ class TodosController extends StateNotifier<TodosState> {
   Future<bool> updateContent(int id, String newContent) async {
     try {
       final updated = await _repo.updateTodo(id, content: newContent);
+      if (!mounted) return false;
       state = state.copyWith(
         items: state.items.map((e) => e.id == id ? updated : e).toList(),
       );
       return true;
     } catch (e) {
+      if (!mounted) return false;
       state = state.copyWith(error: ApiErrorHandler.getErrorMessage(e));
       return false;
     }
@@ -87,15 +100,20 @@ class TodosController extends StateNotifier<TodosState> {
     try {
       await _repo.deleteTodo(id);
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(items: previousState, error: "Failed to delete task.");
     }
   }
 
   // ================= MAGIA DRAG & DROP =================
+  // Indeksy z ReorderableListView.onReorderItem (newIndex jest już skorygowany)
   Future<void> reorder(int oldIndex, int newIndex) async {
-    // Krok 1: Korekta indeksu w Flutterze (specyfika ReorderableListView)
-    if (newIndex > oldIndex) newIndex -= 1;
-    if (oldIndex == newIndex) return; // Brak zmiany pozycji
+    // Krok 1: Brak zmiany pozycji / indeks spoza listy
+    if (oldIndex == newIndex ||
+        oldIndex < 0 || oldIndex >= state.items.length ||
+        newIndex < 0 || newIndex >= state.items.length) {
+      return;
+    }
 
     // Krok 2: Kopia listy i fizyczne przestawienie elementów lokalnie
     final List<TodoItem> currentList = List.from(state.items);
@@ -113,11 +131,13 @@ class TodosController extends StateNotifier<TodosState> {
     // Krok 5: Strzał do API
     try {
       final updatedTodo = await _repo.reorderTodo(itemToMove.id, prevId, nextId);
+      if (!mounted) return;
       // Podmiana na wersję z serwera (z prawidłowo przeliczonym floatem "position")
       state = state.copyWith(
         items: state.items.map((e) => e.id == itemToMove.id ? updatedTodo : e).toList()
       );
     } catch (e) {
+      if (!mounted) return;
       // Rollback w razie braku prądu/internetu
       state = state.copyWith(items: previousState, error: "Reorder failed. Synchronizing...");
       await loadTodos(); // Awaryjne odświeżenie z serwera
@@ -126,5 +146,8 @@ class TodosController extends StateNotifier<TodosState> {
 }
 
 final todosProvider = StateNotifierProvider<TodosController, TodosState>((ref) {
-  return TodosController(ref.watch(todoRepositoryProvider));
+  // Zmiana sesji (logowanie / wylogowanie) tworzy kontroler od nowa:
+  // zalogowany -> pobiera zadania swojego konta, gość -> pusta lista bez zapytań do API.
+  final isLoggedIn = ref.watch(authControllerProvider.select((s) => s.isAuthenticated));
+  return TodosController(ref.watch(todoRepositoryProvider), autoLoad: isLoggedIn);
 });

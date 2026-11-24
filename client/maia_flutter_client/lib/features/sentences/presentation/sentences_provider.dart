@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/sentence_model.dart';
 import '../data/sentences_repository.dart';
 import '../../../core/network/api_error_handler.dart';
+import '../../../core/utils/list_reorder.dart';
 
 class SentencesState {
   final List<Sentence> sentences;
@@ -19,6 +20,12 @@ class SentencesState {
   });
 
   bool get isLastPage => currentPage >= totalPages;
+
+  /// Czy zdanie z pozycji [index] bieżącej strony jest pierwsze na całej liście.
+  bool isFirstOverall(int index) => currentPage == 1 && index == 0;
+
+  /// Czy zdanie z pozycji [index] bieżącej strony jest ostatnie na całej liście.
+  bool isLastOverall(int index) => isLastPage && index == sentences.length - 1;
 
   SentencesState copyWith({
     List<Sentence>? sentences,
@@ -125,6 +132,51 @@ class SentencesNotifier extends StateNotifier<SentencesState> {
 
   void clearData(){
     state = const SentencesState();
+  }
+
+  // ================= Kolejność (drag & drop, na początek / na koniec) =================
+
+  /// Przeciągnięcie w obrębie bieżącej strony. Indeksy z `ReorderableListView.onReorderItem`.
+  /// Lista zmienia się od razu (optymistycznie); przy błędzie wraca do poprzedniej kolejności.
+  Future<bool> reorder(int oldIndex, int newIndex) async {
+    final result = reorderList(state.sentences, oldIndex, newIndex);
+    if (result == null) return true;
+
+    final previous = state.sentences;
+    state = state.copyWith(sentences: result.items);
+
+    try {
+      final updated = await _repository.reorderSentence(
+        result.moved.id,
+        previousId: result.previous?.id,
+        nextId: result.next?.id,
+      );
+      updateSentenceLocally(updated);
+      return true;
+    } catch (e) {
+      state = state.copyWith(sentences: previous, errorMessage: ApiErrorHandler.getErrorMessage(e));
+      return false;
+    }
+  }
+
+  /// Na sam początek listy (góra strony 1) - także ze stron dalszych niż pierwsza.
+  Future<bool> moveToTop(int sentenceId) =>
+      _moveAndReload(() => _repository.moveSentenceToTop(sentenceId));
+
+  /// Na sam koniec listy (dół ostatniej strony).
+  Future<bool> moveToBottom(int sentenceId) =>
+      _moveAndReload(() => _repository.moveSentenceToBottom(sentenceId));
+
+  Future<bool> _moveAndReload(Future<Sentence> Function() move) async {
+    try {
+      await move();
+    } catch (e) {
+      state = state.copyWith(errorMessage: ApiErrorHandler.getErrorMessage(e));
+      return false;
+    }
+    // Zdanie mogło opuścić bieżącą stronę (a inne na nią wejść) - pobieramy ją od nowa
+    await refreshCurrentPage();
+    return true;
   }
 }
 

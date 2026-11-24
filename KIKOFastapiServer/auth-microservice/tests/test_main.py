@@ -2,7 +2,7 @@ import pytest
 import uuid
 from unittest.mock import patch
 from src.db.models.user import User
-from src.core.security import pwd_context
+from src.core.security import verify_password
 from sqlalchemy.future import select
 from tests.conftest import TestingSessionLocal
 
@@ -109,7 +109,7 @@ async def test_post_register_user_saves_to_database(client, valid_register_data)
         assert db_user.account_role == "REGULAR"
         assert db_user.account_subscription == "FREE"
         assert db_user.created_at is not None
-        assert pwd_context.verify(valid_register_data["password"], db_user.hashed_password)
+        assert verify_password(valid_register_data["password"], db_user.hashed_password)
 # ======================================================================
 
 

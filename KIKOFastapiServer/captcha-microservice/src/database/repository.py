@@ -17,7 +17,7 @@ from datetime import datetime
 #         return self.db.query(Captcha).filter(Captcha.id == captcha_id).first()
     
 # src/database/repository.py
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from sqlalchemy import delete
 
 class CaptchaRepository:

@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, PaginatedSentences
+from typing import Optional
+from schemas.sentence import Sentence, SentenceCreate, SentenceUpdate, SentenceReorder, PaginatedSentences
 
 # ================= ZMIANA: Importujemy wszystkie funkcje CRUD, w tym nowe =================
 from crud.sentence import (
@@ -13,7 +11,10 @@ from crud.sentence import (
     get_sentence, 
     update_sentence, 
     delete_sentence,
-    clone_sentence
+    clone_sentence,
+    reorder_sentence,
+    move_sentence_to_top,
+    move_sentence_to_bottom,
 )
 from database import get_db
 
@@ -124,3 +125,35 @@ def delete_sentence_endpoint(
     current_user: CurrentUser = Depends(get_current_user) # [ZMIANA]
 ):
     return delete_sentence(db, sentence_id, current_user) # [ZMIANA]
+
+
+# ================= Kolejnosc na liscie "My Sentences" =================
+@router.post("/{sentence_id}/reorder", response_model=Sentence)
+def reorder_sentence_endpoint(
+    sentence_id: int,
+    reorder: SentenceReorder,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """Drag & drop: przenosi zdanie miedzy prev_id (nad) a next_id (pod)."""
+    return reorder_sentence(db, sentence_id, reorder, current_user)
+
+
+@router.post("/{sentence_id}/move-to-top", response_model=Sentence)
+def move_sentence_to_top_endpoint(
+    sentence_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """Przenosi zdanie na sam poczatek listy (gora pierwszej strony)."""
+    return move_sentence_to_top(db, sentence_id, current_user)
+
+
+@router.post("/{sentence_id}/move-to-bottom", response_model=Sentence)
+def move_sentence_to_bottom_endpoint(
+    sentence_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """Przenosi zdanie na sam koniec listy (dol ostatniej strony)."""
+    return move_sentence_to_bottom(db, sentence_id, current_user)

@@ -1,5 +1,4 @@
 import random
-import string
 import base64
 from typing import Tuple
 from captcha.image import ImageCaptcha  # To musisz mieć zainstalowane

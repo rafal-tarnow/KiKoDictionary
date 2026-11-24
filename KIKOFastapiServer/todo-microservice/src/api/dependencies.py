@@ -22,5 +22,5 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
         if user_id is None:
             raise credentials_exception
         return CurrentUser(id=user_id)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc

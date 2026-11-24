@@ -1,3 +1,5 @@
+// Wspólne dla modułów z listami przeciąganymi (Projects, My Sentences).
+
 /// Wynik przeniesienia elementu na liście (drag & drop).
 class ReorderResult<T> {
   /// Lista po przeniesieniu (nowa instancja).

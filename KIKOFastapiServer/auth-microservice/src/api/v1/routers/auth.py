@@ -1,6 +1,5 @@
 import httpx
 import secrets
-from uuid import uuid4
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
@@ -14,7 +13,6 @@ from src.db.session import get_db
 from src.db.repository.user_repository import UserRepository
 from src.db.repository.refresh_token_repository import RefreshTokenRepository
 from src.db.repository.password_reset_repository import PasswordResetRepository
-from src.db.models.password_reset import PasswordResetToken
 
 from src.core.security import verify_password, create_access_token, create_refresh_token
 
@@ -47,12 +45,12 @@ async def register_user(
             verify_data = response.json()
             if not verify_data.get("is_valid"):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid CAPTCHA answer")
-        except httpx.TimeoutException:
-            raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Captcha verification timed out. Please try again later.")
+        except httpx.TimeoutException as exc:
+            raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Captcha verification timed out. Please try again later.") from exc
         except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Captcha service unavailable. Please try again later.")
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Captcha service unavailable. Please try again later.") from exc
         except httpx.HTTPStatusError as exc:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Error communicating with captcha service.")
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Error communicating with captcha service.") from exc
 
     # --- 2. LOGIKA BIZNESOWA REJESTRACJI ---
     user_create_data = UserCreate(
@@ -141,9 +139,9 @@ async def refresh_access_token(
              raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
         
         user_id_from_token = payload.get("sub")
-    except JWTError:
+    except JWTError as exc:
         # Jeśli token jest całkowicie fałszywy lub sfałszowano sygnaturę, odrzucamy go natychmiast
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token") from exc
 
     # 2. Szukamy tokenu w bazie (White-listing)
     db_refresh_token = await refresh_token_repo.get_by_token(token=token_request.refresh_token)

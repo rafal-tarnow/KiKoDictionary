@@ -1,6 +1,5 @@
 import os
-from pydantic_settings import BaseSettings
-from typing import List
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Maia Sentences Microservice"
@@ -18,9 +17,6 @@ class Settings(BaseSettings):
     MAX_CHARS_PREMIUM: int = 569
     # ========================================================
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
 
 settings = Settings()

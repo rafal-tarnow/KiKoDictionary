@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../../core/navigation_provider.dart';
 import '../../../core/routing/app_page.dart';
+import '../data/models/todo_model.dart';
 import 'todos_provider.dart';
 import 'widgets/todo_card.dart';
 import 'widgets/todo_dialog.dart';
@@ -234,11 +235,16 @@ class TodosPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildReorderableList(List items, TodosController notifier, BuildContext context, WidgetRef ref) {
+  Widget _buildReorderableList(List<TodoItem> items, TodosController notifier, BuildContext context, WidgetRef ref) {
     return ReorderableListView.builder(
-      padding: const EdgeInsets.only(top: 16, bottom: 80), 
+      padding: const EdgeInsets.only(top: 16, bottom: 80),
       itemCount: items.length,
-      onReorder: (oldIndex, newIndex) {
+      // Wyłączamy domyślne uchwyty Fluttera: na desktopie/web dokładały uchwyt po PRAWEJ,
+      // na telefonie tylko długie przytrzymanie - stąd różne zachowanie na różnych urządzeniach.
+      // Zamiast tego: własny uchwyt po lewej (TodoCard) + długie przytrzymanie kafelka.
+      buildDefaultDragHandles: false,
+      // onReorderItem podaje newIndex już skorygowany o usunięty element
+      onReorderItem: (oldIndex, newIndex) {
         notifier.reorder(oldIndex, newIndex);
       },
       proxyDecorator: (Widget child, int index, Animation<double> animation) {
@@ -250,12 +256,17 @@ class TodosPage extends ConsumerWidget {
       },
       itemBuilder: (context, index) {
         final todo = items[index];
-        return TodoCard(
-          key: ValueKey(todo.id), 
-          todo: todo,
-          onToggle: () => notifier.toggleCompleted(todo),
-          onEdit: () => _showEditDialog(context, ref, todo.id, todo.content),
-          onDelete: () => notifier.deleteTodo(todo.id),
+        // Długie przytrzymanie kafelka = przeciąganie na ekranach dotykowych
+        return ReorderableDelayedDragStartListener(
+          key: ValueKey(todo.id),
+          index: index,
+          child: TodoCard(
+            todo: todo,
+            index: index,
+            onToggle: () => notifier.toggleCompleted(todo),
+            onEdit: () => _showEditDialog(context, ref, todo.id, todo.content),
+            onDelete: () => notifier.deleteTodo(todo.id),
+          ),
         );
       },
     );

@@ -27,7 +27,15 @@ class TestBackend with ChangeNotifier {
       bricksCount++;
       
       // 2. TO JEST KLUCZ! To mówi do UI: "Hej, zmieniłem się, przerysujcie się!"
-      notifyListeners(); 
+      notifyListeners();
     });
+  }
+
+  // Bez tego timery działałyby dalej po zniszczeniu obiektu (wyciek + notifyListeners po dispose)
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _statusTimer?.cancel();
+    super.dispose();
   }
 }

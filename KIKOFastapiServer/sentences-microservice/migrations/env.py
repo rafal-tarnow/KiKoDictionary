@@ -24,6 +24,10 @@ import sys
 # żeby Alembic wiedział, skąd importować pliki.
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+# W Dockerze baza leży w /app/db (DATABASE_URL z docker-compose) - ma pierwszeństwo przed alembic.ini
+if os.getenv("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+
 from database import Base
 # Musisz zaimportować wszystkie modele, żeby Alembic je "zauważył"
 from models.sentence import Sentence

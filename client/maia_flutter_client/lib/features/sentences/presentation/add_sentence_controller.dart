@@ -35,7 +35,8 @@ class AddSentenceController extends StateNotifier<AsyncValue<void>> {
       // --- ZMIANA ---
       // Zamiast zabijać providera (invalidate), prosimy go o odświeżenie danych.
       // Dzięki temu zachowujemy numer strony.
-      await _ref.read(sentencesProvider.notifier).refreshCurrentPage();
+      // Nowe zdanie trafia na sam początek listy - pokazujemy stronę 1, żeby było je widać
+      await _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
       
       // Jeśli wolałbyś skakać do ostatniej strony (bo tam dodał się element),
       // odkomentuj metodę w providerze i użyj tutaj:

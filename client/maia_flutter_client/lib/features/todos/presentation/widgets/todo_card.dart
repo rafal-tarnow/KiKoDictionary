@@ -3,6 +3,8 @@ import '../../data/models/todo_model.dart';
 
 class TodoCard extends StatelessWidget {
   final TodoItem todo;
+  // Pozycja kafelka na liście - potrzebna uchwytowi przeciągania
+  final int index;
   final VoidCallback onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -10,6 +12,7 @@ class TodoCard extends StatelessWidget {
   const TodoCard({
     super.key,
     required this.todo,
+    required this.index,
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
@@ -33,8 +36,10 @@ class TodoCard extends StatelessWidget {
         child: Row(
           children: [
             // --- 1. Rączka do przeciągania (Drag Handle) ---
+            // Zawsze po lewej i od razu reaguje (mysz). Na dotyku działa też długie
+            // przytrzymanie całego kafelka - patrz ReorderableDelayedDragStartListener w todos_page.dart
             ReorderableDragStartListener(
-              index: -1, // To zostanie zignorowane, ReorderableListView nadpisuje, ale widgetymusimy dać "na twardo" w listach zewnętrznych, tutaj zadziała naturalnie bez tego, więc używamy natywnego IconButtona wizualnie.
+              index: index,
               child: const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Icon(Icons.drag_indicator, color: Colors.grey),
