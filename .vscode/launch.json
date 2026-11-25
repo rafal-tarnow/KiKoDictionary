@@ -1,0 +1,23 @@
+{
+    // Konfiguracje F5 / Run and Debug, gdy w VS Code otwarty jest CAŁY katalog repozytorium.
+    // Aplikacja Flutter leży w client/maia_flutter_client i zawsze startuje z lib/main.dart.
+    // Urządzenie (Windows / Chrome / Android) wybierasz na pasku stanu VS Code (prawy dolny róg).
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Maia (debug)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "client/maia_flutter_client",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "Maia (release)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "client/maia_flutter_client",
+            "program": "lib/main.dart",
+            "flutterMode": "release"
+        }
+    ]
+}

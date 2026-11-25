@@ -1,0 +1,28 @@
+{
+    // Konfiguracje F5 / Run and Debug dla VS Code (folder client/maia_flutter_client otwarty jako projekt).
+    // Zawsze startują z lib/main.dart - niezależnie od pliku otwartego w edytorze.
+    // Urządzenie (Windows / Chrome / Android) wybierasz na pasku stanu VS Code (prawy dolny róg).
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Maia (debug)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "Maia (profile)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Maia (release)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release"
+        }
+    ]
+}
