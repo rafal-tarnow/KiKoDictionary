@@ -18,21 +18,89 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="English Learner - learn English sentences, plan tasks and projects.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="maia_flutter_client">
+  <meta name="apple-mobile-web-app-title" content="English Learner">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>maia_flutter_client</title>
+  <title>English Learner</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Ekran ładowania: czysty HTML/CSS, widoczny od pierwszej chwili - zanim przeglądarka
+    pobierze silnik Fluttera i kod aplikacji (kilka MB). Wygląd jak "słupek" aplikacji
+    (AppFrame): szare tło, biała kolumna max 550 px. Znika przy pierwszej klatce Fluttera.
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body { background: #E0E0E0; }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      transition: opacity 0.3s ease-out;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    #loading .column {
+      width: 100%;
+      max-width: 550px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: #FFFFFF;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      font-family: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    #loading .title { color: #673AB7; font-size: 26px; font-weight: 700; }
+    #loading .hint { color: #757575; font-size: 14px; }
+    #loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #D1C4E9;
+      border-top-color: #673AB7;
+      border-radius: 50%;
+      animation: loading-spin 0.9s linear infinite;
+    }
+    @keyframes loading-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #loading .spinner { animation-duration: 3s; }
+    }
+  </style>
 </head>
 <body>
+  <div id="loading" role="status" aria-live="polite">
+    <div class="column">
+      <div class="title">English Learner</div>
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="hint">Loading&hellip;</div>
+    </div>
+  </div>
+  <noscript>
+    <p style="text-align: center; font-family: sans-serif;">English Learner needs JavaScript to run.</p>
+  </noscript>
+
+  <script>
+    // Flutter wysyła to zdarzenie, gdy narysuje pierwszą klatkę aplikacji -
+    // wtedy płynnie chowamy i usuwamy ekran ładowania.
+    window.addEventListener('flutter-first-frame', function () {
+      var loading = document.getElementById('loading');
+      if (!loading) return;
+      loading.classList.add('hidden');
+      setTimeout(function () { loading.remove(); }, 400);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

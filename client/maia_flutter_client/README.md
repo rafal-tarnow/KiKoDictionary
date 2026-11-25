@@ -24,11 +24,22 @@ flutter run -d windows --release
 
 ## Build web version
 
-flutter build web --base-href "/english_learner/flutter/"
-
-or 
+Zalecane (WebAssembly z automatycznym zapasowym JavaScriptem dla starszych przeglądarek):
 
 flutter build web --wasm --base-href "/english_learner/flutter/"
+
+Wersja tylko JavaScript (gdyby z Wasm był problem):
+
+flutter build web --base-href "/english_learner/flutter/"
+
+
+
+Uwagi:
+- Optymalizacja jest domyślnie maksymalna (`--release`, `-O4`) - nie trzeba dodawać flag.
+- Hosting: GitHub Pages (https://rafal-tarnow.github.io/english_learner/flutter/) sam kompresuje pliki (gzip).
+  Wasm działa tam w trybie jednowątkowym (GitHub Pages nie pozwala ustawić nagłówków COOP/COEP) - to OK.
+- Ekran ładowania (logo + kółko) jest w `web/index.html` i znika przy pierwszej klatce aplikacji
+  (zdarzenie `flutter-first-frame`).
 
 
 ## Komendy ktore trzeba wywolac po swiezym pobranu repozytorium (windows)
