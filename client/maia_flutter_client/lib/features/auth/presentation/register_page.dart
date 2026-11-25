@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../auth_routes.dart';
 import '../../captcha/presentation/widgets/captcha_box.dart';
 import '../../captcha/presentation/captcha_controller.dart';
 import 'controllers/register_controller.dart';
-import '../../../core/routing/app_page.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -73,8 +74,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _passCtrl.clear();
       _captchaInputCtrl.clear();
 
-      // Przekierowanie do logowania (Index 5 w MainShell)
-      ref.read(navigationProvider.notifier).state = AppPage.login;
+      // Przekierowanie do logowania
+      context.goNamed(AuthRoutes.login);
 
       // Pobranie nowej captchy "na zaś"
       ref.read(captchaControllerProvider.notifier).fetchCaptcha();
@@ -93,7 +94,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     // ZMIANA: Watchujemy stan rejestracji
     final regState = ref.watch(registerControllerProvider);
 
-    return Scaffold(
+    return AppScaffold(
+      title: "Register",
       // Body jest centrowane i scrollowalne - identycznie jak w LoginPage
       body: Center(
         child: SingleChildScrollView(
@@ -253,19 +255,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 16),
 
                   // --- LINK DO LOGOWANIA ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Wrap zamiast Row: przy dużej czcionce / wąskim ekranie przycisk przechodzi
+                  // do następnej linii zamiast wystawać poza ekran
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text("Already have an account?"),
                       TextButton(
                         onPressed: regState.isLoading
                             ? null
                             : () {
-                                // Nawigacja do logowania (Index 5 w AppShell)
-                                ref
-                                        .read(navigationProvider.notifier)
-                                        .state =
-                                    AppPage.login;
+                                // Nawigacja do logowania
+                                context.goNamed(AuthRoutes.login);
                               },
                         child: const Text("Log in"),
                       ),

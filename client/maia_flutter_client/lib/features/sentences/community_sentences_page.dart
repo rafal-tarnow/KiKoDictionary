@@ -1,11 +1,12 @@
 // ================= ZAKTUALIZOWANY PLIK =================
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/widgets/app_scaffold.dart';
+import '../auth/auth_routes.dart';
 import 'presentation/community_sentences_provider.dart';
 import 'presentation/widgets/community_sentence_tile.dart';
 import '../../core/constants/app_languages.dart';
-import '../../core/routing/app_page.dart';
 
 class CommunitySentencesPage extends ConsumerWidget {
   const CommunitySentencesPage({super.key});
@@ -55,8 +56,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationProvider.notifier).state =
-                            AppPage.register; // Rejestracja
+                        context.goNamed(AuthRoutes.register);
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -70,8 +70,7 @@ class CommunitySentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationProvider.notifier).state =
-                            AppPage.login; // Logowanie
+                        context.goNamed(AuthRoutes.login);
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -216,8 +215,8 @@ class CommunitySentencesPage extends ConsumerWidget {
     final state = ref.watch(communitySentencesProvider);
     final notifier = ref.read(communitySentencesProvider.notifier);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
+    return AppScaffold(
+      title: "Community",
 
       // ================= [ZMIANA 2]: Floating Action Button =================
       // Korzystamy z FAB.extended bez twardo wpisanego koloru.

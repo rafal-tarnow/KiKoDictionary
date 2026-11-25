@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maia_flutter_client/features/test/backend/backend_provider.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import '../../core/widgets/app_scaffold.dart';
 
 class TestPage extends ConsumerWidget {
   const TestPage({super.key});
@@ -18,7 +19,14 @@ class TestPage extends ConsumerWidget {
       testBackendProvider.select((testBackend) => testBackend.brickStatus),
     );
 
-    return Scaffold(
+    return AppScaffold(
+      title: "Test Page",
+      appBarBackgroundColor: Colors.deepPurple.shade50, // Możesz stylować każdy inaczej
+      showUserMenu: false,
+      actions: [
+        IconButton(icon: const Icon(Icons.refresh), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+      ],
       body: Column(
         children: [
           Text('Sentences page: $brickName'),

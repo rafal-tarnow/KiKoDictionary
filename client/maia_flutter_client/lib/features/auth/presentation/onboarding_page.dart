@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_languages.dart';
-import '../../../core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../home/home_routes.dart';
 import '../../settings/presentation/controllers/settings_controller.dart';
 import '../../user/presentation/controllers/user_controller.dart';
-import '../../../core/routing/app_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -28,15 +28,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     // Dla uproszczenia (jeśli nie ruszałeś API), traktujemy udane zapisanie profilu jako ukończenie.
 
     if (success && mounted) {
-      // Ponownie pobieramy usera z bazy, aby mieć zaktualizowaną flagę (jeśli baza ją zmienia)
-      await ref.read(userControllerProvider.notifier).fetchUser();
-      // Po await widget mógł zostać usunięty - wtedy nie wolno używać context
-      if (!mounted) return;
+      // Pobieramy przed await: gdy profil dostanie flagę ukończenia, router sam wyprowadzi
+      // użytkownika z /onboarding i ta strona zniknie (nie wolno już używać jej context)
+      final messenger = ScaffoldMessenger.of(context);
+      final router = GoRouter.of(context);
 
-      // Przekierowujemy na stronę główną
-      ref.read(navigationProvider.notifier).state = AppPage.home; // HomePage
-      
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Ponownie pobieramy usera z bazy, aby mieć zaktualizowaną flagę onboardingu
+      await ref.read(userControllerProvider.notifier).fetchUser();
+
+      router.goNamed(HomeRoutes.home);
+      messenger.showSnackBar(
         const SnackBar(
           content: Text("All set! You can start learning."),
           backgroundColor: Colors.green,
@@ -91,6 +92,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     // --- Wybór języka (Dokładnie jak w ustawieniach) ---
                     DropdownButtonFormField<String>(
                       initialValue: _selectedLangCode,
+                      // Wybrana pozycja zajmuje szerokość pola (długie nazwy skracane zamiast wystawać)
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: "Native Language",
@@ -101,7 +104,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         final name = AppLanguages.getName(langCode);
                         return DropdownMenuItem(
                           value: langCode,
-                          child: Text('$flag   $name'),
+                          child: Text('$flag   $name', overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: settingsState.isLoading

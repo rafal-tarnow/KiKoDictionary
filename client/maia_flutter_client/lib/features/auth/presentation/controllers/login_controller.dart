@@ -56,7 +56,7 @@ class LoginController extends StateNotifier<LoginState> {
 }
 
 // Używamy autoDispose, aby stan czyścił się, gdy kontroler nie jest obserwowany 
-// (choć przy IndexedStack on "żyje", ale to dobra praktyka dla formularzy)
+// (choć strona może "żyć" w stosie routera, ale to dobra praktyka dla formularzy)
 final loginControllerProvider = StateNotifierProvider.autoDispose<LoginController, LoginState>((ref) {
   return LoginController(
     ref.watch(authRepositoryProvider),

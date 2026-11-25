@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Do AutofillHints
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../auth_routes.dart';
 import 'controllers/login_controller.dart';
-import '../../../core/routing/app_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -56,8 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
       );
 
-      // Przekierowanie na stronę główną (Index 0)
-      ref.read(navigationProvider.notifier).state = AppPage.home;
+      // Przekierowanie robi router: z /login na stronę, z której przyszedł użytkownik (albo Home)
     }
   }
 
@@ -66,9 +66,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // ZMIANA: Obserwujemy tylko stan logowania (nie globalny auth)
     final loginState = ref.watch(loginControllerProvider);
 
-    return Scaffold(
-      // AppBar opcjonalny, zależy czy strona jest w Drawerze czy osobno
-      // Tutaj zakładam, że będzie w MainShell, więc AppBar dostarczy shell.
+    return AppScaffold(
+      title: "Log in",
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -176,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onPressed: loginState.isLoading
                           ? null
                           : () {
-                              ref.read(navigationProvider.notifier).state = AppPage.forgotPassword; // Index nowej strony
+                              context.goNamed(AuthRoutes.forgotPassword);
                             },
                       style: TextButton.styleFrom(
                         // Zmniejszamy minimalny rozmiar i padding, żeby tekst
@@ -248,19 +247,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 16),
 
                   // --- Link do rejestracji ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Wrap zamiast Row: przy dużej czcionce / wąskim ekranie przycisk przechodzi
+                  // do następnej linii zamiast wystawać poza ekran
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text("Don't have an account?"),
                       TextButton(
                         onPressed: loginState.isLoading
                             ? null
                             : () {
-                                // Nawigacja do rejestracji (Index 4 w AppShell)
-                                ref
-                                        .read(navigationProvider.notifier)
-                                        .state =
-                                    AppPage.register;
+                                // Nawigacja do rejestracji
+                                context.goNamed(AuthRoutes.register);
                               },
                         child: const Text("Register"),
                       ),

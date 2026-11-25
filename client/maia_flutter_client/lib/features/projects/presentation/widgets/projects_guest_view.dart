@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/navigation_provider.dart';
-import '../../../../core/routing/app_page.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/app_scaffold.dart';
+import '../../../auth/auth_routes.dart';
 
 /// Widok dla niezalogowanego użytkownika: zajawka + FAB otwierający zachętę do logowania
 /// (ten sam wzorzec co w My Sentences i Daily Tasks).
-class ProjectsGuestView extends ConsumerWidget {
+class ProjectsGuestView extends StatelessWidget {
   const ProjectsGuestView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
+  Widget build(BuildContext context) {
+    return AppScaffold(
+      title: "Projects",
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'projects_guest_fab',
-        onPressed: () => _showLoginPrompt(context, ref),
+        onPressed: () => _showLoginPrompt(context),
         icon: const Icon(Icons.add),
         label: const Text("NEW PROJECT"),
       ),
@@ -47,10 +47,10 @@ class ProjectsGuestView extends ConsumerWidget {
     );
   }
 
-  void _showLoginPrompt(BuildContext context, WidgetRef ref) {
-    void goTo(BuildContext ctx, AppPage page) {
+  void _showLoginPrompt(BuildContext context) {
+    void goTo(BuildContext ctx, String routeName) {
       Navigator.of(ctx).pop();
-      ref.read(navigationProvider.notifier).state = page;
+      context.goNamed(routeName);
     }
 
     showDialog(
@@ -85,7 +85,7 @@ class ProjectsGuestView extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => goTo(ctx, AppPage.register),
+                    onPressed: () => goTo(ctx, AuthRoutes.register),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -97,7 +97,7 @@ class ProjectsGuestView extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => goTo(ctx, AppPage.login),
+                    onPressed: () => goTo(ctx, AuthRoutes.login),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.deepPurple.shade200),

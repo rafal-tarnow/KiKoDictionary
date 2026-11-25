@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../auth_routes.dart';
 import 'controllers/forgot_password_controller.dart';
-import '../../../core/routing/app_page.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -45,23 +46,19 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      // Opcjonalnie: Powrót do logowania po sukcesie
-      // ref.read(navigationIndexProvider.notifier).state = _loginPageIndex;
     }
   }
 
   void _navigateToLogin() {
-    ref.read(navigationProvider.notifier).state = AppPage.login;
+    context.goNamed(AuthRoutes.login);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(forgotPasswordControllerProvider);
 
-    return Scaffold(
-      // AppBar jest opcjonalny, jeśli strona jest w MainShell, 
-      // ale dla ForgotPassword często chcemy "czysty" ekran bez menu.
-      // Tutaj zostawiam body, bo MainShell dostarcza AppBar.
+    return AppScaffold(
+      title: "Reset Password",
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),

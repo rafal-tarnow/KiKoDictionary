@@ -36,3 +36,24 @@ flutter build web --wasm --base-href "/english_learner/flutter/"
 2. flutter pub get
 3. flutter doctor
 4. flutter run -d windows
+
+## Nawigacja (go_router)
+
+Każda strona ma adres URL (w wersji web: `.../flutter/#/projects/5`), historię i działający przycisk "wstecz".
+
+- `lib/core/routing/app_router.dart` - składa trasy wszystkich modułów + strażnik (redirect):
+  gość na stronie wymagającej logowania -> `/login?from=...`, nowy użytkownik -> `/onboarding`.
+- `lib/core/routing/route_access.dart` - reguły strażnika (czysta funkcja, testy w `test/core/routing/`).
+- `lib/features/<moduł>/<moduł>_routes.dart` - trasy danego modułu (ścieżki, nazwy, strony).
+- `lib/core/widgets/app_scaffold.dart` - wspólny szkielet strony (AppBar + Drawer + przycisk konta);
+  każda strona sama podaje tytuł i swoje przyciski w AppBarze.
+- Sekcje z Drawera to gałęzie `StatefulShellRoute`: pamiętają swój stan i budują się przy pierwszym wejściu.
+
+Nawigacja w kodzie: `context.goNamed(ProjectsRoutes.list)`, `ProjectsRoutes.openDetails(context, id)`, `context.pop()`.
+
+### Jak dodać nową stronę
+1. Strona zwraca `AppScaffold(title: ..., actions: [...], body: ...)`.
+2. W module dodaj `<moduł>_routes.dart` z nazwą, ścieżką i `StatefulShellBranch` (sekcja Drawera)
+   albo zwykłym `GoRoute` (strona poza Drawerem, jak logowanie).
+3. Dopisz gałąź w `app_router.dart` (i ewentualnie pozycję w `core/widgets/main_drawer.dart`).
+4. Jeśli strona wymaga logowania - dopisz jej ścieżkę do `routeAccessRules.loginRequiredPaths`.

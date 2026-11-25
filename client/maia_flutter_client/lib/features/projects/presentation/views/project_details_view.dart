@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../data/models/project.dart';
 import '../../data/models/project_task.dart';
+import '../../projects_routes.dart';
 import '../controllers/project_tasks_controller.dart';
 import '../controllers/projects_controller.dart';
+import '../project_actions.dart';
 import '../projects_ui.dart';
 import '../widgets/confirm_delete_dialog.dart';
+import '../widgets/item_actions_menu.dart';
 import '../widgets/project_task_card.dart';
+import '../widgets/projects_refresh_button.dart';
 import '../widgets/projects_status_views.dart';
 import '../widgets/task_form_dialog.dart';
 
-/// Poziom 2: zadania wybranego projektu (przeciągalne).
+/// Poziom 2 (`/projects/:projectId`): zadania wybranego projektu (przeciągalne).
 class ProjectDetailsView extends ConsumerWidget {
   final int projectId;
 
@@ -49,13 +55,50 @@ class ProjectDetailsView extends ConsumerWidget {
     if (context.mounted) ProjectsUi.showFailure(context, result);
   }
 
+  /// Strzałka wstecz: normalnie zdejmuje stronę ze stosu; gdy stos jest pusty
+  /// (np. strona otwarta bezpośrednio z linku), przechodzi do listy projektów.
+  void _backToList(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.goNamed(ProjectsRoutes.list);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(projectTasksControllerProvider(projectId));
     final project = ref.watch(projectsControllerProvider.select((s) => s.findById(projectId)));
+    final projectsReady = ref.watch(
+      projectsControllerProvider.select((s) => !s.isLoading && s.errorMessage == null),
+    );
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
+    // Lista projektów załadowana, a takiego projektu nie ma (usunięty / obcy / zły link)
+    if (project == null && projectsReady) return _buildNotFound(context);
+
+    final state = ref.watch(projectTasksControllerProvider(projectId));
+
+    return AppScaffold(
+      title: project?.name ?? "Project",
+      titleSpacing: 0,
+      titleWidget: Row(
+        children: [
+          if (project != null) ...[
+            Icon(Icons.folder, color: project.displayColor),
+            const SizedBox(width: 8),
+          ],
+          Expanded(child: Text(project?.name ?? "Project", overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+      leading: BackButton(onPressed: () => _backToList(context)),
+      actions: [
+        ProjectsRefreshButton(isLoading: state.isLoading, onPressed: _controller(ref).loadTasks),
+        if (project != null)
+          ItemActionsMenu(
+            iconColor: Colors.black87,
+            onEdit: () => ProjectActions.edit(context, ref, project),
+            onDelete: () => ProjectActions.delete(context, ref, project, onConfirmed: () => _backToList(context)),
+          ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'project_details_fab',
         onPressed: () => _addTask(context, ref),
@@ -68,6 +111,33 @@ class ProjectDetailsView extends ConsumerWidget {
             ProjectsErrorBanner(message: state.errorMessage!, onRetry: _controller(ref).loadTasks),
           if (state.isLoading && state.tasks.isNotEmpty) const LinearProgressIndicator(minHeight: 3),
           Expanded(child: _buildBody(context, ref, state, project)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotFound(BuildContext context) {
+    return AppScaffold(
+      title: "Project",
+      leading: BackButton(onPressed: () => _backToList(context)),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Expanded(
+            child: ProjectsEmptyState(
+              icon: Icons.folder_off_outlined,
+              title: "Project not found.",
+              message: "It may have been deleted or the link is no longer valid.",
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 48),
+            child: FilledButton.icon(
+              onPressed: () => context.goNamed(ProjectsRoutes.list),
+              icon: const Icon(Icons.folder_copy_outlined),
+              label: const Text("BACK TO PROJECTS"),
+            ),
+          ),
         ],
       ),
     );

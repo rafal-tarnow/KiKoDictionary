@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/presentation/controllers/auth_controller.dart';
-import '../../core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/widgets/app_scaffold.dart';
+import '../auth/auth_routes.dart';
 import 'presentation/sentences_provider.dart';
 import 'presentation/widgets/sentence_form_dialog.dart';
 import 'presentation/widgets/sentence_tile.dart';
-import '../../core/routing/app_page.dart';
 
 class SentencesPage extends ConsumerWidget {
   const SentencesPage({super.key});
@@ -61,8 +62,7 @@ class SentencesPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationProvider.notifier).state =
-                            AppPage.register; // Index Rejestracji
+                        context.goNamed(AuthRoutes.register);
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -82,8 +82,7 @@ class SentencesPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop(); // Najpierw zamknij dialog
-                        ref.read(navigationProvider.notifier).state =
-                            AppPage.login; // Index Logowania
+                        context.goNamed(AuthRoutes.login);
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -128,8 +127,22 @@ class SentencesPage extends ConsumerWidget {
     // Własny ScaffoldMessenger: komunikaty z tej strony (np. "Moved to the end") pokazują się
     // w JEJ Scaffoldzie - nad paskiem stron, zamiast go zasłaniać - i nie przechodzą na inne strony.
     return ScaffoldMessenger(
-      child: Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
+      child: AppScaffold(
+      title: "Sentences",
+      actions: [
+        if (isLoggedIn)
+          IconButton(
+            tooltip: "Refresh",
+            onPressed: sentencesState.isLoading ? null : notifier.refreshCurrentPage,
+            icon: sentencesState.isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54),
+                  )
+                : const Icon(Icons.refresh),
+          ),
+      ],
 
       // FAB: Zawsze widoczny. Akcja zależy od tego, czy user jest zalogowany.
       floatingActionButton: FloatingActionButton(

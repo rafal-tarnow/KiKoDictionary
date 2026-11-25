@@ -109,6 +109,8 @@ class LanguageSelector extends ConsumerWidget {
 
                 return DropdownButtonFormField<String>(
                   initialValue: currentLang,
+                  // Wybrana pozycja zajmuje szerokość pola (długie nazwy skracane zamiast wystawać)
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(
@@ -125,6 +127,7 @@ class LanguageSelector extends ConsumerWidget {
                       value: langCode,
                       child: Text(
                         '$flag   $name', // Spacja dla czytelności
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,

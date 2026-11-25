@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../../home/home_routes.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/language_selector.dart';
 import 'widgets/username_editor.dart';
 import 'widgets/subscription_card.dart';
-import '../../../core/routing/app_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -35,12 +36,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _executeDeletion() async {
+    // Pobieramy przed await: po usunięciu konta (wylogowanie) router opuści /settings
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     final success = await ref
         .read(settingsControllerProvider.notifier)
         .deleteAccount();
 
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    if (success) {
+      messenger.showSnackBar(
         const SnackBar(
           content: Text(
             "Your account has been deleted. We're sorry to see you go!",
@@ -49,8 +54,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      // Przekierowanie na stronę główną (Index 0) po wylogowaniu
-      ref.read(navigationProvider.notifier).state = AppPage.home;
+      // Przekierowanie na stronę główną po wylogowaniu
+      router.goNamed(HomeRoutes.home);
     }
   }
 
@@ -58,7 +63,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(settingsControllerProvider);
 
-    return Center(
+    return AppScaffold(
+      title: "Settings",
+      body: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: ConstrainedBox(
@@ -231,6 +238,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

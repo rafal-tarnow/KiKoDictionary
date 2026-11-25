@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
-import '../../../core/navigation_provider.dart';
-import '../../../core/routing/app_page.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../../auth/auth_routes.dart';
 import '../data/models/todo_model.dart';
 import 'todos_provider.dart';
 import 'widgets/todo_card.dart';
@@ -53,7 +54,7 @@ class TodosPage extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationProvider.notifier).state = AppPage.register;
+                        context.goNamed(AuthRoutes.register);
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -69,7 +70,7 @@ class TodosPage extends ConsumerWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ref.read(navigationProvider.notifier).state = AppPage.login;
+                        context.goNamed(AuthRoutes.login);
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -137,8 +138,8 @@ class TodosPage extends ConsumerWidget {
     // ================= [DODANE]: Sprawdzanie czy zalogowany =================
     final isLoggedIn = ref.watch(authControllerProvider).isAuthenticated;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent, 
+    return AppScaffold(
+      title: "Daily Tasks",
       
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {

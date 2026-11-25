@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maia_flutter_client/core/navigation_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/token_storage.dart';
 import '../../../user/presentation/controllers/user_controller.dart';
 import '../../../sentences/presentation/sentences_provider.dart';
-import '../../../../core/routing/app_page.dart';
 
 // Stan sesji: Interesuje nas tylko czy user jest zalogowany
 class AuthState {
@@ -33,12 +31,8 @@ class AuthController extends StateNotifier<AuthState> {
       // Opcjonalnie: Tutaj można strzelić do /api/v1/users/me żeby sprawdzić czy token jest nadal ważny
       state = const AuthState(isAuthenticated: true, isAppLoading: false);
 
-      // ================= [ZMIANA 1]: Oczekujemy na załadowanie usera =================
+      // Profil (m.in. flaga onboardingu) - router sam przekieruje na /onboarding, gdy trzeba
       await _ref.read(userControllerProvider.notifier).fetchUser();
-      
-      // Sprawdzamy status usera i wymuszamy nawigację!
-      _checkOnboardingAndRedirect();
-      // ==================================================================================
 
       // ZMIANA: Pobierz prywatne zdania po wejściu do aplikacji
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
@@ -51,26 +45,13 @@ class AuthController extends StateNotifier<AuthState> {
   void setAuthenticated(bool isAuthenticated) async{
     state = AuthState(isAuthenticated: isAuthenticated, isAppLoading: false);
     if(isAuthenticated){
-      // ================= [ZMIANA 2]: Oczekujemy na załadowanie usera po logowaniu =================
+      // Profil (m.in. flaga onboardingu) - router sam przekieruje na /onboarding, gdy trzeba
       await _ref.read(userControllerProvider.notifier).fetchUser();
-      
-      _checkOnboardingAndRedirect();
-      // ============================================================================================
       // ZMIANA: Zmuś aplikację do załadowania Zdań NOWEGO użytkownika
       _ref.read(sentencesProvider.notifier).loadSentences(page: 1);
     }
   }
 
-
-  void _checkOnboardingAndRedirect() {
-    final user = _ref.read(userControllerProvider).valueOrNull;
-    if (user != null && user.profile != null) {
-      if (user.profile!.isOnboardingCompleted == false) {
-        // Przekierowanie na Index 11 (OnboardingPage) z ominięciem menu głównego
-        _ref.read(navigationProvider.notifier).state = AppPage.onboarding;
-      }
-    }
-  }
 
   Future<void> logout() async {
     final token = await _storage.getToken();

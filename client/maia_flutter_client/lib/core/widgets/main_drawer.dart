@@ -1,179 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import "../../features/auth/presentation/controllers/auth_controller.dart";
-import '../navigation_provider.dart';
-import "../routing/app_page.dart";
+import 'package:go_router/go_router.dart';
+import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/home/home_routes.dart';
+import '../../features/projects/projects_routes.dart';
+import '../../features/sentences/sentences_routes.dart';
+import '../../features/todos/todos_routes.dart';
+import '../../features/words/words_routes.dart';
 
 class MainDrawer extends ConsumerWidget {
   const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedPage = ref.watch(navigationProvider);
-    // Obserwujemy stan autentykacji
-    final authState = ref.watch(authControllerProvider);
-    final isLoggedIn = authState.isAuthenticated;
+    // Aktywna pozycja wynika z bieżącego adresu (np. /projects/5 -> "Projects")
+    final location = GoRouterState.of(context).uri.path;
+    final isLoggedIn = ref.watch(authControllerProvider.select((s) => s.isAuthenticated));
+
+    _DrawerTile tile(String title, IconData icon, String routeName, String path) => _DrawerTile(
+          title: title,
+          icon: icon,
+          routeName: routeName,
+          isSelected: path == '/' ? location == '/' : location == path || location.startsWith('$path/'),
+        );
 
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Colors.deepPurple),
+            decoration: const BoxDecoration(color: Colors.deepPurple),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
+                const Text(
                   'English Learner',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   isLoggedIn ? 'Welcome!' : 'Guest Mode',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-                Text(
-                  'Your progress: 45%',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
+                const Text('Your progress: 45%', style: TextStyle(color: Colors.white70, fontSize: 14)),
               ],
             ),
           ),
-          _DrawerTile(
-            title: 'Home',
-            icon: Icons.home,
-            page: AppPage.home,
-            isSelected: selectedPage == AppPage.home,
-          ),
-          // _DrawerTile(
-          //   title: 'Slownik',
-          //   icon: Icons.menu_book,
-          //   index: 1,
-          //   isSelected: selectedIndex == 1,
-          // ),
-          _DrawerTile(
-            title: 'Words',
-            icon: Icons.school,
-            page: AppPage.words,
-            isSelected: selectedPage == AppPage.words,
-          ),
-          // ================= [ZMIANA 4]: Sekcja Zdań z liniami odgradzającymi =================
-          const Divider(height: 32),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, bottom: 8),
-            child: Text(
-              "SENTENCES",
-              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-            ),
-          ),
-          
-          _DrawerTile(
-            title: 'My Sentences', // Zmiana nazwy dla jasności
-            icon: Icons.book,
-            page: AppPage.sentences,
-            isSelected: selectedPage == AppPage.sentences,
-          ),
-          
-          _DrawerTile(
-            title: 'Community', // Dodanie nowej strony
-            icon: Icons.public,
-            page: AppPage.communitySentences, // Odnosi się do nowej strony dodanej w app.dart
-            isSelected: selectedPage == AppPage.communitySentences,
-          ),
-          const Divider(height: 32),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, bottom: 8),
-            child: Text(
-              "TODO",
-              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-            ),
-          ),
-          _DrawerTile(
-            title: 'Daily Tasks', 
-            icon: Icons.checklist_rtl,
-            page: AppPage.todos,
-            isSelected: selectedPage == AppPage.todos,
-          ),
-          const Divider(height: 32),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, bottom: 8),
-            child: Text(
-              "PROJECTS",
-              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-            ),
-          ),
-          _DrawerTile(
-            title: 'Projects',
-            icon: Icons.folder_copy_outlined,
-            page: AppPage.projects,
-            isSelected: selectedPage == AppPage.projects,
-          ),
-          // ===================================================================================
-          // _DrawerTile(
-          //   title: 'Rejestracja',
-          //   icon: Icons.chat,
-          //   index: 4,
-          //   isSelected: selectedIndex == 4,
-          // ),
-          // _DrawerTile(
-          //   title: 'Logowanie',
-          //   icon: Icons.login,
-          //   index: 5,
-          //   isSelected: selectedIndex == 5,
-          // ),
-          // const Divider(),
-          // const Padding(
-          //   padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
-          //   child: Text(
-          //     "DEV TOOLS",
-          //     style: TextStyle(color: Colors.grey, fontSize: 12),
-          //   ),
-          // ),
-          // _DrawerTile(
-          //   title: 'Test',
-          //   icon: Icons.quiz,
-          //   index: 6,
-          //   isSelected: selectedIndex == 6,
-          // ),
-          // _DrawerTile(
-          //   title: 'Health Check',
-          //   icon: Icons.dns,
-          //   index: 7,
-          //   isSelected: selectedIndex == 7,
-          // ),
-          // _DrawerTile(
-          //   title: 'Captcha Test',
-          //   icon: Icons.security,
-          //   index: 8,
-          //   isSelected: selectedIndex == 8,
-          // ),
+          tile('Home', Icons.home, HomeRoutes.home, HomeRoutes.homePath),
+          tile('Words', Icons.school, WordsRoutes.words, WordsRoutes.wordsPath),
+          const _SectionHeader('SENTENCES'),
+          tile('My Sentences', Icons.book, SentencesRoutes.mySentences, SentencesRoutes.mySentencesPath),
+          tile('Community', Icons.public, SentencesRoutes.community, SentencesRoutes.communityPath),
+          const _SectionHeader('TODO'),
+          tile('Daily Tasks', Icons.checklist_rtl, TodosRoutes.todos, TodosRoutes.todosPath),
+          const _SectionHeader('PROJECTS'),
+          tile('Projects', Icons.folder_copy_outlined, ProjectsRoutes.list, ProjectsRoutes.listPath),
         ],
       ),
     );
   }
 }
 
-// _DrawerTile pozostaje bez zmian jak w Twoim pliku
-class _DrawerTile extends ConsumerWidget {
+class _SectionHeader extends StatelessWidget {
+  final String label;
+
+  const _SectionHeader(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DrawerTile extends StatelessWidget {
   final String title;
   final IconData icon;
-  final AppPage page;
+  final String routeName;
   final bool isSelected;
 
   const _DrawerTile({
     required this.title,
     required this.icon,
-    required this.page,
+    required this.routeName,
     required this.isSelected,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: isSelected ? Colors.deepPurple : null),
       title: Text(
@@ -187,8 +113,10 @@ class _DrawerTile extends ConsumerWidget {
       selectedTileColor: Colors.deepPurple.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onTap: () {
-        ref.read(navigationProvider.notifier).state = page;
-        Navigator.pop(context);
+        // Najpierw zamykamy Drawer, potem przechodzimy na stronę sekcji
+        final router = GoRouter.of(context);
+        Navigator.of(context).pop();
+        router.goNamed(routeName);
       },
     );
   }

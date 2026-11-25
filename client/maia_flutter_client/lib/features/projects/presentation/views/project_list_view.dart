@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/app_scaffold.dart';
+import '../../projects_routes.dart';
 import '../controllers/projects_controller.dart';
-import '../controllers/selected_project_provider.dart';
 import '../project_actions.dart';
 import '../projects_ui.dart';
 import '../widgets/project_card.dart';
+import '../widgets/projects_refresh_button.dart';
 import '../widgets/projects_status_views.dart';
 
-/// Poziom 1: lista projektów użytkownika (przeciągalna).
+/// Poziom 1 (`/projects`): lista projektów użytkownika (przeciągalna).
 class ProjectListView extends ConsumerWidget {
   const ProjectListView({super.key});
 
@@ -16,8 +18,11 @@ class ProjectListView extends ConsumerWidget {
     final state = ref.watch(projectsControllerProvider);
     final controller = ref.read(projectsControllerProvider.notifier);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
+    return AppScaffold(
+      title: "Projects",
+      actions: [
+        ProjectsRefreshButton(isLoading: state.isLoading, onPressed: controller.loadProjects),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'projects_list_fab',
         onPressed: () => ProjectActions.create(context, ref),
@@ -68,7 +73,7 @@ class ProjectListView extends ConsumerWidget {
             child: ProjectCard(
               project: project,
               index: index,
-              onOpen: () => ref.read(selectedProjectIdProvider.notifier).state = project.id,
+              onOpen: () => ProjectsRoutes.openDetails(context, project.id),
               onEdit: () => ProjectActions.edit(context, ref, project),
               onDelete: () => ProjectActions.delete(context, ref, project),
             ),

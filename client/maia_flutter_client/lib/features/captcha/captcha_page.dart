@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/widgets/main_drawer.dart';
+import '../../core/widgets/app_scaffold.dart';
 import 'presentation/captcha_controller.dart';
 import 'presentation/widgets/captcha_box.dart';
 
@@ -51,12 +51,8 @@ class _CaptchaPageState extends ConsumerState<CaptchaPage> {
     // Obserwujemy stan, aby wiedzieć np. czy trwa ładowanie
     final captchaState = ref.watch(captchaControllerProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Captcha Test"),
-        elevation: 2,
-      ),
-      drawer: const MainDrawer(), // Dodajemy boczny pasek
+    return AppScaffold(
+      title: "Captcha Demo",
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(

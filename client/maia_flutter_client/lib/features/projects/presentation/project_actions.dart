@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/project.dart';
 import 'controllers/projects_controller.dart';
-import 'controllers/selected_project_provider.dart';
 import 'projects_ui.dart';
 import 'widgets/confirm_delete_dialog.dart';
 import 'widgets/project_form_dialog.dart';
@@ -26,7 +25,14 @@ abstract final class ProjectActions {
     if (context.mounted) ProjectsUi.showFailure(context, result);
   }
 
-  static Future<void> delete(BuildContext context, WidgetRef ref, Project project) async {
+  /// [onConfirmed] wywoływane po potwierdzeniu, przed usunięciem - np. strona szczegółów
+  /// wraca wtedy do listy, żeby nie pokazywać znikającego projektu.
+  static Future<void> delete(
+    BuildContext context,
+    WidgetRef ref,
+    Project project, {
+    VoidCallback? onConfirmed,
+  }) async {
     final confirmed = await showConfirmDeleteDialog(
       context,
       title: "Delete Project",
@@ -36,11 +42,12 @@ abstract final class ProjectActions {
     );
     if (!confirmed || !context.mounted) return;
 
-    // Jeśli usuwamy otwarty projekt - wracamy do listy
-    final selected = ref.read(selectedProjectIdProvider.notifier);
-    if (selected.state == project.id) selected.state = null;
+    // Zależności pobieramy PRZED onConfirmed: po przejściu do listy ta strona (i jej ref) znika
+    final controller = ref.read(projectsControllerProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    onConfirmed?.call();
 
-    final result = await ref.read(projectsControllerProvider.notifier).deleteProject(project.id);
-    if (context.mounted) ProjectsUi.showFailure(context, result);
+    final result = await controller.deleteProject(project.id);
+    ProjectsUi.showFailureOn(messenger, result);
   }
 }

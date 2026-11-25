@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/navigation_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../home/home_routes.dart';
+import '../../../settings/settings_routes.dart';
+import '../../auth_routes.dart';
 import '../../../../core/constants/app_languages.dart'; // NOWY IMPORT
 import '../../../user/presentation/controllers/user_controller.dart'; // NOWY IMPORT
 import '../controllers/auth_controller.dart';
-import '../../../../core/routing/app_page.dart';
 
 class UserAvatarButton extends ConsumerWidget {
   const UserAvatarButton({super.key});
@@ -76,7 +78,7 @@ class UserAvatarButton extends ConsumerWidget {
             if (value == 'logout') {
               _handleLogout(context, ref);
             } else if (value == 'settings') {
-              ref.read(navigationProvider.notifier).state = AppPage.settings;
+              context.goNamed(SettingsRoutes.settings);
             }
           },
 
@@ -146,25 +148,27 @@ class UserAvatarButton extends ConsumerWidget {
           child: Icon(Icons.login, color: Colors.grey.shade700, size: 20),
         ),
         onPressed: () {
-          ref.read(navigationProvider.notifier).state = AppPage.login;
+          context.goNamed(AuthRoutes.login);
         },
       ),
     );
   }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    // Pobieramy przed await: po wylogowaniu router może opuścić bieżącą stronę
+    // (np. /settings wymaga logowania), a wtedy jej context przestaje być ważny
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     await ref.read(authControllerProvider.notifier).logout();
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Logged out successfully"),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-
-    ref.read(navigationProvider.notifier).state = AppPage.home;
+    router.goNamed(HomeRoutes.home);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text("Logged out successfully"),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

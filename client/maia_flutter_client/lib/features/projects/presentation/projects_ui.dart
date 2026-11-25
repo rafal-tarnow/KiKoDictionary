@@ -57,9 +57,14 @@ abstract final class ProjectsUi {
 
   /// Pokazuje komunikat tylko przy błędzie (sukces jest widoczny od razu na liście).
   static void showFailure(BuildContext context, ActionResult result) {
+    if (!context.mounted) return;
+    showFailureOn(ScaffoldMessenger.of(context), result);
+  }
+
+  /// Wariant dla akcji, po których strona może już nie istnieć (messenger pobrany wcześniej).
+  static void showFailureOn(ScaffoldMessengerState messenger, ActionResult result) {
     if (result case ActionFailure(:final message)) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
