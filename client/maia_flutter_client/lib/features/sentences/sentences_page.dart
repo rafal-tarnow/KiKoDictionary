@@ -125,7 +125,10 @@ class SentencesPage extends ConsumerWidget {
     final authState = ref.watch(authControllerProvider);
     final isLoggedIn = authState.isAuthenticated;
 
-    return Scaffold(
+    // Własny ScaffoldMessenger: komunikaty z tej strony (np. "Moved to the end") pokazują się
+    // w JEJ Scaffoldzie - nad paskiem stron, zamiast go zasłaniać - i nie przechodzą na inne strony.
+    return ScaffoldMessenger(
+      child: Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
 
       // FAB: Zawsze widoczny. Akcja zależy od tego, czy user jest zalogowany.
@@ -172,9 +175,15 @@ class SentencesPage extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back),
                       label: const Text("Previous"),
                     ),
-                    Text(
-                      "Page ${sentencesState.currentPage}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    // Expanded: na wąskim ekranie napis się skraca zamiast wypychać przyciski poza ekran
+                    Expanded(
+                      child: Text(
+                        "Page ${sentencesState.currentPage} / ${sentencesState.totalPages}",
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     ElevatedButton.icon(
                       onPressed:
@@ -345,6 +354,7 @@ class SentencesPage extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
       ),
     );
   }

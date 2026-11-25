@@ -58,17 +58,24 @@ class _SentenceTileState extends ConsumerState<SentenceTile> {
 
   Future<void> _move({required bool toTop}) async {
     // Pobieramy zależności przed await: po przeładowaniu strony ten kafelek może zniknąć
-    final notifier = ref.read(sentencesProvider.notifier);
+    // (kontener zamiast `ref`, bo `ref` zniszczonego kafelka nie wolno już używać)
+    final container = ProviderScope.containerOf(context, listen: false);
+    final notifier = container.read(sentencesProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final id = widget.sentence.id;
 
     final success = toTop ? await notifier.moveToTop(id) : await notifier.moveToBottom(id);
-    final state = ref.read(sentencesProvider);
+    final state = container.read(sentencesProvider);
 
     messenger.hideCurrentSnackBar();
     if (!success) {
       messenger.showSnackBar(
-        SnackBar(content: Text(state.errorMessage ?? "Failed to move the sentence."), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(state.errorMessage ?? "Failed to move the sentence."),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+        ),
       );
       return;
     }
@@ -79,11 +86,15 @@ class _SentenceTileState extends ConsumerState<SentenceTile> {
       SnackBar(
         content: Text(toTop ? "Moved to the top of the list." : "Moved to the end of the list."),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
+        // Flutter domyślnie NIE chowa komunikatu z przyciskiem akcji (persist = true) -
+        // wymuszamy znikanie po czasie, a krzyżyk pozwala zamknąć go od razu
+        persist: false,
+        showCloseIcon: true,
         action: isTargetVisible
             ? null
             : SnackBarAction(
-                label: "SHOW",
+                label: "GO TO PAGE $targetPage",
                 onPressed: () => notifier.loadSentences(page: targetPage),
               ),
       ),

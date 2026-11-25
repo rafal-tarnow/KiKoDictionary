@@ -248,6 +248,64 @@ void main() {
     });
   });
 
+  group('SentencesPage - komunikat po "Move to end"', () {
+    Future<_FakeSentencesRepository> pumpPageWithPages(WidgetTester tester) async {
+      final repo = _FakeSentencesRepository([_sentence(1), _sentence(2)], totalPages: 3);
+      tester.view.physicalSize = const Size(400 * 3, 800 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      // Jak w aplikacji: strona zdań wewnątrz zewnętrznego Scaffoldu (MainShell)
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith((ref) => _LoggedInAuthController()),
+          sentencesRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SentencesPage())),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('More actions').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Move to end'));
+      await tester.pump(); // operacja + przeładowanie strony
+      await tester.pump(const Duration(milliseconds: 500)); // animacja wejścia komunikatu
+      return repo;
+    }
+
+    testWidgets('nie zasłania paska stron i ma krzyżyk oraz czytelny przycisk', (tester) async {
+      await pumpPageWithPages(tester);
+
+      expect(find.text('Moved to the end of the list.'), findsOneWidget);
+      expect(find.text('GO TO PAGE 3'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      final snackBar = tester.getRect(find.byType(SnackBar));
+      final nextButton = tester.getRect(find.text('Next'));
+      expect(snackBar.bottom, lessThanOrEqualTo(nextButton.top)); // komunikat NAD paskiem stron
+    });
+
+    testWidgets('znika sam po kilku sekundach', (tester) async {
+      await pumpPageWithPages(tester);
+      expect(find.byType(SnackBar), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('przycisk przenosi na ostatnią stronę', (tester) async {
+      final repo = await pumpPageWithPages(tester);
+      repo.loadedPages.clear();
+
+      await tester.tap(find.text('GO TO PAGE 3'));
+      await tester.pumpAndSettle();
+
+      expect(repo.loadedPages, [3]);
+    });
+  });
+
   testWidgets('SentencesPage - przeciągnięcie za lewy uchwyt zmienia kolejność', (tester) async {
     final repo = _FakeSentencesRepository([_sentence(1), _sentence(2), _sentence(3)]);
     tester.view.physicalSize = const Size(400 * 3, 900 * 3);

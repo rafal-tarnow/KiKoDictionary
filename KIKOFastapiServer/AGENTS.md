@@ -14,9 +14,14 @@ Nigdy nie działają jednocześnie, więc tunel Cloudflare łączy się z tym, k
 
 ## Po zmianach kodu, uruchomienie / przebudowa na Kubuntu
 
+Jeden skrypt robi wszystko (warunki, kopia baz, przebudowa, testy zdrowia, migracje, sprzątanie):
+
 ```bash
-cd /mnt/windows/Users/Tom/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer && docker compose up -d --build
+bash /mnt/windows/Users/Tom/Documents/GITHUB_MOJE/KiKoDictionary/KIKOFastapiServer/linux_update_server.sh
 ```
+
+`--check` = tylko diagnoza, nic nie zmienia. Nagłówek skryptu zawiera pełny opis sytuacji i typowych
+awarii (przeczytaj go przy problemach); logi: `~/kiko-update-logs/`, kopie baz: `~/kiko-db-safety-copies/`.
 
 ## Ważne przy pracy na Kubuntu
 
